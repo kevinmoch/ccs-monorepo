@@ -1,0 +1,14 @@
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue';
+  const component: DefineComponent<object, object, any>;
+  export default component;
+}
+interface Window {
+  __POWERED_BY_WUJIE__?: boolean;
+  __WUJIE_MOUNT?: () => void;
+  __WUJIE_UNMOUNT?: () => void;
+  $wujie?: {
+    props?: Record<string, unknown>;
+    bus?: { $on: (event: string, handler: (payload: any) => void) => void; $off?: (event: string, handler: (payload: any) => void) => void; $emit?: (event: string, payload?: any) => void };
+  };
+}

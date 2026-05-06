@@ -1,0 +1,30 @@
+{
+  "name": "ccs-uniapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "uni --host 0.0.0.0",
+    "build": "node scripts/build-target.mjs h5",
+    "build:weixin": "node scripts/build-target.mjs weixin",
+    "build:ios": "node scripts/build-target.mjs ios",
+    "build:android": "node scripts/build-target.mjs android",
+    "build:harmony": "node scripts/build-target.mjs harmony",
+    "lint": "vue-tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "latest",
+    "@dcloudio/uni-cli-i18n": "2.0.2-5000720260410001",
+    "@dcloudio/uni-cli-shared": "2.0.2-5000720260410001",
+    "@dcloudio/uni-components": "latest",
+    "@dcloudio/uni-h5": "latest",
+    "@dcloudio/vite-plugin-uni": "latest",
+    "vue": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vite": "latest",
+    "vue-tsc": "latest",
+    "webpack": "^5.106.2"
+  }
+}

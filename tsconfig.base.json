@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@ccs/shared": ["packages/shared/src/index.ts"],
+      "@ccs/runtime": ["packages/runtime/src/index.ts"],
+      "@ccs/runtime/react": ["packages/runtime/src/react.tsx"],
+      "@ccs/runtime/vue": ["packages/runtime/src/vue.ts"],
+      "@ccs/ui-react": ["packages/ui-react/src/index.tsx"],
+      "@ccs/ui-vue": ["packages/ui-vue/src/index.ts"],
+      "@ccs/ui-vue/*": ["packages/ui-vue/src/*"]
+    }
+  }
+}

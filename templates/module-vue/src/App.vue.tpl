@@ -1,0 +1,1 @@
+<template><div class="module-shell"><header class="module-header"><div><span>__MODULE_NAME__</span><h2>__MODULE_TITLE__</h2></div><RouterLink to="/dashboard">Dashboard</RouterLink></header><RouterView /></div></template>

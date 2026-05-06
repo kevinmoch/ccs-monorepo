@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.base.json","compilerOptions":{"jsx":"preserve","types":["vite/client","node"]},"include":["src/**/*.ts","src/**/*.vue","src/env.d.ts","vite.config.ts","vite.card.config.ts"]}

@@ -1,0 +1,26 @@
+{
+  "name": "ccs-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.3",
+  "scripts": {
+    "dev": "turbo run dev --parallel --filter=ccs-framework --filter=ccs-module-demo",
+    "build": "turbo run build",
+    "build:web": "node scripts/build-web.mjs",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build:uniapp-weixin": "node scripts/build-uniapp.mjs weixin",
+    "build:uniapp-ios": "node scripts/build-uniapp.mjs ios",
+    "build:uniapp-android": "node scripts/build-uniapp.mjs android",
+    "build:uniapp-harmony": "node scripts/build-uniapp.mjs harmony",
+    "lint": "turbo run lint",
+    "test": "vitest run",
+    "ccs": "pnpm --filter @ccs/cli ccs"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "turbo": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

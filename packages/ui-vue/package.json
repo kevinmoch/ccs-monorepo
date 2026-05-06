@@ -1,0 +1,24 @@
+{
+  "name": "@ccs/ui-vue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./CardGrid.vue": "./src/components/CardGrid.vue",
+    "./CcsCardShell.vue": "./src/components/CcsCardShell.vue"
+  },
+  "scripts": {
+    "build": "vue-tsc -p tsconfig.json --noEmit",
+    "lint": "vue-tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "vue": ">=3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "typescript": "latest",
+    "vue": "latest",
+    "vue-tsc": "latest"
+  }
+}

@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-family-sans: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer utilities {
+  .vertical-text-desktop {
+    @media (min-width: 1280px) {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: 0.25em;
+    }
+  }
+}
+
+html {
+  font-size: 17px; /* 整体调大所有依赖 rem 的字号和间距 */
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: var(--font-family-sans);
+}
+
+.dark body {
+  background-color: #0F172A;
+  color: #F8FAFC;
+}
+
+.sidebar-item {
+  transition: all 0.2s;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.active-sidebar {
+  background-color: #2563EB;
+  color: white;
+}
+
+.dashboard-card-item {
+  grid-column: span var(--col-base) / span var(--col-base);
+  grid-row: span var(--row-base) / span var(--row-base);
+}
+
+@media (min-width: 768px) {
+  .dashboard-card-item {
+    grid-column: span var(--col-md) / span var(--col-md);
+    grid-row: span var(--row-md) / span var(--row-md);
+  }
+}
+
+.card {
+  background-color: white;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3); /* slate-400 */
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
+}
+::-webkit-scrollbar-corner,
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(71, 85, 105, 0.8); /* slate-600 */
+}
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.8); /* slate-500 */
+}
+
+.dark .card {
+  background-color: #1E293B;
+  border-color: #334155;
+}
+
+/* Custom Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
