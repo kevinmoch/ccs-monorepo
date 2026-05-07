@@ -1,0 +1,20 @@
+appId: com.ccs.framework
+productName: CCS Framework
+directories:
+  output: ../../dist/electron
+files:
+  - out/main/**
+  - out/preload/**
+  - package.json
+extraResources:
+  - from: ../../dist/web
+    to: web
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
