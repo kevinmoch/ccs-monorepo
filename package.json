@@ -8,13 +8,15 @@
     "build": "turbo run build",
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",
+    "build:android": "node scripts/build-uniapp.mjs android",
     "build:uniapp-weixin": "node scripts/build-uniapp.mjs weixin",
     "build:uniapp-ios": "node scripts/build-uniapp.mjs ios",
     "build:uniapp-android": "node scripts/build-uniapp.mjs android",
     "build:uniapp-harmony": "node scripts/build-uniapp.mjs harmony",
     "lint": "turbo run lint",
     "test": "vitest run",
-    "ccs": "pnpm --filter @ccs/cli ccs"
+    "ccs": "pnpm --filter @ccs/cli ccs",
+    "css": "pnpm ccs"
   },
   "devDependencies": {
     "@types/node": "latest",

@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Menu } from 'electron';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -9,12 +9,20 @@ const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let staticServer: Server | undefined;
 
 async function createWindow() {
-  const win = new BrowserWindow({ width: 1440, height: 960, minWidth: 1180, minHeight: 760, webPreferences: { preload: join(__dirname, '../preload/preload.mjs'), contextIsolation: true, nodeIntegration: false } });
+  const win = new BrowserWindow({
+    width: 1440,
+    height: 960,
+    minWidth: 1180,
+    minHeight: 760,
+    autoHideMenuBar: true,
+    webPreferences: { preload: join(__dirname, '../preload/preload.mjs'), contextIsolation: true, nodeIntegration: false }
+  });
   if (isDev && process.env.VITE_DEV_SERVER_URL) win.loadURL(process.env.VITE_DEV_SERVER_URL);
   else win.loadURL(await startWebServer());
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   void createWindow();
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

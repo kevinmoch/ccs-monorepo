@@ -1,0 +1,11 @@
+{
+  "name": "ccs-uniapp",
+  "appid": "__UNI__CCSAPP",
+  "description": "CCS multi-end container",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {},
+  "mp-weixin": {},
+  "h5": { "router": { "mode": "history" } }
+}

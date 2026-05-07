@@ -7,6 +7,12 @@ import { copyTemplate, displayPath, findRepoRoot, insertBeforeMarker } from './f
 import { moduleBaseRoute, titleFromName, toKebabCase, toPascalCase } from './utils.js';
 
 const program = new Command();
+const buildTargetAliases: Record<string, string> = {
+  android: 'uniapp-android',
+  ios: 'uniapp-ios',
+  weixin: 'uniapp-weixin',
+  harmony: 'uniapp-harmony'
+};
 
 program.name('ccs').description('CCS monorepo engineering CLI').version('0.1.0');
 
@@ -125,9 +131,10 @@ build
     runPnpm(['--filter', toKebabCase(options.module), 'build:cards', '--', '--cards', cards]);
   });
 
-build.argument('<target>', 'web | electron | uniapp-weixin | uniapp-ios | uniapp-android | uniapp-harmony').action((target: string) => {
+build.argument('<target>', 'web | electron | android | uniapp-weixin | uniapp-ios | uniapp-android | uniapp-harmony').action((target: string) => {
   const root = findRepoRoot();
-  const script = `build:${target}`;
+  const scriptTarget = buildTargetAliases[target] ?? target;
+  const script = `build:${scriptTarget}`;
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   if (!pkg.scripts?.[script]) throw new Error(`Unknown build target: ${target}`);
   ensureWorkspaceInstall();
