@@ -10,3 +10,4 @@ coverage
 apps/*/.ccs-card-build
 apps/*/dist
 *-lock.*
+out
