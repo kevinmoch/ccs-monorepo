@@ -11,3 +11,10 @@ apps/*/.ccs-card-build
 apps/*/dist
 *-lock.*
 out
+
+# Capacitor Android
+apps/ccs-android/android/.gradle/
+apps/ccs-android/android/build/
+apps/ccs-android/android/app/build/
+apps/ccs-android/android/keystore.properties
+apps/ccs-android/capacitor.config.json

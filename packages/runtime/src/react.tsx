@@ -32,6 +32,9 @@ export function MicroApp({ app, theme, language, routePath, user }: MicroAppProp
   useEffect(() => {
     syncLanguageToMicroApps(language);
   }, [language]);
+  useEffect(() => {
+    WujieReact.bus.$emit(CCS_EVENTS.NAVIGATE, { routePath });
+  }, [routePath]);
   const Wujie = WujieReact as React.ComponentType<Record<string, unknown>>;
   return <Wujie name={app.name} url={app.url} sync alive props={props} width="100%" height="100%" />;
 }

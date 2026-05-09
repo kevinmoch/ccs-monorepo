@@ -8,7 +8,7 @@ import { moduleBaseRoute, titleFromName, toKebabCase, toPascalCase } from './uti
 
 const program = new Command();
 const buildTargetAliases: Record<string, string> = {
-  android: 'uniapp-android',
+  android: 'android',
   ios: 'uniapp-ios',
   weixin: 'uniapp-weixin',
   harmony: 'uniapp-harmony'

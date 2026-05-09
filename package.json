@@ -8,7 +8,7 @@
     "build": "turbo run build",
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",
-    "build:android": "node scripts/build-uniapp.mjs android",
+    "build:android": "node scripts/build-android.mjs",
     "build:uniapp-weixin": "node scripts/build-uniapp.mjs weixin",
     "build:uniapp-ios": "node scripts/build-uniapp.mjs ios",
     "build:uniapp-android": "node scripts/build-uniapp.mjs android",
