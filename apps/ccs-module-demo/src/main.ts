@@ -32,10 +32,12 @@ async function render() {
       (i18n.global.locale as any).value = language;
     }
   });
-  // Navigate to the correct route when mounted in wujie
+  // Navigate to the correct route when mounted in wujie / iframe
   navigateToRoute(props.routePath);
-  // Listen for route changes from the host app
+  // Listen for route changes from the host app (wujie bus)
   disposeRouteSync = bindWujieRouteHandler();
+  // Also listen for postMessage-based navigation from iframe parent
+  disposePostMessage = bindPostMessageRouteHandler();
 }
 if (window.__POWERED_BY_WUJIE__) {
   window.__WUJIE_MOUNT = () => render();
@@ -49,14 +51,50 @@ if (window.__POWERED_BY_WUJIE__) {
   render();
 }
 
+/** Read the __ccs_route param used by the iframe fallback.
+ *  It is passed via hash fragment (e.g. #__ccs_route=%2Fmodules%2Fdemo%2Fdashboard) */
+function getIframeRoute(): string | undefined {
+  try {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#__ccs_route=')) return undefined;
+    const encoded = hash.slice('#__ccs_route='.length);
+    return decodeURIComponent(encoded);
+  } catch {
+    return undefined;
+  }
+}
+
 function navigateToRoute(routePath?: string) {
   if (routePath && typeof routePath === 'string') {
     const target = routePath.replace('/modules/demo', '') || '/dashboard';
     router.replace(target);
+  } else if (!window.__POWERED_BY_WUJIE__) {
+    // Check if launched via iframe fallback with a __ccs_route param
+    const iframeRoute = getIframeRoute();
+    if (iframeRoute) {
+      const target = iframeRoute.replace('/modules/demo', '') || '/dashboard';
+      router.replace(target);
+      return;
+    }
+    router.replace('/dashboard');
   } else {
     router.replace('/dashboard');
   }
 }
+
+function bindPostMessageRouteHandler(): () => void {
+  const handler = (event: MessageEvent) => {
+    if (event.data?.type === 'CCS_NAVIGATE' && event.data?.routePath) {
+      navigateToRoute(event.data.routePath);
+    }
+  };
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}
+
+// In non-wujie standalone / iframe mode, listen for postMessage navigation
+// The listener is bound after the app is mounted via a microtask in render()
+let disposePostMessage: (() => void) | undefined;
 
 function bindWujieRouteHandler(): () => void {
   const wujieWin = window as any;

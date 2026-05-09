@@ -212,6 +212,7 @@ export default function App() {
   const [isBottomNavExpanded, setIsBottomNavExpanded] = useState(false);
   const [sidebarHeaderId, setSidebarHeaderId] = useState<string | null>(null);
   const [isShowingL1List, setIsShowingL1List] = useState(false);
+  const [hasVisitedMicroApp, setHasVisitedMicroApp] = useState(false);
 
   // Menu Expansion State
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
@@ -341,6 +342,11 @@ export default function App() {
       }]);
       setActiveTabId(newId);
       setCurrentPath(fullItem.url);
+    }
+
+    // Keep micro app iframe alive after first visit
+    if (fullItem.url === MICRO_APP_PATH) {
+      setHasVisitedMicroApp(true);
     }
   };
 
@@ -1334,8 +1340,12 @@ export default function App() {
                     />
                   )}
 
-                  {currentPath === MICRO_APP_PATH && (
-                    <div className="flex-1 min-h-[640px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                  {/* MicroApp: kept alive via display toggle — prevents iframe reload on tab switch */}
+                  {hasVisitedMicroApp && (
+                    <div
+                      className="flex-1 min-h-[640px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm"
+                      style={{ display: currentPath === MICRO_APP_PATH ? undefined : 'none' }}
+                    >
                       <ErrorBoundary onError={(err) => console.error('[MicroApp] Failed to load ccs-module-demo:', err)}>
                       {(() => {
                         const app = moduleManifests.find((module) => module.name === 'ccs-module-demo');
