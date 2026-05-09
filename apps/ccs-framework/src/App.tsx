@@ -69,6 +69,7 @@ import { ITSupportPage } from './components/dashboard/ITSupportPage';
 import { HelpGuidePage } from './components/dashboard/HelpGuidePage';
 import { MyWorkspacePage, MyProjectsPage, MyTodosPage, SeverelyOverduePage, OverduePage } from './components/dashboard/GenericPages';
 import { moduleManifests } from './modules/registry';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 const DefaultAvatar = ({ className = "w-full h-full text-slate-400" }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
@@ -1335,6 +1336,7 @@ export default function App() {
 
                   {currentPath === MICRO_APP_PATH && (
                     <div className="flex-1 min-h-[640px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                      <ErrorBoundary onError={(err) => console.error('[MicroApp] Failed to load ccs-module-demo:', err)}>
                       {(() => {
                         const app = moduleManifests.find((module) => module.name === 'ccs-module-demo');
                         if (!app) return null;
@@ -1353,6 +1355,7 @@ export default function App() {
                           />
                         );
                       })()}
+                      </ErrorBoundary>
                     </div>
                   )}
                   

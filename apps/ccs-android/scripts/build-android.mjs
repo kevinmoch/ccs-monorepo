@@ -51,7 +51,9 @@ const capConfig = {
   webDir: '../../dist/web',
   server: {
     androidScheme: 'https',
+    hostname: 'localhost',
     allowNavigation: ['localhost'],
+    cleartext: true,
   },
 };
 writeFileSync(join(pkgDir, 'capacitor.config.json'), JSON.stringify(capConfig, null, 2));
@@ -117,7 +119,7 @@ console.log(`Building Android APK (${buildVariant})...`);
 const gradleCmd = process.platform === 'win32'
   ? join(androidDir, 'gradlew.bat')
   : join(androidDir, 'gradlew');
-const gradleResult = spawnSync(gradleCmd, [buildType], {
+const gradleResult = spawnSync(gradleCmd, ['clean', buildType], {
   cwd: androidDir,
   stdio: 'inherit',
   shell: process.platform === 'win32',
