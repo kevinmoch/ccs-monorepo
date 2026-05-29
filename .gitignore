@@ -11,6 +11,7 @@ apps/*/.ccs-card-build
 apps/*/dist
 *-lock.*
 out
+apps/ccs-framework/
 
 # Capacitor Android
 apps/ccs-android/android/.gradle/
