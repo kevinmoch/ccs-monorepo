@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const isWindows = process.platform === 'win32';
 const args = [
   'exec',
   'turbo',
@@ -11,9 +11,9 @@ const args = [
   ...process.argv.slice(2),
 ];
 
-const child = spawn(pnpm, args, {
+const child = spawn('pnpm', args, {
   stdio: 'inherit',
-  shell: false,
+  shell: isWindows,
 });
 
 const forwardSignal = (signal) => {
@@ -22,6 +22,11 @@ const forwardSignal = (signal) => {
 
 process.on('SIGINT', forwardSignal);
 process.on('SIGTERM', forwardSignal);
+
+child.on('error', (error) => {
+  console.error('[ccs] failed to start dev servers:', error);
+  process.exit(1);
+});
 
 child.on('exit', (code, signal) => {
   if (signal) {
