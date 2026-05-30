@@ -40,5 +40,19 @@ pnpm ccs build android
 
 默认端口：
 
-- React Portal: http://localhost:5173
+- React Portal: http://localhost:3000
 - Vue 示例子应用: http://localhost:5174
+
+开发调试时，可以同时启动框架和子模块：
+
+```bash
+pnpm dev
+```
+
+该命令会同时启动框架和 `apps/ccs-module-*` 子模块。框架 dev server 会读取 `apps/ccs-module-*` 的 `package.json` 中 `dev` 脚本端口，并把 `/ccs-module-*` 同源代理到对应子模块 dev server；菜单 URL 如 `ccs-module-demo/orders` 会在 iframe 中加载子模块调试页面，并通过 iframe 路由参数进入 `/orders` 页面。构建后的 `pnpm build:web` 仍然使用 `dist/web/ccs-module-*` 下的同源产物。
+
+`pnpm ccs create module <name>` 会从 5175 起自动分配未占用的子模块 dev 端口。也可以显式传入端口：
+
+```bash
+pnpm ccs create module ccs-module-abc --port 5176
+```

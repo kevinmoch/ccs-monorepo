@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Command } from 'commander';
 import { copyTemplate, displayPath, findRepoRoot, insertBeforeMarker } from './fs.js';
@@ -18,20 +18,58 @@ program.name('ccs').description('CCS monorepo engineering CLI').version('0.1.0')
 
 const create = program.command('create').description('create modules, pages and cards');
 
+function readModuleDevPorts(root: string) {
+  const appsDir = join(root, 'apps');
+  const ports = new Set<number>();
+
+  if (!existsSync(appsDir)) return ports;
+
+  for (const dir of readdirSync(appsDir)) {
+    if (!dir.startsWith('ccs-module-')) continue;
+
+    const packageFile = join(appsDir, dir, 'package.json');
+    if (!existsSync(packageFile)) continue;
+
+    const pkg = JSON.parse(readFileSync(packageFile, 'utf8'));
+    const devScript = String(pkg.scripts?.dev ?? '');
+    const port = Number(devScript.match(/(?:^|\s)--port(?:=|\s+)(\d+)/)?.[1]);
+
+    if (Number.isInteger(port)) ports.add(port);
+  }
+
+  return ports;
+}
+
+function nextModuleDevPort(root: string, start = 5175) {
+  const usedPorts = readModuleDevPorts(root);
+  let port = start;
+
+  while (usedPorts.has(port)) port += 1;
+  return port;
+}
+
+function parsePort(value: string) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) throw new Error(`Invalid port: ${value}`);
+  return port;
+}
+
 create
   .command('module')
   .argument('<name>', 'module package name, e.g. ccs-module-order')
-  .option('-p, --port <port>', 'dev server port', '5175')
+  .option('-p, --port <port>', 'dev server port. Defaults to the next free port from 5175')
   .option('-t, --title <title>', 'module title')
-  .action((name: string, options: { port: string; title?: string }) => {
+  .action((name: string, options: { port?: string; title?: string }) => {
     const root = findRepoRoot();
     const kebab = toKebabCase(name);
     const title = options.title ?? titleFromName(kebab.replace(/^ccs-module-/, ''));
     const baseRoute = moduleBaseRoute(kebab);
-    const port = Number(options.port);
+    const usedPorts = readModuleDevPorts(root);
+    const port = options.port ? parsePort(options.port) : nextModuleDevPort(root);
     const target = join(root, 'apps', kebab);
 
     if (existsSync(target)) throw new Error(`${displayPath(target, root)} already exists`);
+    if (options.port && usedPorts.has(port)) throw new Error(`Port ${port} is already used by another ccs-module-* app.`);
 
     copyTemplate(join(root, 'templates', 'module-vue'), target, {
       __MODULE_NAME__: kebab,
@@ -40,19 +78,22 @@ create
       __MODULE_DEV_PORT__: String(port)
     });
 
-    insertBeforeMarker(
-      join(root, 'apps', 'ccs-framework', 'src', 'modules', 'registry.ts'),
-      '// ccs-cli:module',
-      `  createVueModuleManifest({
+    const registryFile = join(root, 'apps', 'ccs-framework', 'src', 'modules', 'registry.ts');
+    if (existsSync(registryFile)) {
+      insertBeforeMarker(
+        registryFile,
+        '// ccs-cli:module',
+        `  createVueModuleManifest({
     name: '${kebab}',
     title: '${title}',
     url: import.meta.env.DEV ? 'http://localhost:${port}' : '/${kebab}/',
     baseRoute: '${baseRoute}',
     devPort: ${port}
   }),`
-    );
+      );
+    }
 
-    console.log(`Created module ${kebab}`);
+    console.log(`Created module ${kebab} on dev port ${port}`);
   });
 
 create

@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "dev": "turbo run dev --parallel --filter=ccs-framework --filter=ccs-module-demo",
+    "dev": "turbo run dev --filter=ccs-framework --filter='ccs-module-*'",
     "build": "turbo run build",
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",

@@ -11,6 +11,7 @@ let app: VueApp | null = null;
 let disposeSync: (() => void) | undefined;
 let disposeRouteSync: (() => void) | undefined;
 const i18n = createI18n({ legacy: false, locale: 'zh-CN', fallbackLocale: 'zh-CN', messages: { 'zh-CN': resources['zh-CN'].translation, 'en-US': resources['en-US'].translation } as any });
+const initialIframeRoute = getIframeRoute();
 async function render() {
   const props = readWujieProps();
   await applyRuntimeProps(props);
@@ -52,9 +53,12 @@ if (window.__POWERED_BY_WUJIE__) {
 }
 
 /** Read the __ccs_route param used by the iframe fallback.
- *  It is passed via hash fragment (e.g. #__ccs_route=%2Fmodules%2Fdemo%2Fdashboard) */
+ *  It is passed via query string to avoid conflicting with Vue hash history. */
 function getIframeRoute(): string | undefined {
   try {
+    const queryRoute = new URLSearchParams(window.location.search).get('__ccs_route');
+    if (queryRoute) return queryRoute;
+
     const hash = window.location.hash;
     if (!hash || !hash.startsWith('#__ccs_route=')) return undefined;
     const encoded = hash.slice('#__ccs_route='.length);
@@ -70,7 +74,7 @@ function navigateToRoute(routePath?: string) {
     router.replace(target);
   } else if (!window.__POWERED_BY_WUJIE__) {
     // Check if launched via iframe fallback with a __ccs_route param
-    const iframeRoute = getIframeRoute();
+    const iframeRoute = initialIframeRoute ?? getIframeRoute();
     if (iframeRoute) {
       const target = iframeRoute.replace('/modules/demo', '') || '/dashboard';
       router.replace(target);

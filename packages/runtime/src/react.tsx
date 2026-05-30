@@ -41,15 +41,17 @@ export function syncLanguageToMicroApps(language: Language) {
 
 /** Build an iframe src URL that combines the app URL with the target route.
  *  Uses an absolute URL + explicit index.html to avoid any ambiguity
- *  in Capacitor's path resolution, and a hash fragment for the route
- *  so the server only ever sees the base path. */
+ *  in Capacitor's path resolution. The route is carried in query string
+ *  because iframe fallback uses Vue hash history internally. */
 function buildIframeSrc(appUrl: string, routePath: string): string {
   const pathOnly = routePath.startsWith('/') ? routePath : '/' + routePath;
   const base = (typeof window !== 'undefined' ? window.location.origin : '') + appUrl;
   // Explicitly target index.html so Capacitor's asset loader doesn't
   // need to resolve directory → index.html on its own
   const htmlUrl = base.endsWith('/') ? base + 'index.html' : base;
-  return `${htmlUrl}#__ccs_route=${encodeURIComponent(pathOnly)}`;
+  const url = new URL(htmlUrl);
+  url.searchParams.set('__ccs_route', pathOnly);
+  return url.toString();
 }
 
 export function MicroApp({ app, theme, language, routePath, user }: MicroAppProps) {
