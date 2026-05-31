@@ -6,8 +6,9 @@
         <h2>{{ $t('demoModule') }}</h2>
       </div>
       <nav>
-        <RouterLink to="/dashboard">{{ $t('analytics') }}</RouterLink
-        ><RouterLink to="/orders">{{ $t('orders') }}</RouterLink>
+        <RouterLink to="/">{{ $t('demoModule') }}</RouterLink>
+        <RouterLink to="/dashboard">{{ $t('demoDashboard') }}</RouterLink>
+        <!-- ccs-cli:nav -->
       </nav>
     </header>
     <RouterView />

@@ -58,15 +58,15 @@ function getIframeRoute(): string | undefined {
 
 function navigateToRoute(routePath?: string) {
   if (routePath && typeof routePath === 'string') {
-    const target = routePath.replace('/modules/demo', '') || '/dashboard';
+    const target = routePath.replace('/modules/demo', '') || '/';
     router.replace(target);
   } else {
     const iframeRoute = initialIframeRoute ?? getIframeRoute();
     if (iframeRoute) {
-      const target = iframeRoute.replace('/modules/demo', '') || '/dashboard';
+      const target = iframeRoute.replace('/modules/demo', '') || '/';
       router.replace(target);
       return;
     }
-    router.replace('/dashboard');
+    router.replace('/');
   }
 }

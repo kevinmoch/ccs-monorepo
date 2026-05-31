@@ -12,13 +12,15 @@ defineProps<{ title: string }>();
 </script>
 <style scoped>
 .ccs-card-shell {
+  height: 100%;
   min-height: 180px;
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
-  border-radius: 18px;
+  border-radius: 16px;
   background: color-mix(in srgb, var(--ccs-bg, #fff) 92%, white);
   color: var(--ccs-text, #0f172a);
   box-shadow: 0 12px 32px rgb(15 23 42 / 8%);
+  box-sizing: border-box;
 }
 .ccs-card-shell__header {
   display: flex;

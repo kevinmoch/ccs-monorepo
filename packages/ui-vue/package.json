@@ -12,6 +12,9 @@
     "build": "vue-tsc -p tsconfig.json --noEmit",
     "lint": "vue-tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@ccs/shared": "workspace:*"
+  },
   "peerDependencies": {
     "vue": ">=3.4.0"
   },

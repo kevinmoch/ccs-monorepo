@@ -1,1 +1,9 @@
-<template><section class="page-block"><h2>__PAGE_TITLE__</h2><CardGrid :cards="pageConfig.cards" :registry="cardRegistry" /></section></template><script setup lang="ts">import { CardGrid } from '@ccs/ui-vue'; import { cardRegistry } from '../../cards'; import pageConfig from './config';</script><style scoped>.page-block{display:grid;gap:18px}</style>
+<template>
+	<CardGrid :cards="pageConfig.cards" :registry="cardRegistry" />
+</template>
+
+<script setup lang="ts">
+import { CardGrid } from '@ccs/ui-vue';
+import { cardRegistry } from '../../cards';
+import pageConfig from './config';
+</script>

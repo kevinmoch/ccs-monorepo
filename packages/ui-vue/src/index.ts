@@ -1,7 +1,20 @@
 import type { Component } from 'vue';
+import type { Language } from '@ccs/shared';
+export type LocalizedText = string | Partial<Record<Language, string>>;
+export interface CardGridSpan {
+  base?: number;
+  md?: number;
+}
+export interface CardGridLayout {
+  colSpan?: CardGridSpan;
+  rowSpan?: number;
+}
 export interface CardDefinition {
   type: string;
-  title?: string;
+  title?: LocalizedText;
+  layout?: CardGridLayout;
+  colSpan?: CardGridSpan;
+  rowSpan?: number;
   props?: Record<string, unknown>;
 }
 export type CardRegistry = Record<string, Component>;

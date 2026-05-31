@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
-import DashboardPage from '../pages/dashboard/DashboardPage.vue';
+import HomePage from '../pages/home/HomePage.vue';
 
 function isIframe(): boolean {
 	try {
@@ -19,13 +19,12 @@ function detectBasePath(): string {
 
 const BASE = detectBasePath();
 const iframeMode = isIframe();
-const redirectTarget = iframeMode ? '/dashboard' : `${BASE}/dashboard`;
 
 const router = createRouter({
 	history: iframeMode ? createWebHashHistory(BASE) : createWebHistory(BASE),
 	routes: [
-		{ path: '/', redirect: redirectTarget },
-		{ path: '/dashboard', name: 'Dashboard', component: DashboardPage }, // ccs-cli:route
+		{ path: '/', name: 'Home', component: HomePage },
+		// ccs-cli:route
 	]
 });
 export default router;

@@ -41,7 +41,9 @@ export function insertBeforeMarker(file: string, marker: string, code: string) {
   const current = readFileSync(file, 'utf8');
   if (current.includes(code.trim())) return false;
   if (!current.includes(marker)) throw new Error(`Marker ${marker} not found in ${file}`);
-  writeTextFile(file, current.replace(marker, `${code}\n${marker}`));
+  const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const markerLine = current.match(new RegExp(`^[ \\t]*${escaped}`, 'm'))?.[0] ?? marker;
+  writeTextFile(file, current.replace(markerLine, `${code}\n${markerLine}`));
   return true;
 }
 

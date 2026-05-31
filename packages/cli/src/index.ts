@@ -54,6 +54,40 @@ function parsePort(value: string) {
   return port;
 }
 
+function moduleMenuMarker(moduleName: string) {
+  return `// ccs-cli:framework-page:${moduleName}`;
+}
+
+function insertFrameworkModuleMenu(root: string, moduleName: string, title: string) {
+  const menuFile = join(root, 'apps', 'ccs-framework', 'src', 'lib', 'menu6.ts');
+  if (!existsSync(menuFile)) return;
+
+  insertBeforeMarker(
+    menuFile,
+    '// ccs-cli:framework-module',
+    `        {
+          id: '${moduleName}',
+          title: isZh ? '${title}' : '${title}',
+          icon: HardHat,
+          children: [
+            { id: '${moduleName}-home', title: isZh ? '首页' : 'Home', url: '${moduleName}', icon: HardHat },
+            ${moduleMenuMarker(moduleName)}
+          ]
+        },`
+  );
+}
+
+function insertFrameworkPageMenu(root: string, moduleName: string, pageName: string, title: string) {
+  const menuFile = join(root, 'apps', 'ccs-framework', 'src', 'lib', 'menu6.ts');
+  if (!existsSync(menuFile)) return;
+
+  insertBeforeMarker(
+    menuFile,
+    moduleMenuMarker(moduleName),
+    `            { id: '${moduleName}-${pageName}', title: isZh ? '${title}' : '${title}', url: '${moduleName}/${pageName}', icon: LineChart },`
+  );
+}
+
 create
   .command('module')
   .argument('<name>', 'module package name, e.g. ccs-module-order')
@@ -78,20 +112,7 @@ create
       __MODULE_DEV_PORT__: String(port)
     });
 
-    const registryFile = join(root, 'apps', 'ccs-framework', 'src', 'modules', 'registry.ts');
-    if (existsSync(registryFile)) {
-      insertBeforeMarker(
-        registryFile,
-        '// ccs-cli:module',
-        `  createVueModuleManifest({
-    name: '${kebab}',
-    title: '${title}',
-    url: import.meta.env.DEV ? 'http://localhost:${port}' : '/${kebab}/',
-    baseRoute: '${baseRoute}',
-    devPort: ${port}
-  }),`
-      );
-    }
+    insertFrameworkModuleMenu(root, kebab, title);
 
     console.log(`Created module ${kebab} on dev port ${port}`);
   });
@@ -129,6 +150,14 @@ create
       component: () => import('../pages/${pageName}/${pascal}Page.vue')
     },`
     );
+
+    insertBeforeMarker(
+      join(root, 'apps', moduleName, 'src', 'App.vue'),
+      '<!-- ccs-cli:nav -->',
+      `\t\t\t\t<RouterLink to="/${pageName}">${title}</RouterLink>`
+    );
+
+    insertFrameworkPageMenu(root, moduleName, pageName, title);
 
     console.log(`Created page ${pageName} in ${moduleName}`);
   });

@@ -1,10 +1,19 @@
 <template>
-  <CcsCardShell :title="$t('userStat')"
-    ><div class="metric-value">{{ total.toLocaleString() }}</div>
-    <p class="metric-up">+{{ growth }}% MoM</p></CcsCardShell
-  >
+  <CcsCardShell :title="title">
+    <div class="metric-card">
+      <span>{{ label }}</span>
+      <strong>{{ value }}</strong>
+      <small>{{ trend }}</small>
+    </div>
+  </CcsCardShell>
 </template>
 <script setup lang="ts">
 import { CcsCardShell } from '@ccs/ui-vue';
-withDefaults(defineProps<{ total?: number; growth?: number }>(), { total: 0, growth: 0 });
+
+withDefaults(defineProps<{ title?: string; label?: string; value?: string | number; trend?: string }>(), {
+  title: 'User Stat',
+  label: 'Metric',
+  value: '--',
+  trend: ''
+});
 </script>

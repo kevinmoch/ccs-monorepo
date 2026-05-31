@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 const cardsArgIndex = process.argv.indexOf('--cards');
 const cards = cardsArgIndex >= 0 ? process.argv[cardsArgIndex + 1] : '';
 if (!cards) {
-  console.error('Usage: pnpm build:cards -- --cards user-stat,order-chart');
+  console.error('Usage: pnpm build:cards -- --cards user-stat');
   process.exit(1);
 }
 for (const card of cards

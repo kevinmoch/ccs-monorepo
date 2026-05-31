@@ -61,15 +61,15 @@ function getIframeRoute(): string | undefined {
 
 function navigateToRoute(routePath?: string) {
 	if (routePath && typeof routePath === 'string') {
-		const target = routePath.replace('__MODULE_BASE_ROUTE__', '') || '/dashboard';
+		const target = routePath.replace('__MODULE_BASE_ROUTE__', '') || '/';
 		router.replace(target);
 	} else {
 		const iframeRoute = initialIframeRoute ?? getIframeRoute();
 		if (iframeRoute) {
-			const target = iframeRoute.replace('__MODULE_BASE_ROUTE__', '') || '/dashboard';
+			const target = iframeRoute.replace('__MODULE_BASE_ROUTE__', '') || '/';
 			router.replace(target);
 			return;
 		}
-		router.replace('/dashboard');
+		router.replace('/');
 	}
 }

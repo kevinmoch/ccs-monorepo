@@ -13,6 +13,28 @@ body {
   min-height: 100%;
   color: var(--ccs-text, #0f172a);
 }
+.module-home {
+  min-height: 280px;
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ccs-bg, #fff) 92%, white);
+}
+.module-home p {
+  margin: 0;
+  color: color-mix(in srgb, var(--ccs-text, #0f172a) 58%, transparent);
+  font-weight: 700;
+}
+.module-home h1 {
+  margin: 0;
+  font-size: clamp(30px, 6vw, 48px);
+}
+.module-home span {
+  color: color-mix(in srgb, var(--ccs-text, #0f172a) 68%, transparent);
+}
 .module-header {
   display: flex;
   align-items: center;
@@ -45,25 +67,28 @@ body {
   font-size: clamp(34px, 5vw, 52px);
   font-weight: 800;
 }
+.metric-card {
+  min-height: 112px;
+  display: grid;
+  align-content: center;
+  gap: 10px;
+}
+.metric-card span {
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--ccs-text, #0f172a) 62%, transparent);
+}
+.metric-card strong {
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1;
+  color: var(--ccs-primary, #2563eb);
+}
+.metric-card small {
+  font-size: 13px;
+  font-weight: 700;
+  color: #16a34a;
+}
 .metric-up {
   margin: 12px 0 0;
   color: #16a34a;
-}
-.bars {
-  display: flex;
-  align-items: end;
-  height: 92px;
-  gap: 10px;
-}
-.bars span {
-  flex: 1;
-  min-width: 16px;
-  border-radius: 999px 999px 6px 6px;
-  background: linear-gradient(180deg, var(--ccs-primary, #2563eb), #93c5fd);
-}
-.todo-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding-left: 18px;
 }
