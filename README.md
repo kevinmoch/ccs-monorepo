@@ -1,6 +1,6 @@
 # CCS MonoRepo
 
-企业级微前端 MonoRepo：React 主应用作为 Portal，Vue3 子应用作为业务模块，Wujie 负责微前端调度，`ccs` CLI 负责模块、页面、卡片生成与多端构建。
+企业级微前端 MonoRepo：React 主应用作为 Portal，Vue3 子应用作为业务模块，iframe 负责模块嵌入与调度，`ccs` CLI 负责模块、页面、卡片生成与多端构建。
 
 ## 快速开始
 

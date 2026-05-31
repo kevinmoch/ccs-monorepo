@@ -13,8 +13,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ccs/shared": "workspace:*",
-    "wujie-react": "latest"
+    "@ccs/shared": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18",

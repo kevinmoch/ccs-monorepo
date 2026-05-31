@@ -1,17 +1,15 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
 import DashboardPage from '../pages/dashboard/DashboardPage.vue';
 
-function isPlainIframe(): boolean {
+function isIframe(): boolean {
 	try {
-		return !window.__POWERED_BY_WUJIE__ && window.top !== window.self;
+		return window.top !== window.self;
 	} catch {
 		return false;
 	}
 }
 
 function detectBasePath(): string {
-	if (window.__POWERED_BY_WUJIE__) return '__MODULE_BASE_ROUTE__';
-
 	const pathname = window.location.pathname;
 	if (pathname === '/') return '/';
 
@@ -20,7 +18,7 @@ function detectBasePath(): string {
 }
 
 const BASE = detectBasePath();
-const iframeMode = isPlainIframe();
+const iframeMode = isIframe();
 const redirectTarget = iframeMode ? '/dashboard' : `${BASE}/dashboard`;
 
 const router = createRouter({
