@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
@@ -8,7 +9,7 @@ const pascal = card
   .map((part) => part[0].toUpperCase() + part.slice(1))
   .join('');
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), tailwindcss()],
   build: {
     outDir: 'dist/cards',
     emptyOutDir: false,

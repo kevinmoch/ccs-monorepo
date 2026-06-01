@@ -15,6 +15,7 @@
     "@ccs/runtime": "workspace:*",
     "@ccs/shared": "workspace:*",
     "@ccs/ui-vue": "workspace:*",
+    "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-vue": "latest",
     "i18next": "latest",
     "pinia": "latest",
@@ -24,6 +25,7 @@
     "vue-router": "latest"
   },
   "devDependencies": {
+    "tailwindcss": "^4.1.14",
     "typescript": "latest",
     "vue-tsc": "latest"
   }

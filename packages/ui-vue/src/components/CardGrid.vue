@@ -75,7 +75,7 @@ function layoutStyle(card: CardDefinition): CSSProperties {
   display: grid;
   place-items: center;
   border: 1px dashed color-mix(in srgb, var(--ccs-text, #0f172a) 24%, transparent);
-  border-radius: 16px;
+  border-radius: var(--ccs-card-radius, 16px);
   color: color-mix(in srgb, var(--ccs-text, #0f172a) 62%, transparent);
 }
 @media (min-width: 768px) {

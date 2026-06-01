@@ -1,3 +1,8 @@
+@import "tailwindcss";
+@import "@ccs/shared/card.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
   margin: 0;
   font-family:
@@ -20,9 +25,10 @@ body {
   align-content: center;
   gap: 10px;
   padding: 24px;
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--ccs-bg, #fff) 92%, white);
+  border: var(--ccs-card-border-width) solid var(--ccs-card-border-color);
+  border-radius: var(--ccs-card-radius);
+  background: var(--ccs-card-background);
+  box-shadow: var(--ccs-card-shadow);
 }
 .module-home p {
   margin: 0;
