@@ -12,8 +12,8 @@
 import { CcsCardShell } from '@ccs/ui-vue';
 
 withDefaults(defineProps<{ title?: string; label?: string; value?: string | number; trend?: string }>(), {
-	title: 'User Stat',
-	label: 'user-stat',
+	title: 'Admin Stat',
+	label: 'admin-stat',
 	value: '--',
 	trend: ''
 });

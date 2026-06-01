@@ -13,14 +13,34 @@ pnpm build
 常用命令：
 
 ```bash
-pnpm ccs create module ccs-module-order
-pnpm ccs create page dashboard --module ccs-module-order
-pnpm ccs create card user-stat --module ccs-module-order
-pnpm ccs build cards user-stat,order-chart --module ccs-module-order
+pnpm ccs create module ccs-module-demo
+pnpm ccs create page user --module ccs-module-demo
+pnpm ccs create card user-stat --module ccs-module-demo
+pnpm ccs create page admin --module ccs-module-demo
+pnpm ccs create card admin-stat --module ccs-module-demo
+
+pnpm install
+pnpm dev
+
+pnpm ccs build cards user-stat,admin-chart --module ccs-module-order
 pnpm ccs build web
 pnpm ccs build electron
 pnpm ccs build android
-pnpm ccs build uniapp-weixin
+```
+
+配置菜单项示例：
+
+```json
+{
+  id: 'ccs-module-demo',
+  title: isZh ? '子模块示例' : 'Submodule Demo',
+  icon: HardHat,
+  children: [
+    { id: 'ccs-module-demo-home', title: isZh ? '首页' : 'Home', url: 'ccs-module-demo', icon: Shield },
+    { id: 'ccs-module-demo-user', title: isZh ? '用户' : 'User', url: 'ccs-module-order/user', icon: Users },
+    { id: 'ccs-module-demo-admin', title: isZh ? '管理' : 'Admin', url: 'ccs-module-order/admin', icon: LineChart },
+  ]
+}
 ```
 
 Android APK 构建使用 DCloud 官方 Android 离线 SDK 工程，依赖 JDK、Android SDK、官方离线工程、DCloud 离线打包 AppKey 和签名证书：

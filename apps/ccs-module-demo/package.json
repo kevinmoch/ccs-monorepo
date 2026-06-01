@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5174",
+    "dev": "vite --host 0.0.0.0 --port 5175",
     "build": "vue-tsc -p tsconfig.json --noEmit && vite build",
     "build:cards": "node scripts/build-cards.mjs",
-    "preview": "vite preview --port 4174",
+    "preview": "vite preview",
     "lint": "vue-tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist .ccs-card-build"
   },
