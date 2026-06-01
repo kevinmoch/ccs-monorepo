@@ -14,9 +14,9 @@ pnpm build
 
 ```bash
 pnpm ccs create module ccs-module-order
-pnpm ccs create page dashboard --module ccs-module-demo
-pnpm ccs create card user-stat --module ccs-module-demo
-pnpm ccs build cards user-stat,order-chart --module ccs-module-demo
+pnpm ccs create page dashboard --module ccs-module-order
+pnpm ccs create card user-stat --module ccs-module-order
+pnpm ccs build cards user-stat,order-chart --module ccs-module-order
 pnpm ccs build web
 pnpm ccs build electron
 pnpm ccs build android

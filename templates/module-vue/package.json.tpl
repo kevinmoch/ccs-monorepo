@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0 --port __MODULE_DEV_PORT__",
     "build": "vue-tsc -p tsconfig.json --noEmit && vite build",
     "build:cards": "node scripts/build-cards.mjs",
-    "preview": "vite preview --port 4174",
+    "preview": "vite preview",
     "lint": "vue-tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist .ccs-card-build"
   },

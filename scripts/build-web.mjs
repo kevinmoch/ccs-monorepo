@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const root = process.cwd();
 const appsDir = join(root, 'apps');
 const distWebDir = join(root, 'dist', 'web');
-const builds = [{ name: 'ccs-framework', outDir: distWebDir, base: '/' }];
+const builds = [{ name: 'ccs-framework', outDir: distWebDir, base: '/', scripts: {} }];
 
 for (const dir of readdirSync(appsDir)) {
   if (!dir.startsWith('ccs-module-')) continue;
@@ -15,7 +15,8 @@ for (const dir of readdirSync(appsDir)) {
   builds.push({
     name: pkg.name ?? dir,
     outDir: join(distWebDir, dir),
-    base: `/${dir}/`
+    base: `/${dir}/`,
+    scripts: pkg.scripts ?? {}
   });
 }
 
@@ -35,6 +36,20 @@ for (const build of builds) {
     }
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
+
+  if (build.scripts['build:cards']) {
+    console.log(`\n[ccs] build ${build.name} cards -> ${join(build.outDir, 'cards')}`);
+    const cardsResult = spawnSync('pnpm', ['--filter', build.name, 'build:cards'], {
+      cwd: root,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+      env: {
+        ...process.env,
+        CCS_CARD_OUT_DIR: join(build.outDir, 'cards')
+      }
+    });
+    if (cardsResult.status !== 0) process.exit(cardsResult.status ?? 1);
+  }
 }
 
 console.log(`\n[ccs] web build output: ${distWebDir}`);

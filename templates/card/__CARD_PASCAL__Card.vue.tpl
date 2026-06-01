@@ -1,6 +1,6 @@
 <template>
 	<CcsCardShell :title="title">
-		<div class="generated-card">
+		<div class="metric-card">
 			<span>{{ label }}</span>
 			<strong>{{ value }}</strong>
 			<small>{{ trend }}</small>
@@ -18,27 +18,3 @@ withDefaults(defineProps<{ title?: string; label?: string; value?: string | numb
 	trend: ''
 });
 </script>
-
-<style scoped>
-.generated-card {
-	display: grid;
-	align-content: center;
-	gap: 10px;
-	min-height: 112px;
-}
-.generated-card span {
-	font-size: 12px;
-	font-weight: 700;
-	color: color-mix(in srgb, var(--ccs-text, #0f172a) 62%, transparent);
-}
-.generated-card strong {
-	font-size: clamp(30px, 5vw, 46px);
-	line-height: 1;
-	color: var(--ccs-primary, #2563eb);
-}
-.generated-card small {
-	font-size: 13px;
-	font-weight: 700;
-	color: #16a34a;
-}
-</style>
