@@ -11,6 +11,7 @@ body {
 }
 .module-shell {
   min-height: 100%;
+  padding: 1rem;
   color: var(--ccs-text, #0f172a);
 }
 .module-home {

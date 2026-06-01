@@ -1,3 +1,5 @@
 <template>
-	<RouterView />
+  <div class="module-shell">
+    <RouterView />
+  </div>
 </template>
