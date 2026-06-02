@@ -50,6 +50,9 @@ type MapLink = {
 	label: string;
 };
 
+const CAPACITOR_LOCATION_TIMEOUT = 16000;
+const BROWSER_LOCATION_TIMEOUT = 20000;
+
 const runtimeOptions: RuntimeInfo[] = [
 	{
 		kind: 'web',
@@ -60,14 +63,14 @@ const runtimeOptions: RuntimeInfo[] = [
 	{
 		kind: 'electron',
 		label: 'Windows 应用',
-		strategy: 'Electron 授权本地应用后调用 Chromium Geolocation',
+		strategy: 'Electron 授权 Chromium Geolocation，地图用默认浏览器打开 Bing',
 		accuracy: '优先系统位置服务和 Wi-Fi/IP 辅助定位'
 	},
 	{
 		kind: 'android',
 		label: '安卓应用',
-		strategy: 'Capacitor Geolocation 原生插件 + Android 精确定位权限',
-		accuracy: '优先 GPS 高精度定位，失败时回退 WebView 定位'
+		strategy: 'Capacitor 原生定位 + 外层超时保护，地图用浏览器打开 Bing',
+		accuracy: '优先 GPS 高精度定位，超时或异常时回退 WebView 定位'
 	}
 ];
 
@@ -191,13 +194,8 @@ async function openMapLocation() {
 			await AppLauncher.openUrl({ url: mapLink.value.href });
 			return;
 		} catch {
-			try {
-				await AppLauncher.openUrl({ url: mapLink.value.fallbackHref });
-				return;
-			} catch {
-				openExternalLink(mapLink.value.fallbackHref);
-				return;
-			}
+			openExternalLink(mapLink.value.fallbackHref);
+			return;
 		}
 	}
 
@@ -216,21 +214,23 @@ async function openMapLocation() {
 		return;
 	}
 
-	// Web: use openExternalLink — called from an <a> with @click.prevent,
-	// so only our window.open runs.
 	openExternalLink(mapLink.value.href);
 }
 
 async function locate(): Promise<LocationFix> {
 	if (runtime.kind === 'android') {
 		try {
-			return await locateWithCapacitor();
+			return await withTimeout(
+				locateWithCapacitor(),
+				CAPACITOR_LOCATION_TIMEOUT,
+				'Android 原生定位超时，已切换到 WebView 定位'
+			);
 		} catch (error) {
 			console.warn('Capacitor geolocation failed, falling back to browser geolocation.', error);
 		}
 	}
 
-	return locateWithBrowser(runtime.kind === 'electron' ? 25000 : 18000);
+	return locateWithBrowser(runtime.kind === 'electron' ? 25000 : BROWSER_LOCATION_TIMEOUT);
 }
 
 async function locateWithCapacitor(): Promise<LocationFix> {
@@ -265,7 +265,7 @@ function locateWithBrowser(timeout: number): Promise<LocationFix> {
 					position.coords.longitude,
 					position.coords.accuracy,
 					position.timestamp,
-					runtime.kind === 'electron' ? 'Windows 系统定位' : '浏览器定位'
+					getBrowserLocationProvider()
 				));
 			},
 			(error) => reject(error),
@@ -287,31 +287,18 @@ function normalizePosition(latitude: number, longitude: number, accuracy: number
 function buildMapLink(location: LocationFix): MapLink {
 	const latitude = location.latitude.toFixed(6);
 	const longitude = location.longitude.toFixed(6);
-	const label = '考勤打卡位置';
 	const bingWebUrl = new URL('https://www.bing.com/maps');
 	bingWebUrl.searchParams.set('q', `${latitude},${longitude}`);
+	const href = bingWebUrl.toString();
+	const label = runtime.kind === 'web' ? '在 Bing 地图中查看' : '在浏览器中查看地图';
 
-	if (runtime.kind === 'android') {
-		return {
-			href: `geo:${latitude},${longitude}?q=${latitude},${longitude}(${encodeURIComponent(label)})`,
-			fallbackHref: bingWebUrl.toString(),
-			label: '在地图 App 中查看'
-		};
-	}
+	return { href, fallbackHref: href, label };
+}
 
-	if (runtime.kind === 'electron') {
-		return {
-			href: `bingmaps:?cp=${latitude}~${longitude}&lvl=18&collection=point.${latitude}_${longitude}_${encodeURIComponent(label)}`,
-			fallbackHref: bingWebUrl.toString(),
-			label: '在 Windows 地图中查看'
-		};
-	}
-
-	return {
-		href: bingWebUrl.toString(),
-		fallbackHref: bingWebUrl.toString(),
-		label: '在 Bing 地图中查看'
-	};
+function getBrowserLocationProvider() {
+	if (runtime.kind === 'electron') return 'Windows 系统定位';
+	if (runtime.kind === 'android') return 'Android WebView 定位';
+	return '浏览器定位';
 }
 
 function openExternalLink(url: string) {
@@ -327,6 +314,22 @@ function openExternalLink(url: string) {
 
 	// All popup attempts failed — keep the user on this page.
 	// The link is still available for right-click / copy.
+}
+
+function withTimeout<T>(promise: Promise<T>, timeout: number, message: string): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const timer = window.setTimeout(() => reject(new Error(message)), timeout);
+		promise.then(
+			(value) => {
+				window.clearTimeout(timer);
+				resolve(value);
+			},
+			(error) => {
+				window.clearTimeout(timer);
+				reject(error);
+			}
+		);
+	});
 }
 
 function detectRuntime(): RuntimeInfo {
