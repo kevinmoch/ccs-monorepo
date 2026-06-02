@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { AppLauncher } from '@capacitor/app-launcher';
+import { Browser } from '@capacitor/browser';
 import { Geolocation } from '@capacitor/geolocation';
 
 type PunchType = 'checkIn' | 'checkOut';
@@ -69,7 +69,7 @@ const runtimeOptions: RuntimeInfo[] = [
 	{
 		kind: 'android',
 		label: '安卓应用',
-		strategy: 'Capacitor 原生定位 + 外层超时保护，地图用浏览器打开 Bing',
+		strategy: 'Capacitor 原生定位 + 外层超时保护，地图用系统浏览器能力打开 Bing',
 		accuracy: '优先 GPS 高精度定位，超时或异常时回退 WebView 定位'
 	}
 ];
@@ -191,10 +191,10 @@ async function openMapLocation() {
 
 	if (runtime.kind === 'android') {
 		try {
-			await AppLauncher.openUrl({ url: mapLink.value.href });
+			await Browser.open({ url: mapLink.value.href });
 			return;
 		} catch {
-			openExternalLink(mapLink.value.fallbackHref);
+			window.location.assign(mapLink.value.fallbackHref);
 			return;
 		}
 	}
@@ -302,18 +302,7 @@ function getBrowserLocationProvider() {
 }
 
 function openExternalLink(url: string) {
-	const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-	if (newWindow) return;
-
-	try {
-		const topWindow = window.top?.open(url, '_blank', 'noopener,noreferrer') ?? null;
-		if (topWindow) return;
-	} catch {
-		// Cross-origin top is inaccessible; do nothing.
-	}
-
-	// All popup attempts failed — keep the user on this page.
-	// The link is still available for right-click / copy.
+	window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function withTimeout<T>(promise: Promise<T>, timeout: number, message: string): Promise<T> {
