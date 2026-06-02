@@ -14,6 +14,7 @@
     "build:uniapp-ios": "node scripts/build-uniapp.mjs ios",
     "build:uniapp-android": "node scripts/build-uniapp.mjs android",
     "build:uniapp-harmony": "node scripts/build-uniapp.mjs harmony",
+    "preview": "node scripts/preview-ssl.mjs",
     "lint": "turbo run lint",
     "test": "vitest run",
     "ccs": "pnpm --filter @ccs/cli ccs",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "tsx": "latest",
     "turbo": "latest",
     "typescript": "latest",
