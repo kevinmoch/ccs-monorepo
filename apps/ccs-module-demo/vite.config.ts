@@ -10,7 +10,7 @@ export default defineConfig(({ command }) => ({
   plugins: [vue(), tailwindcss()],
   base: process.env.CCS_WEB_BASE ?? (command === 'serve' ? `/${moduleName}/` : '/'),
   server: {
-    port: 5175,
+    port: 5173,
     host: '0.0.0.0',
     cors: true,
     headers: { 'Access-Control-Allow-Origin': '*' },

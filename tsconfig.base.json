@@ -18,9 +18,7 @@
     "paths": {
       "@ccs/shared": ["packages/shared/src/index.ts"],
       "@ccs/runtime": ["packages/runtime/src/index.ts"],
-      "@ccs/runtime/react": ["packages/runtime/src/react.tsx"],
       "@ccs/runtime/vue": ["packages/runtime/src/vue.ts"],
-      "@ccs/ui-react": ["packages/ui-react/src/index.tsx"],
       "@ccs/ui-vue": ["packages/ui-vue/src/index.ts"],
       "@ccs/ui-vue/*": ["packages/ui-vue/src/*"]
     }

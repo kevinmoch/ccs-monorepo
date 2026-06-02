@@ -40,7 +40,7 @@ function readModuleDevPorts(root: string) {
   return ports;
 }
 
-function nextModuleDevPort(root: string, start = 5175) {
+function nextModuleDevPort(root: string, start = 5174) {
   const usedPorts = readModuleDevPorts(root);
   let port = start;
 
