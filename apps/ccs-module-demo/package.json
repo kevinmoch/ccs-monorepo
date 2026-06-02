@@ -12,6 +12,8 @@
     "clean": "rm -rf dist .ccs-card-build"
   },
   "dependencies": {
+    "@capacitor/app-launcher": "^6.0.4",
+    "@capacitor/geolocation": "^6.1.1",
     "@ccs/runtime": "workspace:*",
     "@ccs/shared": "workspace:*",
     "@ccs/ui-vue": "workspace:*",
