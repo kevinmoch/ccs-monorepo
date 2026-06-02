@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Browser } from '@capacitor/browser';
 import { Geolocation } from '@capacitor/geolocation';
 
 type PunchType = 'checkIn' | 'checkOut';
@@ -190,13 +189,16 @@ async function openMapLocation() {
 	if (!mapLink.value) return;
 
 	if (runtime.kind === 'android') {
+		// Capacitor's shouldOverrideUrlLoading intercepts external-URL navigations on
+		// the main frame and opens the system browser without navigating the WebView.
+		// Navigate window.top so this works even when running inside an iframe
+		// (the Capacitor bridge is only injected into the main frame).
 		try {
-			await Browser.open({ url: mapLink.value.href });
-			return;
+			(window.top ?? window).location.assign(mapLink.value.href);
 		} catch {
-			window.location.assign(mapLink.value.fallbackHref);
-			return;
+			window.location.assign(mapLink.value.href);
 		}
+		return;
 	}
 
 	if (runtime.kind === 'electron') {
@@ -325,8 +327,23 @@ function detectRuntime(): RuntimeInfo {
 	const capacitor = (window as Window & { Capacitor?: CapacitorBridge }).Capacitor;
 	const electron = (window as Window & { ccsElectron?: ElectronBridge }).ccsElectron;
 
+	// When running inside an iframe the Capacitor bridge is only injected into the
+	// main frame. Check window.top to detect the native runtime even from an iframe.
+	let topCapacitor: CapacitorBridge | undefined;
+	if (window !== window.top) {
+		try {
+			topCapacitor = (window.top as Window & { Capacitor?: CapacitorBridge } | null)?.Capacitor;
+		} catch {
+			// Cross-origin top frame — inaccessible.
+		}
+	}
+
+	const resolvedCapacitor = capacitor ?? topCapacitor;
 	try {
-		if (capacitor?.getPlatform?.() === 'android' || (capacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent))) {
+		if (
+			resolvedCapacitor?.getPlatform?.() === 'android' ||
+			(resolvedCapacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
+		) {
 			return runtimeOptions[2];
 		}
 	} catch {
@@ -334,7 +351,12 @@ function detectRuntime(): RuntimeInfo {
 	}
 
 	if (electron?.platform || /Electron/i.test(navigator.userAgent)) return runtimeOptions[1];
-	if (window.location.protocol === 'https:' && window.location.hostname === 'localhost' && /Android/i.test(navigator.userAgent)) return runtimeOptions[2];
+	// Capacitor serves from http://localhost (not https), so match both protocols.
+	if (
+		(window.location.protocol === 'http:' || window.location.protocol === 'https:')
+		&& window.location.hostname === 'localhost'
+		&& /Android/i.test(navigator.userAgent)
+	) return runtimeOptions[2];
 	return runtimeOptions[0];
 }
 
