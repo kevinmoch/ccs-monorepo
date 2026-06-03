@@ -1,0 +1,58 @@
+[
+  {
+    "id": "safety-handbook-image",
+    "title": "安全文明施工图示",
+    "category": "现场管理",
+    "fileType": "image",
+    "mimeType": "image/png",
+    "url": "/documents/safety-handbook.png",
+    "size": 7340032,
+    "etag": "demo-image-v1",
+    "lastModified": "Wed, 03 Jun 2026 02:00:00 GMT",
+    "updatedAt": "2026-06-03T02:00:00.000Z",
+    "allowOffline": true,
+    "description": "施工现场安全文明标准图示，适合移动端离线查看。"
+  },
+  {
+    "id": "contract-template-pdf",
+    "title": "合同评审操作手册",
+    "category": "合同管理",
+    "fileType": "pdf",
+    "mimeType": "application/pdf",
+    "url": "/documents/contract-review.pdf",
+    "size": 52428800,
+    "etag": "demo-pdf-v1",
+    "lastModified": "Wed, 03 Jun 2026 02:30:00 GMT",
+    "updatedAt": "2026-06-03T02:30:00.000Z",
+    "allowOffline": true,
+    "description": "合同评审流程、节点说明和常见问题。"
+  },
+  {
+    "id": "docx-process-guide",
+    "title": "流程制度说明 DOCX",
+    "category": "制度文档",
+    "fileType": "docx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "url": "/documents/process-guide.docx",
+    "size": 18874368,
+    "etag": "demo-docx-v1",
+    "lastModified": "Wed, 03 Jun 2026 03:00:00 GMT",
+    "updatedAt": "2026-06-03T03:00:00.000Z",
+    "allowOffline": true,
+    "description": "DOCX 文档离线缓存后可在查看区解析预览。"
+  },
+  {
+    "id": "xlsx-cost-ledger",
+    "title": "成本台账 XLSX",
+    "category": "成本管理",
+    "fileType": "xlsx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "url": "/documents/cost-ledger.xlsx",
+    "size": 41943040,
+    "etag": "demo-xlsx-v1",
+    "lastModified": "Wed, 03 Jun 2026 03:30:00 GMT",
+    "updatedAt": "2026-06-03T03:30:00.000Z",
+    "allowOffline": true,
+    "description": "XLSX 文件离线缓存后展示工作表前 80 行预览。"
+  }
+]
