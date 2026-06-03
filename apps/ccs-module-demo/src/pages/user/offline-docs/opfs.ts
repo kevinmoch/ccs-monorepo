@@ -242,7 +242,7 @@ export async function downloadDocumentToOpfs(
 	const localName = getLocalFileName(document);
 	const fileHandle = await docsDir.getFileHandle(localName, { create: true });
 	const previous = await getDocumentMeta(document.id);
-	let startByte = options.force ? 0 : Math.max(previous?.partialBytes ?? 0, await getFileSize(fileHandle));
+	let startByte = getResumeStartByte(previous, localName, options.force, await getFileSize(fileHandle));
 	const requestHeaders = new Headers();
 	if (startByte > 0) requestHeaders.set('Range', `bytes=${startByte}-`);
 
@@ -361,10 +361,16 @@ function isAndroidNative() {
 		return Capacitor.getPlatform?.() === 'android'
 			|| topCapacitor?.getPlatform?.() === 'android'
 			|| (Capacitor.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
-			|| (topCapacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent));
+			|| (topCapacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
+			|| isAndroidWebViewHost();
 	} catch {
-		return false;
+		return isAndroidWebViewHost();
 	}
+}
+
+function isAndroidWebViewHost() {
+	return /Android/i.test(navigator.userAgent)
+		&& (window.location.protocol === 'https:' || window.location.protocol === 'capacitor:' || window.location.hostname === 'localhost');
 }
 
 function getTopCapacitor(): Pick<typeof Capacitor, 'getPlatform' | 'isNativePlatform'> | undefined {
@@ -497,7 +503,7 @@ async function downloadDocumentWithAndroid(
 	const localName = getLocalFileName(document);
 	const localPath = getAndroidDocPath(localName);
 	const previous = await getAndroidDocumentMeta(document.id);
-	let startByte = options.force ? 0 : Math.max(previous?.partialBytes ?? 0, await getAndroidFileSize(localPath));
+	let startByte = getResumeStartByte(previous, localName, options.force, await getAndroidFileSize(localPath));
 	const requestHeaders = new Headers();
 	if (startByte > 0) requestHeaders.set('Range', `bytes=${startByte}-`);
 
@@ -696,7 +702,7 @@ function androidFilesystem<T = unknown>(method: AndroidFilesystemMethod, args: R
 }
 
 function shouldUseParentAndroidFilesystemBridge() {
-	return window !== window.top && Boolean(getTopCapacitor());
+	return window !== window.top && isAndroidNative();
 }
 
 async function getRootDirectory(): Promise<FileSystemDirectoryHandle> {
@@ -750,6 +756,12 @@ async function getMetadataBytes(): Promise<number> {
 function getLocalFileName(document: OfflineDocument) {
 	const extension = getFileExtension(document.url) || document.fileType;
 	return `${sanitizeFileName(document.id)}.${extension}`;
+}
+
+function getResumeStartByte(previous: CachedDocumentMeta | undefined, localName: string, force = false, existingBytes = 0) {
+	if (force || !previous || previous.localName !== localName) return 0;
+	if (previous.status !== 'failed' && previous.status !== 'downloading') return 0;
+	return Math.max(previous.partialBytes, existingBytes);
 }
 
 function getMetaName(id: string) {

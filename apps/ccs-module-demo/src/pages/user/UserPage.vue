@@ -173,7 +173,8 @@ function getDocumentStatus(document: OfflineDocument, meta?: CachedDocumentMeta)
 }
 
 function isCacheSizeMismatch(document: OfflineDocument, meta?: CachedDocumentMeta) {
-	return Boolean(document.size && meta?.status === 'offline' && meta.cachedBytes > 0 && meta.cachedBytes !== document.size);
+	const expectedBytes = meta?.serverSize ?? document.size;
+	return Boolean(expectedBytes && meta?.status === 'offline' && meta.cachedBytes > 0 && meta.cachedBytes !== expectedBytes);
 }
 
 async function cacheDocument(document: OfflineDocument, force = false) {
@@ -252,13 +253,14 @@ async function renderPreview(document: OfflineDocument, source: ViewerSource) {
 	if (document.fileType === 'image' || document.fileType === 'doc' || document.fileType === 'xls') return;
 
 	try {
-		const blob = source.blob ?? await fetchSourceBlob(source, document);
-		const arrayBuffer = await blob.arrayBuffer();
-
 		if (document.fileType === 'pdf') {
-			await renderPdfPreview(arrayBuffer);
+			if (!source.blob && source.url) await renderPdfPreviewFromUrl(source.url);
+			else await renderPdfPreviewFromArrayBuffer(await (source.blob ?? await fetchSourceBlob(source, document)).arrayBuffer());
 			return;
 		}
+
+		const blob = source.blob ?? await fetchSourceBlob(source, document);
+		const arrayBuffer = await blob.arrayBuffer();
 
 		if (document.fileType === 'docx') {
 			const mammoth = await import('mammoth');
@@ -280,14 +282,22 @@ async function renderPreview(document: OfflineDocument, source: ViewerSource) {
 	}
 }
 
-async function renderPdfPreview(arrayBuffer: ArrayBuffer) {
+async function renderPdfPreviewFromArrayBuffer(arrayBuffer: ArrayBuffer) {
+	await renderPdfPreview({ data: arrayBuffer });
+}
+
+async function renderPdfPreviewFromUrl(url: string) {
+	await renderPdfPreview({ url, withCredentials: false });
+}
+
+async function renderPdfPreview(source: { data: ArrayBuffer } | { url: string; withCredentials: boolean }) {
 	const [pdfjs, worker] = await Promise.all([
 		import('pdfjs-dist'),
 		import('pdfjs-dist/build/pdf.worker.mjs?url')
 	]);
 	pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
 
-	const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+	const pdf = await pdfjs.getDocument(source).promise;
 	const renderedPages: PdfPagePreview[] = [];
 	for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
 		const page = await pdf.getPage(pageNumber);

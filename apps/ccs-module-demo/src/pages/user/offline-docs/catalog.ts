@@ -35,8 +35,21 @@ function normalizeDocuments(documents: OfflineDocument[]): OfflineDocument[] {
 }
 
 function normalizeDocumentUrl(url: string) {
-	if (/^https?:\/\//i.test(url)) return url;
+	if (/^https?:\/\//i.test(url)) return normalizeAbsoluteDocumentUrl(url);
 	return new URL(stripDocumentsPrefix(url), documentsSiteUrl).toString();
+}
+
+function normalizeAbsoluteDocumentUrl(url: string) {
+	const configuredBaseUrl = import.meta.env.VITE_CCS_DOCS_BASE_URL as string | undefined;
+	if (!configuredBaseUrl && !isAndroidNativeShell()) return url;
+
+	try {
+		const source = new URL(url);
+		if (!configuredBaseUrl && source.port !== '8080') return url;
+		return new URL(stripDocumentsPrefix(`${source.pathname}${source.search}`), documentsSiteUrl).toString();
+	} catch {
+		return url;
+	}
 }
 
 function normalizeSiteBaseUrl(url: string | undefined) {
@@ -49,11 +62,16 @@ function normalizeSiteBaseUrl(url: string | undefined) {
 }
 
 function getDefaultDocumentsSiteUrl() {
-	if (/Android/i.test(navigator.userAgent)) return 'http://10.0.2.2:8080/';
+	if (isAndroidNativeShell()) return 'http://10.0.2.2:8080/';
 	if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
 		return `${window.location.protocol}//${window.location.hostname}:8080/`;
 	}
 	return 'http://127.0.0.1:8080/';
+}
+
+function isAndroidNativeShell() {
+	return /Android/i.test(navigator.userAgent)
+		&& (window.location.protocol === 'https:' || window.location.protocol === 'capacitor:' || window.location.hostname === 'localhost');
 }
 
 function stripDocumentsPrefix(url: string) {
