@@ -26,14 +26,11 @@ const metaMap = ref<Map<string, CachedDocumentMeta>>(new Map());
 const progressMap = ref<Map<string, DownloadProgress>>(new Map());
 const selectedId = ref('');
 const checkedIds = ref<string[]>([]);
-const query = ref('');
-const categoryFilter = ref('全部');
-const statusFilter = ref<'全部' | DocumentStatus>('全部');
 const isOnline = ref(navigator.onLine);
 const isLoading = ref(true);
 const isCheckingUpdates = ref(false);
 const pageMessage = ref('');
-const viewerSource = ref<ViewerSource>({ kind: 'unavailable', message: '请选择左侧文档' });
+const viewerSource = ref<ViewerSource>({ kind: 'unavailable', message: '请选择文档列表里的文档来查看' });
 const viewerFileType = ref<DocumentFileType | 'empty'>('empty');
 const viewerLoading = ref(false);
 const viewerError = ref('');
@@ -44,8 +41,6 @@ const stats = ref<StorageStats>({ usedBytes: 0, cachedBytes: 0, partialBytes: 0,
 
 let activeObjectUrl: string | undefined;
 
-const categories = computed(() => ['全部', ...Array.from(new Set(documents.value.map((document) => document.category)))]);
-
 const documentRows = computed(() => documents.value.map((document) => {
 	const progress = progressMap.value.get(document.id);
 	const meta = metaMap.value.get(document.id);
@@ -53,15 +48,7 @@ const documentRows = computed(() => documents.value.map((document) => {
 	return { document, meta, status, progress };
 }));
 
-const filteredRows = computed(() => {
-	const keyword = query.value.trim().toLowerCase();
-	return documentRows.value.filter(({ document, status }) => {
-		const matchesKeyword = !keyword || `${document.title} ${document.category} ${document.description ?? ''}`.toLowerCase().includes(keyword);
-		const matchesCategory = categoryFilter.value === '全部' || document.category === categoryFilter.value;
-		const matchesStatus = statusFilter.value === '全部' || status === statusFilter.value;
-		return matchesKeyword && matchesCategory && matchesStatus;
-	});
-});
+const filteredRows = computed(() => documentRows.value);
 
 const selectedDocument = computed(() => documents.value.find((document) => document.id === selectedId.value));
 const selectedMeta = computed(() => selectedId.value ? metaMap.value.get(selectedId.value) : undefined);
@@ -71,16 +58,21 @@ const totalSelectedBytes = computed(() => checkedIds.value.reduce((total, id) =>
 	return total + (meta?.cachedBytes ?? 0) + (meta?.partialBytes ?? 0);
 }, 0));
 
+const measuredQuotaBytes = computed(() => {
+	const quota = stats.value.quotaBytes;
+	return typeof quota === 'number' && Number.isFinite(quota) && quota > 0 ? quota : undefined;
+});
+
 const storagePercent = computed(() => {
 	const used = stats.value.usageBytes ?? stats.value.usedBytes;
-	const quota = stats.value.quotaBytes;
+	const quota = measuredQuotaBytes.value;
 	if (!quota || quota <= 0) return 0;
 	return Math.min(100, Math.round((used / quota) * 1000) / 10);
 });
 
 const pressureLabel = computed(() => {
 	if (!stats.value.opfsAvailable) return 'OPFS 不可用';
-	if (!stats.value.quotaBytes) return '等待浏览器估算';
+	if (!measuredQuotaBytes.value) return '空间监测中';
 	if (storagePercent.value >= 92) return '空间紧张';
 	if (storagePercent.value >= APP_WATERMARK_RATIO * 100) return '接近建议水位';
 	return '空间正常';
@@ -104,8 +96,9 @@ async function initializePage() {
 		documents.value = await loadDocumentCatalog();
 		if (isOpfsAvailable()) await writeCatalogSnapshot(documents.value);
 		await refreshMetadata();
-		selectedId.value = documents.value[0]?.id ?? '';
-		if (selectedDocument.value) await openDocument(selectedDocument.value);
+		selectedId.value = '';
+		viewerSource.value = { kind: 'unavailable', message: '请选择文档列表里的文档来查看' };
+		viewerFileType.value = 'empty';
 	} catch (error) {
 		pageMessage.value = normalizeError(error);
 	} finally {
@@ -349,13 +342,16 @@ function normalizeError(error: unknown) {
 				<span>OPFS 大文件缓存 · {{ isOnline ? '在线' : '离线' }} · {{ pressureLabel }}</span>
 			</div>
 			<div class="hero-metrics">
+				<button type="button" class="hero-update-button" :disabled="isCheckingUpdates" @click="checkUpdates">
+					{{ isCheckingUpdates ? '检查中' : '检查更新' }}
+				</button>
 				<div>
 					<span>已用空间</span>
 					<strong>{{ formatBytes(stats.usageBytes ?? stats.usedBytes) }}</strong>
 				</div>
-				<div>
+				<div v-if="measuredQuotaBytes">
 					<span>浏览器配额</span>
-					<strong>{{ stats.quotaBytes ? formatBytes(stats.quotaBytes) : '估算中' }}</strong>
+					<strong>{{ formatBytes(measuredQuotaBytes) }}</strong>
 				</div>
 				<div>
 					<span>OPFS</span>
@@ -363,33 +359,6 @@ function normalizeError(error: unknown) {
 				</div>
 			</div>
 		</header>
-
-		<div class="doc-toolbar">
-			<label class="search-box">
-				<span>搜索</span>
-				<input v-model="query" type="search" placeholder="文档名称、分类或描述" />
-			</label>
-			<label>
-				<span>分类</span>
-				<select v-model="categoryFilter">
-					<option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
-				</select>
-			</label>
-			<label>
-				<span>状态</span>
-				<select v-model="statusFilter">
-					<option value="全部">全部</option>
-					<option value="not-downloaded">未下载</option>
-					<option value="offline">已离线</option>
-					<option value="update-available">有更新</option>
-					<option value="downloading">下载中</option>
-					<option value="failed">中断</option>
-				</select>
-			</label>
-			<button type="button" class="secondary-button" :disabled="isCheckingUpdates" @click="checkUpdates">
-				{{ isCheckingUpdates ? '检查中' : '检查更新' }}
-			</button>
-		</div>
 
 		<p v-if="pageMessage" class="page-message">{{ pageMessage }}</p>
 
@@ -407,18 +376,22 @@ function normalizeError(error: unknown) {
 						:key="row.document.id"
 						class="doc-row"
 						:class="[{ active: row.document.id === selectedId }, `status-${row.status}`]"
+						role="button"
+						tabindex="0"
+						@click="openDocument(row.document)"
+						@keydown.enter.self.prevent="openDocument(row.document)"
+						@keydown.space.self.prevent="openDocument(row.document)"
 					>
 						<div class="doc-row-main">
-							<label class="doc-checkbox" :title="row.meta ? '选择清理缓存' : '暂无缓存'">
+							<label class="doc-checkbox" :title="row.meta ? '选择清理缓存' : '暂无缓存'" @click.stop>
 								<input v-model="checkedIds" type="checkbox" :value="row.document.id" :disabled="!row.meta" />
 							</label>
-							<button type="button" class="doc-link" @click="openDocument(row.document)">
+							<div class="doc-link">
 								<span class="type-badge">{{ typeLabel(row.document.fileType) }}</span>
 								<span>
 									<strong>{{ row.document.title }}</strong>
-									<small>{{ row.document.category }} · {{ formatBytes(row.document.size) }}</small>
 								</span>
-							</button>
+							</div>
 							<span class="status-badge">{{ statusLabel(row.status) }}</span>
 						</div>
 						<p>{{ row.document.description }}</p>
@@ -428,16 +401,17 @@ function normalizeError(error: unknown) {
 							<span>{{ isSameOriginDocument(row.document) ? '同源可缓存' : '仅在线查看' }}</span>
 						</div>
 
-						<div v-if="row.progress" class="progress-area">
-							<div class="progress-track"><span :style="{ width: `${row.progress.percent ?? 0}%` }"></span></div>
-							<small>{{ row.progress.percent ?? 0 }}% · {{ formatBytes(row.progress.receivedBytes) }} / {{ row.progress.totalBytes ? formatBytes(row.progress.totalBytes) : '未知大小' }} · {{ row.progress.message ?? (row.progress.resumable ? '续传中' : '下载中') }}</small>
+						<div class="progress-area" :class="{ visible: row.progress }" :aria-hidden="!row.progress">
+							<div class="progress-track"><span :style="{ width: `${row.progress?.percent ?? 0}%` }"></span></div>
+							<small v-if="row.progress">{{ row.progress.percent ?? 0 }}% · {{ formatBytes(row.progress.receivedBytes) }} / {{ row.progress.totalBytes ? formatBytes(row.progress.totalBytes) : '未知大小' }} · {{ row.progress.message ?? (row.progress.resumable ? '续传中' : '下载中') }}</small>
+							<small v-else>下载进度</small>
 						</div>
 
 						<div class="row-actions">
-							<button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click="cacheDocument(row.document)">缓存</button>
-							<button v-else-if="row.status === 'update-available'" type="button" @click="cacheDocument(row.document, true)">重新下载</button>
-							<button v-else-if="row.status === 'offline'" type="button" @click="openDocument(row.document)">离线查看</button>
-							<button v-if="row.meta" type="button" class="ghost-button" @click="clearOne(row.document.id)">清除</button>
+							<button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click.stop="cacheDocument(row.document)">缓存本地</button>
+							<button v-else-if="row.status === 'update-available'" type="button" @click.stop="cacheDocument(row.document, true)">重新下载</button>
+							<button v-else-if="row.status === 'offline'" type="button" @click.stop="openDocument(row.document)">离线查看</button>
+							<button v-if="row.meta" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">清除缓存</button>
 						</div>
 					</article>
 				</div>
@@ -525,10 +499,10 @@ function normalizeError(error: unknown) {
 }
 
 .doc-hero,
-.doc-toolbar,
 .doc-list-panel,
 .viewer-panel,
 .cache-panel {
+	box-sizing: border-box;
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 8px;
 	background: var(--ccs-card-background, #ffffff);
@@ -553,8 +527,7 @@ function normalizeError(error: unknown) {
 .cache-stats span,
 .hero-metrics span,
 .doc-meta-line,
-.doc-row p,
-.doc-link small {
+.doc-row p {
 	margin: 0;
 }
 
@@ -568,8 +541,7 @@ function normalizeError(error: unknown) {
 .eyebrow,
 .panel-heading span,
 .cache-stats span,
-.hero-metrics span,
-.doc-toolbar label > span {
+.hero-metrics span {
 	color: #667085;
 	font-size: 12px;
 	font-weight: 800;
@@ -578,7 +550,6 @@ function normalizeError(error: unknown) {
 
 .doc-hero > div:first-child > span,
 .doc-row p,
-.doc-link small,
 .doc-meta-line,
 .progress-area small {
 	color: #667085;
@@ -587,11 +558,11 @@ function normalizeError(error: unknown) {
 .hero-metrics,
 .cache-stats {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 10px;
 }
 
-.hero-metrics div,
+.hero-metrics > div,
 .cache-stats div {
 	display: grid;
 	gap: 6px;
@@ -601,47 +572,44 @@ function normalizeError(error: unknown) {
 	background: rgba(255, 255, 255, 0.72);
 }
 
+.hero-update-button {
+	align-self: stretch;
+	height: auto;
+	min-height: 58px;
+	background: #ffffff;
+	color: #1d4ed8;
+	border: 1px solid rgba(37, 99, 235, 0.18);
+	box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+}
+
 .hero-metrics strong,
 .cache-stats strong {
 	font-size: 18px;
-}
-
-.doc-toolbar {
-	display: grid;
-	grid-template-columns: minmax(220px, 1fr) 160px 160px auto;
-	gap: 12px;
-	align-items: end;
-	padding: 14px;
-}
-
-.doc-toolbar label,
-.search-box {
-	display: grid;
-	gap: 6px;
-}
-
-.doc-toolbar input,
-.doc-toolbar select {
-	height: 40px;
-	min-width: 0;
-	border: 1px solid rgba(15, 23, 42, 0.12);
-	border-radius: 8px;
-	background: #ffffff;
-	color: inherit;
-	font: inherit;
-	padding: 0 11px;
 }
 
 .doc-workspace {
 	display: grid;
 	grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
 	gap: 16px;
+	height: clamp(560px, calc(100dvh - 290px), 720px);
+	min-height: 560px;
 }
 
 .doc-list-panel,
 .viewer-panel,
 .cache-panel {
 	padding: 16px;
+}
+
+.doc-list-panel,
+.viewer-panel {
+	height: 100%;
+	min-height: 0;
+}
+
+.doc-list-panel {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
 }
 
 .panel-heading,
@@ -664,7 +632,7 @@ function normalizeError(error: unknown) {
 	display: grid;
 	gap: 10px;
 	margin-top: 14px;
-	max-height: 690px;
+	min-height: 0;
 	overflow: auto;
 	padding-right: 4px;
 }
@@ -676,6 +644,12 @@ function normalizeError(error: unknown) {
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 8px;
 	background: #ffffff;
+	cursor: pointer;
+}
+
+.doc-row:focus-visible {
+	outline: 3px solid rgba(37, 99, 235, 0.22);
+	outline-offset: 2px;
 }
 
 .doc-row.active {
@@ -702,7 +676,6 @@ function normalizeError(error: unknown) {
 	color: inherit;
 	font: inherit;
 	text-align: left;
-	cursor: pointer;
 }
 
 .doc-link > span:last-child {
@@ -780,6 +753,19 @@ function normalizeError(error: unknown) {
 .progress-area {
 	display: grid;
 	gap: 6px;
+	min-height: 36px;
+}
+
+.progress-area small {
+	display: block;
+	min-height: 16px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.progress-area:not(.visible) {
+	visibility: hidden;
 }
 
 .progress-track,
@@ -836,10 +822,10 @@ button:disabled {
 }
 
 .viewer-panel {
-	min-height: 680px;
 	display: grid;
 	grid-template-rows: auto auto minmax(0, 1fr) auto;
 	gap: 12px;
+	overflow: hidden;
 }
 
 .viewer-topline > div:first-child {
@@ -850,6 +836,7 @@ button:disabled {
 
 .viewer-body {
 	min-height: 0;
+	height: 100%;
 	overflow: auto;
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 8px;
@@ -859,18 +846,23 @@ button:disabled {
 .image-preview {
 	display: block;
 	max-width: 100%;
+	max-height: 100%;
+	height: 100%;
 	margin: 0 auto;
+	object-fit: contain;
 }
 
 .pdf-preview {
 	width: 100%;
 	height: 100%;
-	min-height: 620px;
+	min-height: 0;
 	border: 0;
 	background: #ffffff;
 }
 
 .office-preview {
+	box-sizing: border-box;
+	min-height: 100%;
 	padding: 24px;
 	background: #ffffff;
 	line-height: 1.7;
@@ -890,6 +882,8 @@ button:disabled {
 .sheet-preview {
 	display: grid;
 	gap: 18px;
+	box-sizing: border-box;
+	min-height: 100%;
 	padding: 18px;
 	background: #ffffff;
 }
@@ -959,6 +953,10 @@ button:disabled {
 	text-align: center;
 }
 
+.viewer-body > .empty-state {
+	min-height: 100%;
+}
+
 .cache-panel {
 	display: grid;
 	gap: 12px;
@@ -982,13 +980,18 @@ button:disabled {
 }
 
 @media (max-width: 1100px) {
-	.doc-workspace,
-	.doc-toolbar {
+	.doc-workspace {
 		grid-template-columns: 1fr;
+		height: auto;
 	}
 
+	.doc-list-panel,
 	.viewer-panel {
-		min-height: 560px;
+		height: min(640px, calc(100dvh - 150px));
+	}
+
+	.hero-metrics {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 

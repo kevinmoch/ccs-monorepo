@@ -7,7 +7,6 @@ export type ViewerSourceKind = 'cache' | 'online' | 'unavailable';
 export interface OfflineDocument {
 	id: string;
 	title: string;
-	category: string;
 	fileType: DocumentFileType;
 	mimeType: string;
 	url: string;

@@ -2,7 +2,6 @@
   {
     "id": "safety-handbook-image",
     "title": "安全文明施工图示",
-    "category": "现场管理",
     "fileType": "image",
     "mimeType": "image/png",
     "url": "/documents/safety-handbook.png",
@@ -16,7 +15,6 @@
   {
     "id": "contract-template-pdf",
     "title": "合同评审操作手册",
-    "category": "合同管理",
     "fileType": "pdf",
     "mimeType": "application/pdf",
     "url": "/documents/contract-review.pdf",
@@ -30,7 +28,6 @@
   {
     "id": "docx-process-guide",
     "title": "流程制度说明 DOCX",
-    "category": "制度文档",
     "fileType": "docx",
     "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "url": "/documents/process-guide.docx",
@@ -44,7 +41,6 @@
   {
     "id": "xlsx-cost-ledger",
     "title": "成本台账 XLSX",
-    "category": "成本管理",
     "fileType": "xlsx",
     "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "url": "/documents/cost-ledger.xlsx",
