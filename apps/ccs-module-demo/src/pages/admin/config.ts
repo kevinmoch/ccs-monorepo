@@ -2,7 +2,7 @@ import type { CardDefinition } from '@ccs/ui-vue';
 export default {
   cards: [
     {
-      type: 'user-stat',
+      type: 'admin-stat',
       title: { 'zh-CN': '用户规模', 'en-US': 'User Scale' },
       layout: { colSpan: { base: 12, md: 6 }, rowSpan: 3 },
       props: {
