@@ -4,6 +4,8 @@ export type DocumentStatus = 'not-downloaded' | 'downloading' | 'offline' | 'upd
 
 export type ViewerSourceKind = 'cache' | 'online' | 'unavailable';
 
+export type OfflineStorageKind = 'opfs' | 'electron' | 'android' | 'unavailable';
+
 export interface OfflineDocument {
 	id: string;
 	title: string;
@@ -52,6 +54,8 @@ export interface StorageStats {
 	usageBytes?: number;
 	persisted?: boolean;
 	opfsAvailable: boolean;
+	storageKind?: OfflineStorageKind;
+	storageLabel?: string;
 }
 
 export interface ViewerSource {

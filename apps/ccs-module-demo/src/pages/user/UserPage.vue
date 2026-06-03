@@ -339,7 +339,7 @@ function normalizeError(error: unknown) {
 			<div>
 				<p class="eyebrow">ccs-module-demo</p>
 				<h1>离线文档</h1>
-				<span>OPFS 大文件缓存 · {{ isOnline ? '在线' : '离线' }} · {{ pressureLabel }}</span>
+				<span>{{ stats.storageLabel ?? 'Web OPFS' }} 大文件缓存 · {{ isOnline ? '在线' : '离线' }} · {{ pressureLabel }}</span>
 			</div>
 			<div class="hero-metrics">
 				<button type="button" class="hero-update-button" :disabled="isCheckingUpdates" @click="checkUpdates">
@@ -354,7 +354,7 @@ function normalizeError(error: unknown) {
 					<strong>{{ formatBytes(measuredQuotaBytes) }}</strong>
 				</div>
 				<div>
-					<span>OPFS</span>
+					<span>离线存储</span>
 					<strong>{{ stats.opfsAvailable ? '可用' : '不可用' }}</strong>
 				</div>
 			</div>
@@ -855,7 +855,7 @@ button:disabled {
 .pdf-preview {
 	width: 100%;
 	height: 100%;
-	min-height: 0;
+	min-height: 100%;
 	border: 0;
 	background: #ffffff;
 }

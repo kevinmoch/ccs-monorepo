@@ -1,5 +1,7 @@
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { isSameOriginDocument } from './catalog';
-import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, StorageStats, ViewerSource } from './types';
+import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, OfflineStorageKind, StorageStats, ViewerSource } from './types';
 
 type OpfsStorageManager = StorageManager & {
 	getDirectory?: () => Promise<FileSystemDirectoryHandle>;
@@ -9,12 +11,45 @@ type DirectoryWithEntries = FileSystemDirectoryHandle & {
 	entries: () => AsyncIterableIterator<[string, FileSystemHandle]>;
 };
 
+type ElectronDownloadPayload = {
+	downloadId: string;
+	progress: DownloadProgress;
+};
+
+type ElectronOfflineDocsBridge = {
+	getAllMetadata: () => Promise<CachedDocumentMeta[]>;
+	getDocumentMeta: (id: string) => Promise<CachedDocumentMeta | undefined>;
+	saveDocumentMeta: (meta: CachedDocumentMeta) => Promise<void>;
+	writeCatalogSnapshot: (documents: OfflineDocument[]) => Promise<void>;
+	getStorageStats: () => Promise<StorageStats>;
+	removeDocumentCache: (id: string) => Promise<void>;
+	checkDocumentUpdate: (document: OfflineDocument, absoluteUrl: string) => Promise<CachedDocumentMeta | undefined>;
+	getCachedFileUrl: (id: string) => Promise<string | undefined>;
+	downloadDocument: (request: { downloadId: string; document: OfflineDocument; absoluteUrl: string; force?: boolean }) => Promise<CachedDocumentMeta>;
+	onDownloadProgress: (listener: (payload: ElectronDownloadPayload) => void) => () => void;
+};
+
+type ElectronBridge = {
+	offlineDocs?: ElectronOfflineDocsBridge;
+};
+
+type AndroidFilesystemMethod = 'mkdir' | 'readdir' | 'readFile' | 'writeFile' | 'appendFile' | 'deleteFile' | 'stat' | 'getUri';
+
+type AndroidFilesystemResponse<T> = {
+	type: 'CCS_ANDROID_FS_RESPONSE';
+	id: string;
+	result?: T;
+	error?: string;
+};
+
 const ROOT_DIR = 'ccs-offline-docs-v1';
 const DOCS_DIR = 'docs';
 const META_DIR = 'meta';
 const CATALOG_FILE = 'catalog.json';
 
 export function isOpfsAvailable(): boolean {
+	const nativeKind = getNativeStorageKind();
+	if (nativeKind === 'electron' || nativeKind === 'android') return true;
 	return typeof navigator !== 'undefined' && typeof (navigator.storage as OpfsStorageManager | undefined)?.getDirectory === 'function';
 }
 
@@ -28,11 +63,19 @@ export async function persistOpfsStorage(): Promise<boolean> {
 }
 
 export async function writeCatalogSnapshot(documents: OfflineDocument[]) {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.writeCatalogSnapshot(documents);
+	if (isAndroidNative()) return writeAndroidText(CATALOG_FILE, JSON.stringify(documents, null, 2));
+
 	const root = await getRootDirectory();
 	await writeTextFile(root, CATALOG_FILE, JSON.stringify(documents, null, 2));
 }
 
 export async function getAllMetadata(): Promise<CachedDocumentMeta[]> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.getAllMetadata();
+	if (isAndroidNative()) return getAllAndroidMetadata();
+
 	const metaDir = await getMetaDirectory();
 	const metadata: CachedDocumentMeta[] = [];
 
@@ -49,6 +92,10 @@ export async function getAllMetadata(): Promise<CachedDocumentMeta[]> {
 }
 
 export async function getDocumentMeta(id: string): Promise<CachedDocumentMeta | undefined> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.getDocumentMeta(id);
+	if (isAndroidNative()) return getAndroidDocumentMeta(id);
+
 	try {
 		const metaDir = await getMetaDirectory();
 		const handle = await metaDir.getFileHandle(getMetaName(id));
@@ -59,13 +106,21 @@ export async function getDocumentMeta(id: string): Promise<CachedDocumentMeta | 
 }
 
 export async function saveDocumentMeta(meta: CachedDocumentMeta) {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.saveDocumentMeta(meta);
+	if (isAndroidNative()) return saveAndroidDocumentMeta(meta);
+
 	const metaDir = await getMetaDirectory();
 	await writeTextFile(metaDir, getMetaName(meta.id), JSON.stringify(meta, null, 2));
 }
 
 export async function getStorageStats(): Promise<StorageStats> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return { ...await electron.getStorageStats(), opfsAvailable: true, storageKind: 'electron', storageLabel: 'Electron userData' };
+	if (isAndroidNative()) return getAndroidStorageStats();
+
 	if (!isOpfsAvailable()) {
-		return { usedBytes: 0, metadataBytes: 0, cachedBytes: 0, partialBytes: 0, opfsAvailable: false };
+		return { usedBytes: 0, metadataBytes: 0, cachedBytes: 0, partialBytes: 0, opfsAvailable: false, storageKind: 'unavailable', storageLabel: '不可用' };
 	}
 
 	const metadata = await getAllMetadata();
@@ -83,11 +138,20 @@ export async function getStorageStats(): Promise<StorageStats> {
 		quotaBytes: estimate?.quota,
 		usageBytes: estimate?.usage,
 		persisted,
-		opfsAvailable: true
+		opfsAvailable: true,
+		storageKind: 'opfs',
+		storageLabel: 'Web OPFS'
 	};
 }
 
 export async function createCachedObjectUrl(document: OfflineDocument): Promise<ViewerSource> {
+	const electron = getElectronOfflineDocs();
+	if (electron) {
+		const url = await electron.getCachedFileUrl(document.id);
+		return url ? { kind: 'cache', url } : { kind: 'unavailable', message: '本地没有可用缓存' };
+	}
+	if (isAndroidNative()) return createAndroidCachedUrl(document);
+
 	const meta = await getDocumentMeta(document.id);
 	if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) {
 		return { kind: 'unavailable', message: '本地没有可用缓存' };
@@ -108,6 +172,10 @@ export async function touchDocument(id: string) {
 }
 
 export async function removeDocumentCache(id: string) {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.removeDocumentCache(id);
+	if (isAndroidNative()) return removeAndroidDocumentCache(id);
+
 	const meta = await getDocumentMeta(id);
 	const docsDir = await getDocsDirectory();
 	const metaDir = await getMetaDirectory();
@@ -121,6 +189,10 @@ export async function removeManyDocumentCaches(ids: string[]) {
 }
 
 export async function checkDocumentUpdate(document: OfflineDocument): Promise<CachedDocumentMeta | undefined> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.checkDocumentUpdate(document, toAbsoluteDocumentUrl(document));
+	if (isAndroidNative()) return checkNativeDocumentUpdate(document);
+
 	const meta = await getDocumentMeta(document.id);
 	if (!meta || !navigator.onLine || !isSameOriginDocument(document)) return meta;
 
@@ -158,6 +230,10 @@ export async function downloadDocumentToOpfs(
 	onProgress: (progress: DownloadProgress) => void,
 	options: { force?: boolean; signal?: AbortSignal } = {}
 ): Promise<CachedDocumentMeta> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return downloadDocumentWithElectron(electron, document, onProgress, options);
+	if (isAndroidNative()) return downloadDocumentWithAndroid(document, onProgress, options);
+
 	if (!isOpfsAvailable()) throw new Error('当前浏览器不支持 OPFS，无法离线缓存大文件');
 	if (!document.allowOffline) throw new Error('该文档未开放离线缓存');
 	if (!isSameOriginDocument(document)) throw new Error('Web 端仅允许缓存同源文档');
@@ -261,6 +337,366 @@ export async function downloadDocumentToOpfs(
 		await saveDocumentMeta(failed);
 		throw error;
 	}
+}
+
+function getNativeStorageKind(): OfflineStorageKind {
+	if (getElectronOfflineDocs()) return 'electron';
+	if (isAndroidNative()) return 'android';
+	return 'unavailable';
+}
+
+function getElectronOfflineDocs(): ElectronOfflineDocsBridge | undefined {
+	const current = (window as Window & { ccsElectron?: ElectronBridge }).ccsElectron?.offlineDocs;
+	if (current) return current;
+
+	try {
+		return (window.top as Window & { ccsElectron?: ElectronBridge } | null)?.ccsElectron?.offlineDocs;
+	} catch {
+		return undefined;
+	}
+}
+
+function isAndroidNative() {
+	try {
+		const topCapacitor = getTopCapacitor();
+		return Capacitor.getPlatform?.() === 'android'
+			|| topCapacitor?.getPlatform?.() === 'android'
+			|| (Capacitor.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
+			|| (topCapacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent));
+	} catch {
+		return false;
+	}
+}
+
+function getTopCapacitor(): Pick<typeof Capacitor, 'getPlatform' | 'isNativePlatform'> | undefined {
+	if (window === window.top) return undefined;
+	try {
+		return (window.top as Window & { Capacitor?: Pick<typeof Capacitor, 'getPlatform' | 'isNativePlatform'> } | null)?.Capacitor;
+	} catch {
+		return undefined;
+	}
+}
+
+async function downloadDocumentWithElectron(
+	electron: ElectronOfflineDocsBridge,
+	document: OfflineDocument,
+	onProgress: (progress: DownloadProgress) => void,
+	options: { force?: boolean; signal?: AbortSignal } = {}
+): Promise<CachedDocumentMeta> {
+	const downloadId = `${document.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const unsubscribe = electron.onDownloadProgress((payload) => {
+		if (payload.downloadId === downloadId) onProgress(payload.progress);
+	});
+
+	try {
+		return await electron.downloadDocument({ downloadId, document, absoluteUrl: toAbsoluteDocumentUrl(document), force: options.force });
+	} finally {
+		unsubscribe();
+	}
+}
+
+async function getAllAndroidMetadata(): Promise<CachedDocumentMeta[]> {
+	await ensureAndroidDirectories();
+	let result: Awaited<ReturnType<typeof Filesystem.readdir>>;
+	try {
+		result = await androidFilesystem('readdir', { path: getAndroidMetaDir(), directory: Directory.Data });
+	} catch {
+		return [];
+	}
+
+	const files = result.files.map((file) => typeof file === 'string' ? file : file.name).filter((name) => name.endsWith('.json'));
+	const metadata: CachedDocumentMeta[] = [];
+	for (const file of files) {
+		try {
+			metadata.push(JSON.parse(await readAndroidText(`${getAndroidMetaDir()}/${file}`)) as CachedDocumentMeta);
+		} catch {
+			// Ignore corrupt metadata files; downloading again can repair them.
+		}
+	}
+	return metadata;
+}
+
+async function getAndroidDocumentMeta(id: string): Promise<CachedDocumentMeta | undefined> {
+	try {
+		return JSON.parse(await readAndroidText(getAndroidMetaPath(id))) as CachedDocumentMeta;
+	} catch {
+		return undefined;
+	}
+}
+
+async function saveAndroidDocumentMeta(meta: CachedDocumentMeta) {
+	await writeAndroidText(getAndroidMetaPath(meta.id), JSON.stringify(meta, null, 2));
+}
+
+async function getAndroidStorageStats(): Promise<StorageStats> {
+	const metadata = await getAllAndroidMetadata();
+	const cachedBytes = metadata.reduce((total, meta) => total + meta.cachedBytes, 0);
+	const partialBytes = metadata.reduce((total, meta) => total + meta.partialBytes, 0);
+	const metadataBytes = await getAndroidDirectoryBytes(getAndroidMetaDir());
+	return {
+		usedBytes: cachedBytes + partialBytes + metadataBytes,
+		cachedBytes,
+		partialBytes,
+		metadataBytes,
+		opfsAvailable: true,
+		storageKind: 'android',
+		storageLabel: 'Android 私有目录'
+	};
+}
+
+async function createAndroidCachedUrl(document: OfflineDocument): Promise<ViewerSource> {
+	const meta = await getAndroidDocumentMeta(document.id);
+	if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) {
+		return { kind: 'unavailable', message: '本地没有可用缓存' };
+	}
+
+	const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.getUri>>>('getUri', { path: getAndroidDocPath(meta.localName), directory: Directory.Data });
+	await touchDocument(document.id);
+	return { kind: 'cache', url: Capacitor.convertFileSrc(result.uri) };
+}
+
+async function removeAndroidDocumentCache(id: string) {
+	const meta = await getAndroidDocumentMeta(id);
+	if (meta?.localName) await deleteAndroidFile(getAndroidDocPath(meta.localName));
+	await deleteAndroidFile(getAndroidMetaPath(id));
+}
+
+async function checkNativeDocumentUpdate(document: OfflineDocument): Promise<CachedDocumentMeta | undefined> {
+	const meta = await getDocumentMeta(document.id);
+	if (!meta || !navigator.onLine) return meta;
+
+	try {
+		const response = await fetch(toAbsoluteDocumentUrl(document), { method: 'HEAD', cache: 'no-store' });
+		if (!response.ok) return meta;
+
+		const nextEtag = response.headers.get('etag') ?? document.etag;
+		const nextLastModified = response.headers.get('last-modified') ?? document.lastModified;
+		const nextSize = parseNumber(response.headers.get('content-length')) ?? document.size;
+		const changed = Boolean(
+			(nextEtag && meta.etag && nextEtag !== meta.etag)
+			|| (nextLastModified && meta.lastModified && nextLastModified !== meta.lastModified)
+			|| (typeof nextSize === 'number' && meta.serverSize && nextSize !== meta.serverSize)
+		);
+
+		if (!changed) return meta;
+		const updated: CachedDocumentMeta = { ...meta, status: 'update-available', etag: nextEtag, lastModified: nextLastModified, serverSize: nextSize, error: undefined };
+		await saveDocumentMeta(updated);
+		return updated;
+	} catch {
+		return meta;
+	}
+}
+
+async function downloadDocumentWithAndroid(
+	document: OfflineDocument,
+	onProgress: (progress: DownloadProgress) => void,
+	options: { force?: boolean; signal?: AbortSignal } = {}
+): Promise<CachedDocumentMeta> {
+	if (!document.allowOffline) throw new Error('该文档未开放离线缓存');
+
+	await ensureAndroidDirectories();
+	const localName = getLocalFileName(document);
+	const localPath = getAndroidDocPath(localName);
+	const previous = await getAndroidDocumentMeta(document.id);
+	let startByte = options.force ? 0 : Math.max(previous?.partialBytes ?? 0, await getAndroidFileSize(localPath));
+	const requestHeaders = new Headers();
+	if (startByte > 0) requestHeaders.set('Range', `bytes=${startByte}-`);
+
+	try {
+		const response = await fetch(toAbsoluteDocumentUrl(document), { headers: requestHeaders, cache: 'no-store', signal: options.signal });
+		if (!response.ok && response.status !== 206) throw new Error(`下载失败：HTTP ${response.status}`);
+		if (!response.body) throw new Error('当前环境无法读取下载流');
+
+		const canResume = startByte > 0 && response.status === 206;
+		if (startByte > 0 && !canResume) startByte = 0;
+		const totalBytes = getResponseTotalBytes(response, startByte) ?? document.size;
+		let receivedBytes = startByte;
+		let hasWrittenChunk = canResume;
+
+		await saveAndroidDocumentMeta(createMeta(document, localName, {
+			status: 'downloading',
+			cachedBytes: 0,
+			partialBytes: receivedBytes,
+			serverSize: totalBytes,
+			etag: response.headers.get('etag') ?? document.etag,
+			lastModified: response.headers.get('last-modified') ?? document.lastModified
+		}));
+		onProgress(buildProgress(document.id, receivedBytes, totalBytes, canResume, canResume ? '正在续传' : '正在下载'));
+
+		const reader = response.body.getReader();
+		let lastMetaWriteAt = 0;
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (!value) continue;
+
+			const data = bytesToBase64(value);
+			if (hasWrittenChunk) await androidFilesystem('appendFile', { path: localPath, data, directory: Directory.Data });
+			else {
+				await androidFilesystem('writeFile', { path: localPath, data, directory: Directory.Data, recursive: true });
+				hasWrittenChunk = true;
+			}
+
+			receivedBytes += value.byteLength;
+			onProgress(buildProgress(document.id, receivedBytes, totalBytes, canResume));
+
+			const now = Date.now();
+			if (now - lastMetaWriteAt > 1000) {
+				lastMetaWriteAt = now;
+				await saveAndroidDocumentMeta(createMeta(document, localName, {
+					status: 'downloading',
+					cachedBytes: 0,
+					partialBytes: receivedBytes,
+					serverSize: totalBytes,
+					etag: response.headers.get('etag') ?? document.etag,
+					lastModified: response.headers.get('last-modified') ?? document.lastModified
+				}));
+			}
+		}
+
+		const completed = createMeta(document, localName, {
+			status: 'offline',
+			cachedBytes: receivedBytes,
+			partialBytes: 0,
+			serverSize: totalBytes ?? receivedBytes,
+			etag: response.headers.get('etag') ?? document.etag,
+			lastModified: response.headers.get('last-modified') ?? document.lastModified,
+			downloadedAt: new Date().toISOString(),
+			lastAccessedAt: new Date().toISOString()
+		});
+		await saveAndroidDocumentMeta(completed);
+		onProgress(buildProgress(document.id, receivedBytes, totalBytes ?? receivedBytes, canResume, '已离线'));
+		return completed;
+	} catch (error) {
+		const partialBytes = await getAndroidFileSize(localPath);
+		const failed = createMeta(document, localName, {
+			status: 'failed',
+			cachedBytes: 0,
+			partialBytes,
+			error: normalizeError(error),
+			serverSize: document.size,
+			etag: document.etag,
+			lastModified: document.lastModified
+		});
+		await saveAndroidDocumentMeta(failed);
+		throw error;
+	}
+}
+
+async function ensureAndroidDirectories() {
+	await mkdirAndroid(ROOT_DIR);
+	await mkdirAndroid(getAndroidDocsDir());
+	await mkdirAndroid(getAndroidMetaDir());
+}
+
+async function mkdirAndroid(path: string) {
+	try {
+		await androidFilesystem('mkdir', { path, directory: Directory.Data, recursive: true });
+	} catch {
+		// Existing directories are fine.
+	}
+}
+
+async function readAndroidText(path: string) {
+	const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.readFile>>>('readFile', { path, directory: Directory.Data, encoding: Encoding.UTF8 });
+	return String(result.data);
+}
+
+async function writeAndroidText(path: string, text: string) {
+	await androidFilesystem('writeFile', { path, data: text, directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
+}
+
+async function deleteAndroidFile(path: string) {
+	try {
+		await androidFilesystem('deleteFile', { path, directory: Directory.Data });
+	} catch {
+		// Missing entries are already cleared.
+	}
+}
+
+async function getAndroidFileSize(path: string) {
+	try {
+		return (await androidFilesystem<Awaited<ReturnType<typeof Filesystem.stat>>>('stat', { path, directory: Directory.Data })).size ?? 0;
+	} catch {
+		return 0;
+	}
+}
+
+async function getAndroidDirectoryBytes(path: string): Promise<number> {
+	try {
+		const entries = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.readdir>>>('readdir', { path, directory: Directory.Data });
+		let total = 0;
+		for (const entry of entries.files) {
+			const name = typeof entry === 'string' ? entry : entry.name;
+			const type = typeof entry === 'string' ? undefined : entry.type;
+			const childPath = `${path}/${name}`;
+			if (type === 'directory') total += await getAndroidDirectoryBytes(childPath);
+			else total += await getAndroidFileSize(childPath);
+		}
+		return total;
+	} catch {
+		return 0;
+	}
+}
+
+function getAndroidDocsDir() {
+	return `${ROOT_DIR}/${DOCS_DIR}`;
+}
+
+function getAndroidMetaDir() {
+	return `${ROOT_DIR}/${META_DIR}`;
+}
+
+function getAndroidDocPath(localName: string) {
+	return `${getAndroidDocsDir()}/${localName}`;
+}
+
+function getAndroidMetaPath(id: string) {
+	return `${getAndroidMetaDir()}/${getMetaName(id)}`;
+}
+
+function toAbsoluteDocumentUrl(document: OfflineDocument) {
+	return new URL(document.url, window.location.href).toString();
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+	let binary = '';
+	const chunkSize = 0x8000;
+	for (let index = 0; index < bytes.length; index += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+	}
+	return btoa(binary);
+}
+
+function androidFilesystem<T = unknown>(method: AndroidFilesystemMethod, args: Record<string, unknown>): Promise<T> {
+	if (!shouldUseParentAndroidFilesystemBridge()) {
+		const operation = Filesystem[method] as unknown as (options: Record<string, unknown>) => Promise<T>;
+		return operation(args);
+	}
+
+	return new Promise<T>((resolve, reject) => {
+		const id = `${method}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		const timeout = window.setTimeout(() => {
+			window.removeEventListener('message', handleResponse);
+			reject(new Error('Android 文件系统操作超时'));
+		}, 30000);
+
+		function handleResponse(event: MessageEvent<AndroidFilesystemResponse<T>>) {
+			if (event.data?.type !== 'CCS_ANDROID_FS_RESPONSE' || event.data.id !== id) return;
+			window.clearTimeout(timeout);
+			window.removeEventListener('message', handleResponse);
+			if (event.data.error) reject(new Error(event.data.error));
+			else resolve(event.data.result as T);
+		}
+
+		window.addEventListener('message', handleResponse);
+		window.top?.postMessage({ type: 'CCS_ANDROID_FS_REQUEST', id, method, args }, '*');
+	});
+}
+
+function shouldUseParentAndroidFilesystemBridge() {
+	return window !== window.top && Boolean(getTopCapacitor());
 }
 
 async function getRootDirectory(): Promise<FileSystemDirectoryHandle> {
