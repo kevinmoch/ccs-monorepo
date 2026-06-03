@@ -2,6 +2,7 @@ import localDocuments from '../../../data/offline-documents.json';
 import type { OfflineDocument } from './types';
 
 const manifestUrl = import.meta.env.VITE_CCS_OFFLINE_DOCS_MANIFEST as string | undefined;
+const documentsSiteUrl = normalizeSiteBaseUrl(import.meta.env.VITE_CCS_DOCS_BASE_URL as string | undefined);
 
 export async function loadDocumentCatalog(): Promise<OfflineDocument[]> {
 	const localCatalog = normalizeDocuments(localDocuments as OfflineDocument[]);
@@ -17,9 +18,11 @@ export async function loadDocumentCatalog(): Promise<OfflineDocument[]> {
 	}
 }
 
-export function isSameOriginDocument(document: OfflineDocument): boolean {
+export function isDocumentsSiteDocument(document: OfflineDocument): boolean {
 	try {
-		return new URL(document.url, window.location.href).origin === window.location.origin;
+		const source = new URL(document.url, documentsSiteUrl);
+		const site = new URL(documentsSiteUrl);
+		return source.origin === site.origin && source.pathname.startsWith(site.pathname);
 	} catch {
 		return false;
 	}
@@ -28,7 +31,33 @@ export function isSameOriginDocument(document: OfflineDocument): boolean {
 function normalizeDocuments(documents: OfflineDocument[]): OfflineDocument[] {
 	return documents
 		.filter((document) => document.id && document.title && document.url)
-		.map((document) => ({ ...document, allowOffline: document.allowOffline !== false }));
+		.map((document) => ({ ...document, url: normalizeDocumentUrl(document.url), allowOffline: document.allowOffline !== false }));
+}
+
+function normalizeDocumentUrl(url: string) {
+	if (/^https?:\/\//i.test(url)) return url;
+	return new URL(stripDocumentsPrefix(url), documentsSiteUrl).toString();
+}
+
+function normalizeSiteBaseUrl(url: string | undefined) {
+	try {
+		const normalized = new URL(url || getDefaultDocumentsSiteUrl()).toString();
+		return normalized.endsWith('/') ? normalized : `${normalized}/`;
+	} catch {
+		return 'http://127.0.0.1:8080/';
+	}
+}
+
+function getDefaultDocumentsSiteUrl() {
+	if (/Android/i.test(navigator.userAgent)) return 'http://10.0.2.2:8080/';
+	if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+		return `${window.location.protocol}//${window.location.hostname}:8080/`;
+	}
+	return 'http://127.0.0.1:8080/';
+}
+
+function stripDocumentsPrefix(url: string) {
+	return url.replace(/^\/?documents\//, '').replace(/^\//, '');
 }
 
 function mergeCatalogs(localCatalog: OfflineDocument[], remoteCatalog: OfflineDocument[]): OfflineDocument[] {

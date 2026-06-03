@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { isSameOriginDocument, loadDocumentCatalog } from './offline-docs/catalog';
+import { isDocumentsSiteDocument, loadDocumentCatalog } from './offline-docs/catalog';
 import {
 	checkDocumentUpdate,
 	createCachedObjectUrl,
@@ -19,6 +19,11 @@ type SheetPreview = {
 	rows: string[][];
 };
 
+type PdfPagePreview = {
+	pageNumber: number;
+	url: string;
+};
+
 const APP_WATERMARK_RATIO = 0.86;
 
 const documents = ref<OfflineDocument[]>([]);
@@ -35,16 +40,18 @@ const viewerFileType = ref<DocumentFileType | 'empty'>('empty');
 const viewerLoading = ref(false);
 const viewerError = ref('');
 const docxHtml = ref('');
+const pdfPages = ref<PdfPagePreview[]>([]);
 const sheetPreview = ref<SheetPreview[]>([]);
 const autoLru = ref(true);
 const stats = ref<StorageStats>({ usedBytes: 0, cachedBytes: 0, partialBytes: 0, metadataBytes: 0, opfsAvailable: isOpfsAvailable() });
 
 let activeObjectUrl: string | undefined;
+let pdfPageObjectUrls: string[] = [];
 
 const documentRows = computed(() => documents.value.map((document) => {
 	const progress = progressMap.value.get(document.id);
 	const meta = metaMap.value.get(document.id);
-	const status: DocumentStatus = progress ? 'downloading' : meta?.status ?? 'not-downloaded';
+	const status: DocumentStatus = progress ? 'downloading' : getDocumentStatus(document, meta);
 	return { document, meta, status, progress };
 }));
 
@@ -88,6 +95,7 @@ onUnmounted(() => {
 	window.removeEventListener('online', handleNetworkChange);
 	window.removeEventListener('offline', handleNetworkChange);
 	revokeActiveObjectUrl();
+	revokePdfPageUrls();
 });
 
 async function initializePage() {
@@ -123,11 +131,18 @@ async function openDocument(document: OfflineDocument) {
 	viewerLoading.value = true;
 	viewerError.value = '';
 	docxHtml.value = '';
+	revokePdfPageUrls();
+	pdfPages.value = [];
 	sheetPreview.value = [];
 	viewerFileType.value = document.fileType;
 
 	try {
 		const meta = metaMap.value.get(document.id);
+		if (isCacheSizeMismatch(document, meta)) {
+			viewerSource.value = { kind: 'unavailable', message: '本地缓存文件与服务器清单不一致，请重新下载' };
+			return;
+		}
+
 		if (meta?.status === 'offline' || meta?.status === 'update-available') {
 			viewerSource.value = await createCachedObjectUrl(document);
 			activeObjectUrl = viewerSource.value.url;
@@ -141,7 +156,7 @@ async function openDocument(document: OfflineDocument) {
 			return;
 		}
 
-		viewerSource.value = { kind: 'online', url: document.url, message: isSameOriginDocument(document) ? '正在读取在线文档' : '在线预览不写入缓存' };
+		viewerSource.value = { kind: 'online', url: document.url, message: isDocumentsSiteDocument(document) ? '正在读取文档站点' : '正在读取远程文档' };
 		await renderPreview(document, viewerSource.value);
 	} catch (error) {
 		viewerSource.value = { kind: 'unavailable', message: normalizeError(error) };
@@ -151,13 +166,23 @@ async function openDocument(document: OfflineDocument) {
 	}
 }
 
+function getDocumentStatus(document: OfflineDocument, meta?: CachedDocumentMeta): DocumentStatus {
+	if (!meta) return 'not-downloaded';
+	if (meta.status === 'offline' && isCacheSizeMismatch(document, meta)) return 'update-available';
+	return meta.status;
+}
+
+function isCacheSizeMismatch(document: OfflineDocument, meta?: CachedDocumentMeta) {
+	return Boolean(document.size && meta?.status === 'offline' && meta.cachedBytes > 0 && meta.cachedBytes !== document.size);
+}
+
 async function cacheDocument(document: OfflineDocument, force = false) {
 	if (progressMap.value.has(document.id)) return;
 	pageMessage.value = '';
 
 	try {
-		await clearLruIfNeeded(document);
 		setProgress(document.id, { id: document.id, receivedBytes: 0, totalBytes: document.size, percent: 0, resumable: false, message: '准备下载' });
+		await clearLruIfNeeded(document);
 		await downloadDocumentToOpfs(document, (progress) => setProgress(document.id, progress), { force });
 		await refreshMetadata();
 		if (selectedId.value === document.id) await openDocument(document);
@@ -220,13 +245,20 @@ async function checkUpdates() {
 
 async function renderPreview(document: OfflineDocument, source: ViewerSource) {
 	docxHtml.value = '';
+	revokePdfPageUrls();
+	pdfPages.value = [];
 	sheetPreview.value = [];
 	if (source.kind === 'unavailable') return;
-	if (document.fileType === 'image' || document.fileType === 'pdf' || document.fileType === 'doc' || document.fileType === 'xls') return;
+	if (document.fileType === 'image' || document.fileType === 'doc' || document.fileType === 'xls') return;
 
 	try {
-		const blob = source.blob ?? await fetchSourceBlob(source);
+		const blob = source.blob ?? await fetchSourceBlob(source, document);
 		const arrayBuffer = await blob.arrayBuffer();
+
+		if (document.fileType === 'pdf') {
+			await renderPdfPreview(arrayBuffer);
+			return;
+		}
 
 		if (document.fileType === 'docx') {
 			const mammoth = await import('mammoth');
@@ -248,10 +280,52 @@ async function renderPreview(document: OfflineDocument, source: ViewerSource) {
 	}
 }
 
-async function fetchSourceBlob(source: ViewerSource): Promise<Blob> {
+async function renderPdfPreview(arrayBuffer: ArrayBuffer) {
+	const [pdfjs, worker] = await Promise.all([
+		import('pdfjs-dist'),
+		import('pdfjs-dist/build/pdf.worker.mjs?url')
+	]);
+	pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+
+	const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+	const renderedPages: PdfPagePreview[] = [];
+	for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+		const page = await pdf.getPage(pageNumber);
+		const baseViewport = page.getViewport({ scale: 1 });
+		const scale = Math.min(2, Math.max(1, 920 / baseViewport.width));
+		const viewport = page.getViewport({ scale });
+		const canvas = document.createElement('canvas');
+		const context = canvas.getContext('2d');
+		if (!context) throw new Error('当前环境无法创建 PDF 画布');
+
+		canvas.width = Math.ceil(viewport.width);
+		canvas.height = Math.ceil(viewport.height);
+		await page.render({ canvas, canvasContext: context, viewport }).promise;
+
+		const url = await canvasToObjectUrl(canvas);
+		pdfPageObjectUrls.push(url);
+		renderedPages.push({ pageNumber, url });
+		pdfPages.value = [...renderedPages];
+	}
+}
+
+function canvasToObjectUrl(canvas: HTMLCanvasElement) {
+	return new Promise<string>((resolve, reject) => {
+		canvas.toBlob((blob) => {
+			if (!blob) reject(new Error('PDF 页面渲染失败'));
+			else resolve(URL.createObjectURL(blob));
+		}, 'image/png');
+	});
+}
+
+async function fetchSourceBlob(source: ViewerSource, document: OfflineDocument): Promise<Blob> {
 	if (!source.url) throw new Error('没有可读取的文档地址');
 	const response = await fetch(source.url, { cache: 'no-store' });
 	if (!response.ok) throw new Error(`在线文档读取失败：HTTP ${response.status}`);
+	const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+	if (contentType.includes('text/html') && !document.mimeType.toLowerCase().includes('html')) {
+		throw new Error('服务器返回了 HTML 页面，未获取到真实文档文件');
+	}
 	return response.blob();
 }
 
@@ -283,6 +357,11 @@ function deleteProgress(id: string) {
 function revokeActiveObjectUrl() {
 	if (activeObjectUrl) URL.revokeObjectURL(activeObjectUrl);
 	activeObjectUrl = undefined;
+}
+
+function revokePdfPageUrls() {
+	for (const url of pdfPageObjectUrls) URL.revokeObjectURL(url);
+	pdfPageObjectUrls = [];
 }
 
 function statusLabel(status: DocumentStatus) {
@@ -398,7 +477,7 @@ function normalizeError(error: unknown) {
 						<div class="doc-meta-line">
 							<span>更新 {{ formatDate(row.document.updatedAt ?? row.document.lastModified) }}</span>
 							<span>缓存 {{ formatBytes((row.meta?.cachedBytes ?? 0) + (row.meta?.partialBytes ?? 0)) }}</span>
-							<span>{{ isSameOriginDocument(row.document) ? '同源可缓存' : '仅在线查看' }}</span>
+							<span>{{ isDocumentsSiteDocument(row.document) ? '文档站点' : '远程文档' }}</span>
 						</div>
 
 						<div class="progress-area" :class="{ visible: row.progress }" :aria-hidden="!row.progress">
@@ -437,7 +516,16 @@ function normalizeError(error: unknown) {
 					<div v-if="viewerLoading" class="empty-state">正在准备查看器</div>
 					<div v-else-if="viewerSource.kind === 'unavailable'" class="empty-state">{{ viewerSource.message }}</div>
 					<img v-else-if="viewerFileType === 'image' && viewerSource.url" class="image-preview" :src="viewerSource.url" alt="文档图片预览" />
-					<iframe v-else-if="viewerFileType === 'pdf' && viewerSource.url" class="pdf-preview" :src="viewerSource.url" title="PDF 文档预览"></iframe>
+					<div v-else-if="viewerFileType === 'pdf'" class="pdf-render-preview">
+						<div v-if="pdfPages.length" class="pdf-pages">
+							<figure v-for="page in pdfPages" :key="page.pageNumber">
+								<img :src="page.url" :alt="`PDF 第 ${page.pageNumber} 页`" />
+								<figcaption>第 {{ page.pageNumber }} 页</figcaption>
+							</figure>
+						</div>
+						<iframe v-else-if="viewerSource.url" class="pdf-preview" :src="viewerSource.url" title="PDF 文档预览"></iframe>
+						<div v-else class="empty-state">PDF 暂无可预览内容</div>
+					</div>
 					<div v-else-if="viewerFileType === 'docx'" class="office-preview">
 						<div v-if="docxHtml" v-html="docxHtml"></div>
 						<div v-else class="empty-state">DOCX 正在解析或暂无可预览内容</div>
@@ -858,6 +946,41 @@ button:disabled {
 	min-height: 100%;
 	border: 0;
 	background: #ffffff;
+}
+
+.pdf-render-preview {
+	min-height: 100%;
+	background: #e5e7eb;
+}
+
+.pdf-pages {
+	display: grid;
+	gap: 16px;
+	box-sizing: border-box;
+	min-height: 100%;
+	padding: 18px;
+}
+
+.pdf-pages figure {
+	margin: 0;
+	display: grid;
+	gap: 8px;
+}
+
+.pdf-pages img {
+	display: block;
+	width: min(100%, 920px);
+	height: auto;
+	margin: 0 auto;
+	background: #ffffff;
+	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+.pdf-pages figcaption {
+	color: #475569;
+	font-size: 12px;
+	font-weight: 800;
+	text-align: center;
 }
 
 .office-preview {

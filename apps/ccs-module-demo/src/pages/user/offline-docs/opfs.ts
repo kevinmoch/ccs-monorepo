@@ -1,6 +1,5 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
-import { isSameOriginDocument } from './catalog';
 import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, OfflineStorageKind, StorageStats, ViewerSource } from './types';
 
 type OpfsStorageManager = StorageManager & {
@@ -194,10 +193,10 @@ export async function checkDocumentUpdate(document: OfflineDocument): Promise<Ca
 	if (isAndroidNative()) return checkNativeDocumentUpdate(document);
 
 	const meta = await getDocumentMeta(document.id);
-	if (!meta || !navigator.onLine || !isSameOriginDocument(document)) return meta;
+	if (!meta || !navigator.onLine) return meta;
 
 	try {
-		const response = await fetch(document.url, { method: 'HEAD', cache: 'no-store' });
+		const response = await fetch(toAbsoluteDocumentUrl(document), { method: 'HEAD', cache: 'no-store' });
 		if (!response.ok) return meta;
 
 		const nextEtag = response.headers.get('etag') ?? document.etag;
@@ -236,7 +235,6 @@ export async function downloadDocumentToOpfs(
 
 	if (!isOpfsAvailable()) throw new Error('当前浏览器不支持 OPFS，无法离线缓存大文件');
 	if (!document.allowOffline) throw new Error('该文档未开放离线缓存');
-	if (!isSameOriginDocument(document)) throw new Error('Web 端仅允许缓存同源文档');
 
 	await persistOpfsStorage();
 
@@ -251,8 +249,9 @@ export async function downloadDocumentToOpfs(
 	let writable: FileSystemWritableFileStream | undefined;
 
 	try {
-		const response = await fetch(document.url, { headers: requestHeaders, cache: 'no-store', signal: options.signal });
+		const response = await fetch(toAbsoluteDocumentUrl(document), { headers: requestHeaders, cache: 'no-store', signal: options.signal });
 		if (!response.ok && response.status !== 206) throw new Error(`下载失败：HTTP ${response.status}`);
+		validateDocumentResponse(response, document);
 		if (!response.body) throw new Error('当前环境无法读取下载流');
 
 		const canResume = startByte > 0 && response.status === 206;
@@ -505,6 +504,7 @@ async function downloadDocumentWithAndroid(
 	try {
 		const response = await fetch(toAbsoluteDocumentUrl(document), { headers: requestHeaders, cache: 'no-store', signal: options.signal });
 		if (!response.ok && response.status !== 206) throw new Error(`下载失败：HTTP ${response.status}`);
+		validateDocumentResponse(response, document);
 		if (!response.body) throw new Error('当前环境无法读取下载流');
 
 		const canResume = startByte > 0 && response.status === 206;
@@ -805,6 +805,13 @@ function getResponseTotalBytes(response: Response, startByte: number): number | 
 	const contentLength = parseNumber(response.headers.get('content-length'));
 	if (typeof contentLength === 'number') return startByte + contentLength;
 	return undefined;
+}
+
+function validateDocumentResponse(response: Response, document: OfflineDocument) {
+	const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+	if (contentType.includes('text/html') && !document.mimeType.toLowerCase().includes('html')) {
+		throw new Error('服务器返回了 HTML 页面，未获取到真实文档文件');
+	}
 }
 
 function parseNumber(value: string | null | undefined): number | undefined {

@@ -10,6 +10,7 @@
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",
     "build:android": "node scripts/build-android.mjs",
+    "doc": "cd documents && npx http-server --cors",
     "preview": "node scripts/preview-ssl.mjs",
     "lint": "turbo run lint",
     "test": "vitest run",
