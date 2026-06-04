@@ -3,26 +3,17 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { isDocumentsSiteDocument, loadDocumentCatalog } from './offline-docs/catalog';
 import {
 	checkDocumentUpdate,
-	createCachedObjectUrl,
 	downloadDocumentToOpfs,
 	getAllMetadata,
 	getStorageStats,
 	isOpfsAvailable,
+	openCachedDocument,
+	openOnlineDocument,
 	removeDocumentCache,
 	removeManyDocumentCaches,
 	writeCatalogSnapshot
 } from './offline-docs/opfs';
-import type { CachedDocumentMeta, DocumentFileType, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats, ViewerSource } from './offline-docs/types';
-
-type SheetPreview = {
-	name: string;
-	rows: string[][];
-};
-
-type PdfPagePreview = {
-	pageNumber: number;
-	url: string;
-};
+import type { CachedDocumentMeta, DocumentFileType, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats } from './offline-docs/types';
 
 const APP_WATERMARK_RATIO = 0.86;
 
@@ -35,18 +26,8 @@ const isOnline = ref(navigator.onLine);
 const isLoading = ref(true);
 const isCheckingUpdates = ref(false);
 const pageMessage = ref('');
-const viewerSource = ref<ViewerSource>({ kind: 'unavailable', message: '请选择文档列表里的文档来查看' });
-const viewerFileType = ref<DocumentFileType | 'empty'>('empty');
-const viewerLoading = ref(false);
-const viewerError = ref('');
-const docxHtml = ref('');
-const pdfPages = ref<PdfPagePreview[]>([]);
-const sheetPreview = ref<SheetPreview[]>([]);
 const autoLru = ref(true);
 const stats = ref<StorageStats>({ usedBytes: 0, cachedBytes: 0, partialBytes: 0, metadataBytes: 0, opfsAvailable: isOpfsAvailable() });
-
-let activeObjectUrl: string | undefined;
-let pdfPageObjectUrls: string[] = [];
 
 const documentRows = computed(() => documents.value.map((document) => {
 	const progress = progressMap.value.get(document.id);
@@ -57,8 +38,6 @@ const documentRows = computed(() => documents.value.map((document) => {
 
 const filteredRows = computed(() => documentRows.value);
 
-const selectedDocument = computed(() => documents.value.find((document) => document.id === selectedId.value));
-const selectedMeta = computed(() => selectedId.value ? metaMap.value.get(selectedId.value) : undefined);
 const cachedRows = computed(() => documentRows.value.filter(({ meta }) => meta && (meta.cachedBytes > 0 || meta.partialBytes > 0)));
 const totalSelectedBytes = computed(() => checkedIds.value.reduce((total, id) => {
 	const meta = metaMap.value.get(id);
@@ -94,8 +73,6 @@ onMounted(async () => {
 onUnmounted(() => {
 	window.removeEventListener('online', handleNetworkChange);
 	window.removeEventListener('offline', handleNetworkChange);
-	revokeActiveObjectUrl();
-	revokePdfPageUrls();
 });
 
 async function initializePage() {
@@ -105,8 +82,6 @@ async function initializePage() {
 		if (isOpfsAvailable()) await writeCatalogSnapshot(documents.value);
 		await refreshMetadata();
 		selectedId.value = '';
-		viewerSource.value = { kind: 'unavailable', message: '请选择文档列表里的文档来查看' };
-		viewerFileType.value = 'empty';
 	} catch (error) {
 		pageMessage.value = normalizeError(error);
 	} finally {
@@ -125,44 +100,42 @@ async function refreshMetadata() {
 	stats.value = await getStorageStats();
 }
 
-async function openDocument(document: OfflineDocument) {
+async function openOnline(document: OfflineDocument) {
 	selectedId.value = document.id;
-	revokeActiveObjectUrl();
-	viewerLoading.value = true;
-	viewerError.value = '';
-	docxHtml.value = '';
-	revokePdfPageUrls();
-	pdfPages.value = [];
-	sheetPreview.value = [];
-	viewerFileType.value = document.fileType;
+	pageMessage.value = '';
+
+	try {
+		if (!isOnline.value) {
+			pageMessage.value = '当前离线，无法打开在线文档';
+			return;
+		}
+
+		await openOnlineDocument(document);
+	} catch (error) {
+		pageMessage.value = normalizeError(error);
+	}
+}
+
+async function openOffline(document: OfflineDocument) {
+	selectedId.value = document.id;
+	pageMessage.value = '';
 
 	try {
 		const meta = metaMap.value.get(document.id);
+		if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) {
+			pageMessage.value = '本地没有可用缓存，请先缓存本地';
+			return;
+		}
+
 		if (isCacheSizeMismatch(document, meta)) {
-			viewerSource.value = { kind: 'unavailable', message: '本地缓存文件与服务器清单不一致，请重新下载' };
+			pageMessage.value = '本地缓存文件与服务器清单不一致，请更新缓存后再打开';
 			return;
 		}
 
-		if (meta?.status === 'offline' || meta?.status === 'update-available') {
-			viewerSource.value = await createCachedObjectUrl(document);
-			activeObjectUrl = viewerSource.value.url;
-			await renderPreview(document, viewerSource.value);
-			await refreshMetadata();
-			return;
-		}
-
-		if (!isOnline.value) {
-			viewerSource.value = { kind: 'unavailable', message: '离线状态下没有本地缓存，请联网后先缓存文档' };
-			return;
-		}
-
-		viewerSource.value = { kind: 'online', url: document.url, message: isDocumentsSiteDocument(document) ? '正在读取文档站点' : '正在读取远程文档' };
-		await renderPreview(document, viewerSource.value);
+		await openCachedDocument(document);
+		await refreshMetadata();
 	} catch (error) {
-		viewerSource.value = { kind: 'unavailable', message: normalizeError(error) };
-		viewerError.value = normalizeError(error);
-	} finally {
-		viewerLoading.value = false;
+		pageMessage.value = normalizeError(error);
 	}
 }
 
@@ -186,7 +159,7 @@ async function cacheDocument(document: OfflineDocument, force = false) {
 		await clearLruIfNeeded(document);
 		await downloadDocumentToOpfs(document, (progress) => setProgress(document.id, progress), { force });
 		await refreshMetadata();
-		if (selectedId.value === document.id) await openDocument(document);
+		pageMessage.value = force ? `已更新缓存：${document.title}` : `已缓存本地：${document.title}`;
 	} catch (error) {
 		pageMessage.value = normalizeError(error);
 		await refreshMetadata();
@@ -199,7 +172,7 @@ async function clearOne(id: string) {
 	await removeDocumentCache(id);
 	checkedIds.value = checkedIds.value.filter((checkedId) => checkedId !== id);
 	await refreshMetadata();
-	if (selectedId.value === id && selectedDocument.value) await openDocument(selectedDocument.value);
+	if (selectedId.value === id) selectedId.value = '';
 }
 
 async function clearSelected() {
@@ -207,14 +180,14 @@ async function clearSelected() {
 	const clearedSelected = checkedIds.value.includes(selectedId.value);
 	checkedIds.value = [];
 	await refreshMetadata();
-	if (clearedSelected && selectedDocument.value) await openDocument(selectedDocument.value);
+	if (clearedSelected) selectedId.value = '';
 }
 
 async function clearAll() {
 	await removeManyDocumentCaches(cachedRows.value.map(({ document }) => document.id));
 	checkedIds.value = [];
 	await refreshMetadata();
-	if (selectedDocument.value) await openDocument(selectedDocument.value);
+	selectedId.value = '';
 }
 
 async function clearOldestCache() {
@@ -244,101 +217,6 @@ async function checkUpdates() {
 	}
 }
 
-async function renderPreview(document: OfflineDocument, source: ViewerSource) {
-	docxHtml.value = '';
-	revokePdfPageUrls();
-	pdfPages.value = [];
-	sheetPreview.value = [];
-	if (source.kind === 'unavailable') return;
-	if (document.fileType === 'image' || document.fileType === 'doc' || document.fileType === 'xls') return;
-
-	try {
-		if (document.fileType === 'pdf') {
-			if (!source.blob && source.url) await renderPdfPreviewFromUrl(source.url);
-			else await renderPdfPreviewFromArrayBuffer(await (source.blob ?? await fetchSourceBlob(source, document)).arrayBuffer());
-			return;
-		}
-
-		const blob = source.blob ?? await fetchSourceBlob(source, document);
-		const arrayBuffer = await blob.arrayBuffer();
-
-		if (document.fileType === 'docx') {
-			const mammoth = await import('mammoth');
-			const result = await mammoth.convertToHtml({ arrayBuffer });
-			docxHtml.value = result.value;
-			return;
-		}
-
-		if (document.fileType === 'xlsx') {
-			const xlsx = await import('xlsx');
-			const workbook = xlsx.read(arrayBuffer, { type: 'array' });
-			sheetPreview.value = workbook.SheetNames.slice(0, 3).map((name) => {
-				const rows = xlsx.utils.sheet_to_json<string[]>(workbook.Sheets[name], { header: 1, blankrows: false }).slice(0, 80);
-				return { name, rows: rows.map((row) => row.map((cell) => String(cell ?? ''))) };
-			});
-		}
-	} catch (error) {
-		viewerError.value = `预览解析失败：${normalizeError(error)}`;
-	}
-}
-
-async function renderPdfPreviewFromArrayBuffer(arrayBuffer: ArrayBuffer) {
-	await renderPdfPreview({ data: arrayBuffer });
-}
-
-async function renderPdfPreviewFromUrl(url: string) {
-	await renderPdfPreview({ url, withCredentials: false });
-}
-
-async function renderPdfPreview(source: { data: ArrayBuffer } | { url: string; withCredentials: boolean }) {
-	const [pdfjs, worker] = await Promise.all([
-		import('pdfjs-dist'),
-		import('pdfjs-dist/build/pdf.worker.mjs?url')
-	]);
-	pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-
-	const pdf = await pdfjs.getDocument(source).promise;
-	const renderedPages: PdfPagePreview[] = [];
-	for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-		const page = await pdf.getPage(pageNumber);
-		const baseViewport = page.getViewport({ scale: 1 });
-		const scale = Math.min(2, Math.max(1, 920 / baseViewport.width));
-		const viewport = page.getViewport({ scale });
-		const canvas = document.createElement('canvas');
-		const context = canvas.getContext('2d');
-		if (!context) throw new Error('当前环境无法创建 PDF 画布');
-
-		canvas.width = Math.ceil(viewport.width);
-		canvas.height = Math.ceil(viewport.height);
-		await page.render({ canvas, canvasContext: context, viewport }).promise;
-
-		const url = await canvasToObjectUrl(canvas);
-		pdfPageObjectUrls.push(url);
-		renderedPages.push({ pageNumber, url });
-		pdfPages.value = [...renderedPages];
-	}
-}
-
-function canvasToObjectUrl(canvas: HTMLCanvasElement) {
-	return new Promise<string>((resolve, reject) => {
-		canvas.toBlob((blob) => {
-			if (!blob) reject(new Error('PDF 页面渲染失败'));
-			else resolve(URL.createObjectURL(blob));
-		}, 'image/png');
-	});
-}
-
-async function fetchSourceBlob(source: ViewerSource, document: OfflineDocument): Promise<Blob> {
-	if (!source.url) throw new Error('没有可读取的文档地址');
-	const response = await fetch(source.url, { cache: 'no-store' });
-	if (!response.ok) throw new Error(`在线文档读取失败：HTTP ${response.status}`);
-	const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
-	if (contentType.includes('text/html') && !document.mimeType.toLowerCase().includes('html')) {
-		throw new Error('服务器返回了 HTML 页面，未获取到真实文档文件');
-	}
-	return response.blob();
-}
-
 async function clearLruIfNeeded(document: OfflineDocument) {
 	if (!autoLru.value || !document.size) return;
 	const currentStats = await getStorageStats();
@@ -362,16 +240,6 @@ function deleteProgress(id: string) {
 	const next = new Map(progressMap.value);
 	next.delete(id);
 	progressMap.value = next;
-}
-
-function revokeActiveObjectUrl() {
-	if (activeObjectUrl) URL.revokeObjectURL(activeObjectUrl);
-	activeObjectUrl = undefined;
-}
-
-function revokePdfPageUrls() {
-	for (const url of pdfPageObjectUrls) URL.revokeObjectURL(url);
-	pdfPageObjectUrls = [];
 }
 
 function statusLabel(status: DocumentStatus) {
@@ -465,11 +333,6 @@ function normalizeError(error: unknown) {
 						:key="row.document.id"
 						class="doc-row"
 						:class="[{ active: row.document.id === selectedId }, `status-${row.status}`]"
-						role="button"
-						tabindex="0"
-						@click="openDocument(row.document)"
-						@keydown.enter.self.prevent="openDocument(row.document)"
-						@keydown.space.self.prevent="openDocument(row.document)"
 					>
 						<div class="doc-row-main">
 							<label class="doc-checkbox" :title="row.meta ? '选择清理缓存' : '暂无缓存'" @click.stop>
@@ -497,71 +360,15 @@ function normalizeError(error: unknown) {
 						</div>
 
 						<div class="row-actions">
+							<button type="button" :disabled="!isOnline" @click.stop="openOnline(row.document)">在线查看</button>
 							<button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click.stop="cacheDocument(row.document)">缓存本地</button>
-							<button v-else-if="row.status === 'update-available'" type="button" @click.stop="cacheDocument(row.document, true)">重新下载</button>
-							<button v-else-if="row.status === 'offline'" type="button" @click.stop="openDocument(row.document)">离线查看</button>
-							<button v-if="row.meta" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">清除缓存</button>
+							<button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" @click.stop="openOffline(row.document)">离线查看</button>
+							<button v-if="row.meta" type="button" @click.stop="cacheDocument(row.document, true)">更新缓存</button>
+							<button v-if="row.meta" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">删除缓存</button>
 						</div>
 					</article>
 				</div>
 			</aside>
-
-			<section class="viewer-panel">
-				<div class="viewer-topline">
-					<div>
-						<span>文档查看</span>
-						<strong>{{ selectedDocument?.title ?? '未选择文档' }}</strong>
-					</div>
-					<div class="viewer-source" :class="viewerSource.kind">
-						{{ viewerSource.kind === 'cache' ? '本地缓存' : viewerSource.kind === 'online' ? '在线读取' : '不可用' }}
-					</div>
-				</div>
-
-				<div v-if="selectedMeta?.status === 'update-available'" class="update-strip">
-					服务器文件已有更新，当前默认仍读取本地缓存。
-					<button v-if="selectedDocument" type="button" @click="cacheDocument(selectedDocument, true)">重新下载</button>
-				</div>
-
-				<div class="viewer-body">
-					<div v-if="viewerLoading" class="empty-state">正在准备查看器</div>
-					<div v-else-if="viewerSource.kind === 'unavailable'" class="empty-state">{{ viewerSource.message }}</div>
-					<img v-else-if="viewerFileType === 'image' && viewerSource.url" class="image-preview" :src="viewerSource.url" alt="文档图片预览" />
-					<div v-else-if="viewerFileType === 'pdf'" class="pdf-render-preview">
-						<div v-if="pdfPages.length" class="pdf-pages">
-							<figure v-for="page in pdfPages" :key="page.pageNumber">
-								<img :src="page.url" :alt="`PDF 第 ${page.pageNumber} 页`" />
-								<figcaption>第 {{ page.pageNumber }} 页</figcaption>
-							</figure>
-						</div>
-						<iframe v-else-if="viewerSource.url" class="pdf-preview" :src="viewerSource.url" title="PDF 文档预览"></iframe>
-						<div v-else class="empty-state">PDF 暂无可预览内容</div>
-					</div>
-					<div v-else-if="viewerFileType === 'docx'" class="office-preview">
-						<div v-if="docxHtml" v-html="docxHtml"></div>
-						<div v-else class="empty-state">DOCX 正在解析或暂无可预览内容</div>
-					</div>
-					<div v-else-if="viewerFileType === 'xlsx'" class="sheet-preview">
-						<section v-for="sheet in sheetPreview" :key="sheet.name">
-							<h3>{{ sheet.name }}</h3>
-							<div class="sheet-scroll">
-								<table>
-									<tbody>
-										<tr v-for="(row, rowIndex) in sheet.rows" :key="rowIndex">
-											<td v-for="(cell, cellIndex) in row" :key="cellIndex">{{ cell }}</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</section>
-						<div v-if="!sheetPreview.length" class="empty-state">XLSX 正在解析或暂无可预览内容</div>
-					</div>
-					<div v-else class="empty-state">
-						旧版 Office 文件已支持缓存和离线管理，当前查看区不做内嵌解析。
-					</div>
-				</div>
-
-				<p v-if="viewerError" class="viewer-error">{{ viewerError }}</p>
-			</section>
 		</div>
 
 		<section class="cache-panel">
@@ -598,7 +405,6 @@ function normalizeError(error: unknown) {
 
 .doc-hero,
 .doc-list-panel,
-.viewer-panel,
 .cache-panel {
 	box-sizing: border-box;
 	border: 1px solid rgba(15, 23, 42, 0.08);
@@ -687,31 +493,21 @@ function normalizeError(error: unknown) {
 
 .doc-workspace {
 	display: grid;
-	grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
 	gap: 16px;
-	height: clamp(560px, calc(100dvh - 290px), 720px);
-	min-height: 560px;
 }
 
 .doc-list-panel,
-.viewer-panel,
 .cache-panel {
 	padding: 16px;
-}
-
-.doc-list-panel,
-.viewer-panel {
-	height: 100%;
-	min-height: 0;
 }
 
 .doc-list-panel {
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
+	min-height: 0;
 }
 
 .panel-heading,
-.viewer-topline,
 .doc-row-main,
 .row-actions,
 .cache-actions {
@@ -721,8 +517,7 @@ function normalizeError(error: unknown) {
 	gap: 12px;
 }
 
-.panel-heading strong,
-.viewer-topline strong {
+.panel-heading strong {
 	font-size: 20px;
 }
 
@@ -731,6 +526,7 @@ function normalizeError(error: unknown) {
 	gap: 10px;
 	margin-top: 14px;
 	min-height: 0;
+	max-height: clamp(520px, calc(100dvh - 290px), 720px);
 	overflow: auto;
 	padding-right: 4px;
 }
@@ -742,12 +538,6 @@ function normalizeError(error: unknown) {
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	border-radius: 8px;
 	background: #ffffff;
-	cursor: pointer;
-}
-
-.doc-row:focus-visible {
-	outline: 3px solid rgba(37, 99, 235, 0.22);
-	outline-offset: 2px;
 }
 
 .doc-row.active {
@@ -789,8 +579,7 @@ function normalizeError(error: unknown) {
 }
 
 .type-badge,
-.status-badge,
-.viewer-source {
+.status-badge {
 	flex: 0 0 auto;
 	display: inline-flex;
 	align-items: center;
@@ -813,8 +602,7 @@ function normalizeError(error: unknown) {
 	color: #475569;
 }
 
-.status-offline .status-badge,
-.viewer-source.cache {
+.status-offline .status-badge {
 	background: #dcfce7;
 	color: #15803d;
 }
@@ -824,14 +612,12 @@ function normalizeError(error: unknown) {
 	color: #b45309;
 }
 
-.status-downloading .status-badge,
-.viewer-source.online {
+.status-downloading .status-badge {
 	background: #dbeafe;
 	color: #1d4ed8;
 }
 
-.status-failed .status-badge,
-.viewer-source.unavailable {
+.status-failed .status-badge {
 	background: #fee2e2;
 	color: #b91c1c;
 }
@@ -919,161 +705,16 @@ button:disabled {
 	background: #dc2626;
 }
 
-.viewer-panel {
-	display: grid;
-	grid-template-rows: auto auto minmax(0, 1fr) auto;
-	gap: 12px;
-	overflow: hidden;
-}
-
-.viewer-topline > div:first-child {
-	display: grid;
-	gap: 4px;
-	min-width: 0;
-}
-
-.viewer-body {
-	min-height: 0;
-	height: 100%;
-	overflow: auto;
-	border: 1px solid rgba(15, 23, 42, 0.08);
-	border-radius: 8px;
-	background: #f8fafc;
-}
-
-.image-preview {
-	display: block;
-	max-width: 100%;
-	max-height: 100%;
-	height: 100%;
-	margin: 0 auto;
-	object-fit: contain;
-}
-
-.pdf-preview {
-	width: 100%;
-	height: 100%;
-	min-height: 100%;
-	border: 0;
-	background: #ffffff;
-}
-
-.pdf-render-preview {
-	min-height: 100%;
-	background: #e5e7eb;
-}
-
-.pdf-pages {
-	display: grid;
-	gap: 16px;
-	box-sizing: border-box;
-	min-height: 100%;
-	padding: 18px;
-}
-
-.pdf-pages figure {
-	margin: 0;
-	display: grid;
-	gap: 8px;
-}
-
-.pdf-pages img {
-	display: block;
-	width: min(100%, 920px);
-	height: auto;
-	margin: 0 auto;
-	background: #ffffff;
-	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
-}
-
-.pdf-pages figcaption {
-	color: #475569;
-	font-size: 12px;
-	font-weight: 800;
-	text-align: center;
-}
-
-.office-preview {
-	box-sizing: border-box;
-	min-height: 100%;
-	padding: 24px;
-	background: #ffffff;
-	line-height: 1.7;
-}
-
-.office-preview :deep(table) {
-	border-collapse: collapse;
-	width: 100%;
-}
-
-.office-preview :deep(td),
-.office-preview :deep(th) {
-	border: 1px solid #e2e8f0;
-	padding: 6px 8px;
-}
-
-.sheet-preview {
-	display: grid;
-	gap: 18px;
-	box-sizing: border-box;
-	min-height: 100%;
-	padding: 18px;
-	background: #ffffff;
-}
-
-.sheet-preview h3 {
-	margin: 0 0 10px;
-	font-size: 16px;
-}
-
-.sheet-scroll {
-	overflow: auto;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-}
-
-.sheet-scroll table {
-	border-collapse: collapse;
-	min-width: 680px;
-	width: 100%;
-}
-
-.sheet-scroll td {
-	border: 1px solid #e2e8f0;
-	padding: 7px 9px;
-	font-size: 13px;
-	white-space: nowrap;
-}
-
-.update-strip,
 .page-message,
-.viewer-error,
 .empty-state {
 	border-radius: 8px;
 	padding: 12px;
-}
-
-.update-strip {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	background: #fffbeb;
-	color: #92400e;
-	font-weight: 800;
 }
 
 .page-message {
 	margin: 0;
 	background: #f8fafc;
 	color: #475569;
-	font-weight: 700;
-}
-
-.viewer-error {
-	margin: 0;
-	background: #fef2f2;
-	color: #b91c1c;
 	font-weight: 700;
 }
 
@@ -1084,10 +725,6 @@ button:disabled {
 	color: #667085;
 	font-weight: 800;
 	text-align: center;
-}
-
-.viewer-body > .empty-state {
-	min-height: 100%;
 }
 
 .cache-panel {
@@ -1113,16 +750,6 @@ button:disabled {
 }
 
 @media (max-width: 1100px) {
-	.doc-workspace {
-		grid-template-columns: 1fr;
-		height: auto;
-	}
-
-	.doc-list-panel,
-	.viewer-panel {
-		height: min(640px, calc(100dvh - 150px));
-	}
-
 	.hero-metrics {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -1131,7 +758,6 @@ button:disabled {
 @media (max-width: 720px) {
 	.doc-hero,
 	.doc-row-main,
-	.viewer-topline,
 	.cache-actions {
 		align-items: stretch;
 		flex-direction: column;

@@ -1,3 +1,5 @@
+import { FileOpener } from '@capacitor-community/file-opener';
+import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, OfflineStorageKind, StorageStats, ViewerSource } from './types';
@@ -24,6 +26,8 @@ type ElectronOfflineDocsBridge = {
 	removeDocumentCache: (id: string) => Promise<void>;
 	checkDocumentUpdate: (document: OfflineDocument, absoluteUrl: string) => Promise<CachedDocumentMeta | undefined>;
 	getCachedFileUrl: (id: string) => Promise<string | undefined>;
+	openCachedDocument: (id: string) => Promise<void>;
+	openOnlineDocument: (absoluteUrl: string) => Promise<void>;
 	downloadDocument: (request: { downloadId: string; document: OfflineDocument; absoluteUrl: string; force?: boolean }) => Promise<CachedDocumentMeta>;
 	onDownloadProgress: (listener: (payload: ElectronDownloadPayload) => void) => () => void;
 };
@@ -38,6 +42,18 @@ type AndroidFilesystemResponse<T> = {
 	type: 'CCS_ANDROID_FS_RESPONSE';
 	id: string;
 	result?: T;
+	error?: string;
+};
+
+type AndroidFileOpenResponse = {
+	type: 'CCS_ANDROID_FILE_OPEN_RESPONSE';
+	id: string;
+	error?: string;
+};
+
+type AndroidBrowserOpenResponse = {
+	type: 'CCS_ANDROID_BROWSER_OPEN_RESPONSE';
+	id: string;
 	error?: string;
 };
 
@@ -162,6 +178,30 @@ export async function createCachedObjectUrl(document: OfflineDocument): Promise<
 	await touchDocument(document.id);
 
 	return { kind: 'cache', url: URL.createObjectURL(file), blob: file };
+}
+
+export async function openOnlineDocument(document: OfflineDocument) {
+	const absoluteUrl = toAbsoluteDocumentUrl(document);
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.openOnlineDocument(absoluteUrl);
+	if (isAndroidNative()) return androidOpenBrowser(absoluteUrl);
+	openWindow(absoluteUrl);
+}
+
+export async function openCachedDocument(document: OfflineDocument): Promise<void> {
+	const electron = getElectronOfflineDocs();
+	if (electron) return electron.openCachedDocument(document.id);
+	if (isAndroidNative()) return openAndroidCachedDocument(document);
+
+	const opened = openPendingWindow();
+	try {
+		const source = await createCachedObjectUrl(document);
+		if (!source.url) throw new Error(source.message ?? '本地没有可用缓存');
+		opened.location.href = source.url;
+	} catch (error) {
+		opened.close();
+		throw error;
+	}
 }
 
 export async function touchDocument(id: string) {
@@ -460,6 +500,14 @@ async function createAndroidCachedUrl(document: OfflineDocument): Promise<Viewer
 	return { kind: 'cache', url: Capacitor.convertFileSrc(result.uri) };
 }
 
+async function openAndroidCachedDocument(document: OfflineDocument) {
+	const meta = await getAndroidDocumentMeta(document.id);
+	if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) throw new Error('本地没有可用缓存');
+	const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.getUri>>>('getUri', { path: getAndroidDocPath(meta.localName), directory: Directory.Data });
+	await touchDocument(document.id);
+	await androidOpenFile(result.uri, document.mimeType);
+}
+
 async function removeAndroidDocumentCache(id: string) {
 	const meta = await getAndroidDocumentMeta(id);
 	if (meta?.localName) await deleteAndroidFile(getAndroidDocPath(meta.localName));
@@ -701,6 +749,54 @@ function androidFilesystem<T = unknown>(method: AndroidFilesystemMethod, args: R
 	});
 }
 
+function androidOpenFile(filePath: string, contentType: string): Promise<void> {
+	if (!shouldUseParentAndroidFilesystemBridge()) {
+		return FileOpener.open({ filePath, contentType, openWithDefault: true });
+	}
+
+	return new Promise<void>((resolve, reject) => {
+		const id = `open-file-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		const timeout = window.setTimeout(() => {
+			window.removeEventListener('message', handleResponse);
+			reject(new Error('Android 文件打开操作超时'));
+		}, 30000);
+
+		function handleResponse(event: MessageEvent<AndroidFileOpenResponse>) {
+			if (event.data?.type !== 'CCS_ANDROID_FILE_OPEN_RESPONSE' || event.data.id !== id) return;
+			window.clearTimeout(timeout);
+			window.removeEventListener('message', handleResponse);
+			if (event.data.error) reject(new Error(event.data.error));
+			else resolve();
+		}
+
+		window.addEventListener('message', handleResponse);
+		window.top?.postMessage({ type: 'CCS_ANDROID_FILE_OPEN_REQUEST', id, filePath, contentType }, '*');
+	});
+}
+
+function androidOpenBrowser(url: string): Promise<void> {
+	if (!shouldUseParentAndroidFilesystemBridge()) return Browser.open({ url });
+
+	return new Promise<void>((resolve, reject) => {
+		const id = `open-browser-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		const timeout = window.setTimeout(() => {
+			window.removeEventListener('message', handleResponse);
+			reject(new Error('Android 浏览器打开操作超时'));
+		}, 30000);
+
+		function handleResponse(event: MessageEvent<AndroidBrowserOpenResponse>) {
+			if (event.data?.type !== 'CCS_ANDROID_BROWSER_OPEN_RESPONSE' || event.data.id !== id) return;
+			window.clearTimeout(timeout);
+			window.removeEventListener('message', handleResponse);
+			if (event.data.error) reject(new Error(event.data.error));
+			else resolve();
+		}
+
+		window.addEventListener('message', handleResponse);
+		window.top?.postMessage({ type: 'CCS_ANDROID_BROWSER_OPEN_REQUEST', id, url }, '*');
+	});
+}
+
 function shouldUseParentAndroidFilesystemBridge() {
 	return window !== window.top && isAndroidNative();
 }
@@ -770,6 +866,18 @@ function getMetaName(id: string) {
 
 function sanitizeFileName(value: string) {
 	return value.replace(/[^a-z0-9._-]/gi, '_');
+}
+
+function openWindow(url: string) {
+	const opened = window.open(url, '_blank', 'noopener');
+	if (!opened) throw new Error('浏览器阻止了新窗口，请允许弹窗后重试');
+}
+
+function openPendingWindow() {
+	const opened = window.open('about:blank', '_blank');
+	if (!opened) throw new Error('浏览器阻止了新窗口，请允许弹窗后重试');
+	opened.opener = null;
+	return opened;
 }
 
 function getFileExtension(urlText: string) {

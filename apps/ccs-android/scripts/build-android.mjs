@@ -35,7 +35,7 @@ if (missingPrereqs.length > 0) {
     console.warn('    (NOT DCloud offline SDK — a valid SDK has platform-tools/, build-tools/, platforms/)');
   }
   if (missingPrereqs.includes('jdk')) {
-    console.warn('  JDK: Set JAVA_HOME to JDK 17+ installation directory');
+    console.warn('  JDK: Set JAVA_HOME to JDK 21 installation directory');
   }
   console.warn('  Will proceed with cap copy/sync only. Install prerequisites and re-run for APK.');
   console.warn('');
@@ -103,7 +103,7 @@ if (prepareOnly || missingPrereqs.length > 0) {
   if (missingPrereqs.length > 0) {
     console.log(`To build the APK, install: ${missingPrereqs.join(', ')} and re-run.`);
   } else {
-    console.log('Set ANDROID_HOME and JAVA_HOME and re-run to build the APK.');
+    console.log('Set ANDROID_HOME and JAVA_HOME to JDK 21 and re-run to build the APK.');
   }
   process.exit(0);
 }
@@ -216,8 +216,19 @@ function isRealAndroidSdk(dir) {
 }
 
 function detectJavaHome() {
-  // 1. Check environment variables
-  const fromEnv = getFirstEnv('CCS_JAVA_HOME', 'JAVA_HOME', 'JDK_HOME');
+  // 1. Allow an explicit project override.
+  const fromProjectEnv = getFirstEnv('CCS_JAVA_HOME');
+  if (fromProjectEnv && isJdkDir(fromProjectEnv)) return resolve(fromProjectEnv);
+
+  if (process.platform === 'darwin') {
+    const javaHome21 = spawnSync('/usr/libexec/java_home', ['-v', '21'], { stdio: 'pipe' });
+    if (javaHome21.status === 0 && javaHome21.stdout) {
+      const jdkPath = javaHome21.stdout.toString().trim();
+      if (isJdkDir(jdkPath)) return resolve(jdkPath);
+    }
+  }
+
+  const fromEnv = getFirstEnv('JAVA_HOME', 'JDK_HOME');
   if (fromEnv && isJdkDir(fromEnv)) return resolve(fromEnv);
 
   // 2. Check common Windows locations

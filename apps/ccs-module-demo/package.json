@@ -12,23 +12,22 @@
     "clean": "rm -rf dist .ccs-card-build"
   },
   "dependencies": {
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/filesystem": "^6.0.0",
-    "@capacitor/geolocation": "^6.1.1",
+    "@capacitor-community/file-opener": "^8.0.1",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/geolocation": "^8.2.0",
     "@ccs/runtime": "workspace:*",
     "@ccs/shared": "workspace:*",
     "@ccs/ui-vue": "workspace:*",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-vue": "latest",
     "i18next": "latest",
-    "mammoth": "^1.11.0",
-    "pdfjs-dist": "^5.4.394",
     "pinia": "latest",
     "vite": "latest",
     "vue": "latest",
     "vue-i18n": "latest",
-    "vue-router": "latest",
-    "xlsx": "^0.18.5"
+    "vue-router": "latest"
   },
   "devDependencies": {
     "tailwindcss": "^4.1.14",
