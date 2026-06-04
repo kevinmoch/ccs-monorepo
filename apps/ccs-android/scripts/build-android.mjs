@@ -119,18 +119,28 @@ console.log(`Building Android APK (${buildVariant})...`);
 const gradleCmd = process.platform === 'win32'
   ? join(androidDir, 'gradlew.bat')
   : join(androidDir, 'gradlew');
-const gradleResult = spawnSync(gradleCmd, ['clean', buildType], {
-  cwd: androidDir,
-  stdio: 'inherit',
-  shell: process.platform === 'win32',
-  env: {
-    ...process.env,
-    ANDROID_HOME: androidSdk,
-    ANDROID_SDK_ROOT: androidSdk,
-    JAVA_HOME: javaHome,
-  },
-});
-if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
+
+if (process.platform === 'win32') {
+  // On Windows, use cmd.exe inline set to ensure JAVA_HOME propagates to gradlew
+  const gradleResult = spawnSync(
+    `set "JAVA_HOME=${javaHome}" && set "ANDROID_HOME=${androidSdk}" && set "ANDROID_SDK_ROOT=${androidSdk}" && "${gradleCmd}" clean ${buildType}`,
+    [],
+    { cwd: androidDir, stdio: 'inherit', shell: true }
+  );
+  if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
+} else {
+  const gradleResult = spawnSync(gradleCmd, ['clean', buildType], {
+    cwd: androidDir,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      ANDROID_HOME: androidSdk,
+      ANDROID_SDK_ROOT: androidSdk,
+      JAVA_HOME: javaHome,
+    },
+  });
+  if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
+}
 
 // 10. Collect APK
 const outDir = join(repoRoot, 'dist', 'android');
@@ -216,10 +226,6 @@ function isRealAndroidSdk(dir) {
 }
 
 function detectJavaHome() {
-  // 1. Allow an explicit project override.
-  const fromProjectEnv = getFirstEnv('CCS_JAVA_HOME');
-  if (fromProjectEnv && isJdkDir(fromProjectEnv)) return resolve(fromProjectEnv);
-
   if (process.platform === 'darwin') {
     const javaHome21 = spawnSync('/usr/libexec/java_home', ['-v', '21'], { stdio: 'pipe' });
     if (javaHome21.status === 0 && javaHome21.stdout) {
@@ -230,6 +236,8 @@ function detectJavaHome() {
 
   const fromEnv = getFirstEnv('JAVA_HOME', 'JDK_HOME');
   if (fromEnv && isJdkDir(fromEnv)) return resolve(fromEnv);
+
+  const foundJdks = [];
 
   // 2. Check common Windows locations
   const home = homedir();
@@ -248,7 +256,7 @@ function detectJavaHome() {
     // Search one level deeper for the actual JDK home
     for (const entry of readdirSync(candidate)) {
       const jdkPath = join(candidate, entry);
-      if (isJdkDir(jdkPath)) return resolve(jdkPath);
+      if (isJdkDir(jdkPath)) foundJdks.push(jdkPath);
     }
   }
 
@@ -261,10 +269,30 @@ function detectJavaHome() {
     const javaPath = whichResult.stdout.toString().trim().split(/\r?\n/)[0];
     // java.exe is typically at <jdk>/bin/java.exe
     const jdkFromJava = resolve(javaPath, '..', '..');
-    if (isJdkDir(jdkFromJava)) return resolve(jdkFromJava);
+    if (isJdkDir(jdkFromJava) && !foundJdks.includes(jdkFromJava)) {
+      foundJdks.push(jdkFromJava);
+    }
   }
 
-  return undefined;
+  if (foundJdks.length === 0) return undefined;
+
+  // Prefer JDK 21+ (required by AGP 8.13+), then fall back to the first found JDK
+  const javaExe = process.platform === 'win32' ? 'bin\\java.exe' : 'bin/java';
+  for (const jdk of foundJdks) {
+    const javaBin = join(jdk, javaExe);
+    if (!existsSync(javaBin)) continue;
+    const verResult = spawnSync(javaBin, ['-version'], { stdio: 'pipe' });
+    // java -version writes to stderr
+    const verOutput = (verResult.stdout?.toString() ?? '') + (verResult.stderr?.toString() ?? '');
+    const verMatch = verOutput.match(/version\s+"(\d+)/);
+    if (verMatch && parseInt(verMatch[1], 10) >= 21) {
+      return resolve(jdk);
+    }
+  }
+
+  // Fallback: log a warning and use the first available JDK
+  console.warn(`Warning: No JDK 21+ found among detected JDKs. Using ${foundJdks[0]}. Build may fail.`);
+  return resolve(foundJdks[0]);
 }
 
 function isJdkDir(dir) {
