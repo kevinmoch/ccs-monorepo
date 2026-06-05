@@ -1,27 +1,36 @@
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import { readFileSync } from 'node:fs';
-import { defineConfig } from 'vite';
+import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 const moduleName = pkg.name as string;
 
-export default defineConfig(({ command }) => ({
-  plugins: [vue(), tailwindcss()],
-  base: process.env.CCS_WEB_BASE ?? (command === 'serve' ? `/${moduleName}/` : '/'),
-  server: {
-    port: 5173,
-    host: '0.0.0.0',
-    cors: true,
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    warmup: {
-      clientFiles: [
-        './src/main.ts',
-        './src/App.vue',
-        './src/router/index.ts'
-      ]
-    }
-  },
-  optimizeDeps: { include: ['vue', 'vue-router', 'pinia', 'vue-i18n'] },
-  build: { outDir: process.env.CCS_WEB_OUT_DIR ?? 'dist', sourcemap: true, emptyOutDir: !process.env.CCS_WEB_OUT_DIR }
-}));
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, path.resolve(__dirname, '../..'), '');
+
+  return {
+    plugins: [vue(), tailwindcss()],
+    base: process.env.CCS_WEB_BASE ?? (command === 'serve' ? `/${moduleName}/` : '/'),
+    define: {
+      'import.meta.env.OFFLINE_DOCS_SERVER': JSON.stringify(env.OFFLINE_DOCS_SERVER || ''),
+      'import.meta.env.OFFLINE_DOCS_ANDROID': JSON.stringify(env.OFFLINE_DOCS_ANDROID || ''),
+    },
+    server: {
+      port: 5173,
+      host: '0.0.0.0',
+      cors: true,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      warmup: {
+        clientFiles: [
+          './src/main.ts',
+          './src/App.vue',
+          './src/router/index.ts'
+        ]
+      }
+    },
+    optimizeDeps: { include: ['vue', 'vue-router', 'pinia', 'vue-i18n'] },
+    build: { outDir: process.env.CCS_WEB_OUT_DIR ?? 'dist', sourcemap: true, emptyOutDir: !process.env.CCS_WEB_OUT_DIR }
+  };
+});

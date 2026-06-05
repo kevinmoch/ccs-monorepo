@@ -10,6 +10,7 @@
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",
     "build:android": "node scripts/build-android.mjs",
+    "build:android:simulator": "node scripts/build-android-simulator.mjs",
     "doc": "cd documents && npx http-server -p 8080 --gzip --cors --ssl -C cert.pem -K key.pem",
     "preview": "node scripts/preview-ssl.mjs",
     "lint": "turbo run lint",

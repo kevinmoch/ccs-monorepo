@@ -717,15 +717,20 @@ function toAbsoluteDocumentUrl(document: OfflineDocument) {
 /**
  * 将文档的相对路径解析为绝对 URL。
  * - 已是绝对 URL → 原样返回
- * - 配置了 OFFLINE_DOCS_SERVER (构建时 .env) → 优先使用
- * - 配置了 VITE_CCS_DOCS_BASE_URL → 备选
+ * - OFFLINE_DOCS_ANDROID → 构建 Android 应用时使用（模拟器设 10.0.2.2，真机设实际 IP）
+ * - OFFLINE_DOCS_SERVER  → Web / Electron / 不设 ANDROID 时的通用配置
+ * - VITE_CCS_DOCS_BASE_URL → 备选
  * - 均未配置 → 默认 https://{当前主机名}:8080/{路径}
+ *
+ * 注意：不根据运行环境自动选择，由 .env 构建配置决定。
+ * 真机 Android 构建时不设 OFFLINE_DOCS_ANDROID 即可使用 OFFLINE_DOCS_SERVER。
  */
 function resolveDocumentUrl(url: string) {
 	if (/^https?:\/\//i.test(url)) return url;
 
-	const configured = (import.meta.env as Record<string, string | undefined>).OFFLINE_DOCS_SERVER
-		|| (import.meta.env as Record<string, string | undefined>).VITE_CCS_DOCS_BASE_URL;
+	const env = import.meta.env as Record<string, string | undefined>;
+	const configured = env.OFFLINE_DOCS_ANDROID || env.OFFLINE_DOCS_SERVER || env.VITE_CCS_DOCS_BASE_URL;
+
 	if (configured) {
 		const base = configured.endsWith('/') ? configured : `${configured}/`;
 		return new URL(url, base).toString();
