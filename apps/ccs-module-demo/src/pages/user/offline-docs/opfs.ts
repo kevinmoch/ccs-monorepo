@@ -1,5 +1,4 @@
 import { FileOpener } from '@capacitor-community/file-opener';
-import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, OfflineStorageKind, StorageStats, ViewerSource } from './types';
@@ -47,12 +46,6 @@ type AndroidFilesystemResponse<T> = {
 
 type AndroidFileOpenResponse = {
 	type: 'CCS_ANDROID_FILE_OPEN_RESPONSE';
-	id: string;
-	error?: string;
-};
-
-type AndroidBrowserOpenResponse = {
-	type: 'CCS_ANDROID_BROWSER_OPEN_RESPONSE';
 	id: string;
 	error?: string;
 };
@@ -184,8 +177,20 @@ export async function openOnlineDocument(document: OfflineDocument) {
 	const absoluteUrl = toAbsoluteDocumentUrl(document);
 	const electron = getElectronOfflineDocs();
 	if (electron) return electron.openOnlineDocument(absoluteUrl);
-	if (isAndroidNative()) return androidOpenBrowser(absoluteUrl);
-	openWindow(absoluteUrl);
+
+	// Android: navigate window.top so Capacitor's shouldOverrideUrlLoading
+	// intercepts and opens the URL in the system browser.
+	if (isAndroidNative()) {
+		try {
+			(window.top ?? window).location.assign(absoluteUrl);
+		} catch {
+			window.location.assign(absoluteUrl);
+		}
+		return;
+	}
+
+	// Web: open in new tab
+	openExternalLink(absoluteUrl);
 }
 
 export async function openCachedDocument(document: OfflineDocument): Promise<void> {
@@ -193,15 +198,10 @@ export async function openCachedDocument(document: OfflineDocument): Promise<voi
 	if (electron) return electron.openCachedDocument(document.id);
 	if (isAndroidNative()) return openAndroidCachedDocument(document);
 
-	const opened = openPendingWindow();
-	try {
-		const source = await createCachedObjectUrl(document);
-		if (!source.url) throw new Error(source.message ?? '本地没有可用缓存');
-		opened.location.href = source.url;
-	} catch (error) {
-		opened.close();
-		throw error;
-	}
+	// Web: create a blob URL from OPFS and open in a new tab
+	const source = await createCachedObjectUrl(document);
+	if (!source.url) throw new Error(source.message ?? '本地没有可用缓存');
+	openExternalLink(source.url);
 }
 
 export async function touchDocument(id: string) {
@@ -711,7 +711,28 @@ function getAndroidMetaPath(id: string) {
 }
 
 function toAbsoluteDocumentUrl(document: OfflineDocument) {
-	return new URL(document.url, window.location.href).toString();
+	return resolveDocumentUrl(document.url);
+}
+
+/**
+ * 将文档的相对路径解析为绝对 URL。
+ * - 已是绝对 URL → 原样返回
+ * - 配置了 OFFLINE_DOCS_SERVER (构建时 .env) → 优先使用
+ * - 配置了 VITE_CCS_DOCS_BASE_URL → 备选
+ * - 均未配置 → 默认 https://{当前主机名}:8080/{路径}
+ */
+function resolveDocumentUrl(url: string) {
+	if (/^https?:\/\//i.test(url)) return url;
+
+	const configured = (import.meta.env as Record<string, string | undefined>).OFFLINE_DOCS_SERVER
+		|| (import.meta.env as Record<string, string | undefined>).VITE_CCS_DOCS_BASE_URL;
+	if (configured) {
+		const base = configured.endsWith('/') ? configured : `${configured}/`;
+		return new URL(url, base).toString();
+	}
+
+	// 默认：与 Web 应用同主机、端口 8080 的文档服务器（HTTPS）
+	return `https://${window.location.hostname}:8080/${url}`;
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -771,29 +792,6 @@ function androidOpenFile(filePath: string, contentType: string): Promise<void> {
 
 		window.addEventListener('message', handleResponse);
 		window.top?.postMessage({ type: 'CCS_ANDROID_FILE_OPEN_REQUEST', id, filePath, contentType }, '*');
-	});
-}
-
-function androidOpenBrowser(url: string): Promise<void> {
-	if (!shouldUseParentAndroidFilesystemBridge()) return Browser.open({ url });
-
-	return new Promise<void>((resolve, reject) => {
-		const id = `open-browser-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		const timeout = window.setTimeout(() => {
-			window.removeEventListener('message', handleResponse);
-			reject(new Error('Android 浏览器打开操作超时'));
-		}, 30000);
-
-		function handleResponse(event: MessageEvent<AndroidBrowserOpenResponse>) {
-			if (event.data?.type !== 'CCS_ANDROID_BROWSER_OPEN_RESPONSE' || event.data.id !== id) return;
-			window.clearTimeout(timeout);
-			window.removeEventListener('message', handleResponse);
-			if (event.data.error) reject(new Error(event.data.error));
-			else resolve();
-		}
-
-		window.addEventListener('message', handleResponse);
-		window.top?.postMessage({ type: 'CCS_ANDROID_BROWSER_OPEN_REQUEST', id, url }, '*');
 	});
 }
 
@@ -868,16 +866,8 @@ function sanitizeFileName(value: string) {
 	return value.replace(/[^a-z0-9._-]/gi, '_');
 }
 
-function openWindow(url: string) {
-	const opened = window.open(url, '_blank', 'noopener');
-	if (!opened) throw new Error('浏览器阻止了新窗口，请允许弹窗后重试');
-}
-
-function openPendingWindow() {
-	const opened = window.open('about:blank', '_blank');
-	if (!opened) throw new Error('浏览器阻止了新窗口，请允许弹窗后重试');
-	opened.opener = null;
-	return opened;
+function openExternalLink(url: string) {
+	window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function getFileExtension(urlText: string) {
