@@ -396,21 +396,18 @@ function getElectronOfflineDocs(): ElectronOfflineDocsBridge | undefined {
 }
 
 function isAndroidNative() {
+	// 只有 Capacitor 确认运行在原生平台时，才走 Android 文件系统路径。
+	// 普通安卓手机浏览器（Chrome 等）UA 也包含 Android，但 Capacitor 桥不可用，
+	// 此时应回退到 Web OPFS 路径，避免误判导致文件系统操作超时。
 	try {
-		const topCapacitor = getTopCapacitor();
-		return Capacitor.getPlatform?.() === 'android'
-			|| topCapacitor?.getPlatform?.() === 'android'
-			|| (Capacitor.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
-			|| (topCapacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent))
-			|| isAndroidWebViewHost();
+		if (Capacitor.isNativePlatform?.()) {
+			return Capacitor.getPlatform?.() === 'android'
+				|| getTopCapacitor()?.getPlatform?.() === 'android';
+		}
+		return false;
 	} catch {
-		return isAndroidWebViewHost();
+		return false;
 	}
-}
-
-function isAndroidWebViewHost() {
-	return /Android/i.test(navigator.userAgent)
-		&& (window.location.protocol === 'https:' || window.location.protocol === 'capacitor:' || window.location.hostname === 'localhost');
 }
 
 function getTopCapacitor(): Pick<typeof Capacitor, 'getPlatform' | 'isNativePlatform'> | undefined {
@@ -729,7 +726,11 @@ function resolveDocumentUrl(url: string) {
 	if (/^https?:\/\//i.test(url)) return url;
 
 	const env = import.meta.env as Record<string, string | undefined>;
-	const configured = env.OFFLINE_DOCS_ANDROID || env.OFFLINE_DOCS_SERVER || env.VITE_CCS_DOCS_BASE_URL;
+	// 构建时常量（Vite define 注入）或 process.env 回退（Electron 构建传递）
+	const configured = env.OFFLINE_DOCS_ANDROID
+		|| env.OFFLINE_DOCS_SERVER
+		|| (typeof process !== 'undefined' && (process.env as Record<string, string | undefined>).OFFLINE_DOCS_SERVER)
+		|| env.VITE_CCS_DOCS_BASE_URL;
 
 	if (configured) {
 		const base = configured.endsWith('/') ? configured : `${configured}/`;

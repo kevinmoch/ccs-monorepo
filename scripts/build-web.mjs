@@ -3,6 +3,25 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:f
 import { join } from 'node:path';
 
 const root = process.cwd();
+
+// 加载 monorepo 根目录 .env
+function loadRootEnv() {
+  const envPath = join(root, '.env');
+  if (!existsSync(envPath)) return {};
+  const env = {};
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key) env[key] = value;
+  }
+  return env;
+}
+
+const rootEnv = loadRootEnv();
 const appsDir = join(root, 'apps');
 const distWebDir = join(root, 'dist', 'web');
 const builds = [{ name: 'ccs-framework', outDir: distWebDir, base: '/', scripts: {} }];
@@ -31,6 +50,7 @@ for (const build of builds) {
     shell: process.platform === 'win32',
     env: {
       ...process.env,
+      ...rootEnv,
       CCS_WEB_OUT_DIR: build.outDir,
       CCS_WEB_BASE: build.base
     }
@@ -45,6 +65,7 @@ for (const build of builds) {
       shell: process.platform === 'win32',
       env: {
         ...process.env,
+        ...rootEnv,
         CCS_CARD_OUT_DIR: join(build.outDir, 'cards')
       }
     });
