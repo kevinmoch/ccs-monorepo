@@ -914,11 +914,6 @@ function shouldUseParentPostMessageBridge() {
 	return true;
 }
 
-// Keep old name as alias for backward-compatibility within this module.
-function shouldUseParentAndroidFilesystemBridge() {
-	return shouldUseParentPostMessageBridge();
-}
-
 async function getRootDirectory(): Promise<FileSystemDirectoryHandle> {
 	if (!isOpfsAvailable()) throw new Error('OPFS unavailable');
 	const storage = navigator.storage as OpfsStorageManager;
