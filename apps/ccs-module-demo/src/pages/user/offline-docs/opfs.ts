@@ -32,6 +32,7 @@ type ElectronOfflineDocsBridge = {
 };
 
 type ElectronBridge = {
+	platform?: string;
 	offlineDocs?: ElectronOfflineDocsBridge;
 };
 
@@ -153,11 +154,21 @@ export async function getStorageStats(): Promise<StorageStats> {
 }
 
 export async function createCachedObjectUrl(document: OfflineDocument): Promise<ViewerSource> {
+	// Electron: try the native bridge first; fall back to OPFS when the
+	// document was downloaded via the Web OPFS path (e.g. after a bridge
+	// failure during download).
 	const electron = getElectronOfflineDocs();
 	if (electron) {
-		const url = await electron.getCachedFileUrl(document.id);
-		return url ? { kind: 'cache', url } : { kind: 'unavailable', message: '本地没有可用缓存' };
+		try {
+			const url = await electron.getCachedFileUrl(document.id);
+			if (url) return { kind: 'cache', url };
+		} catch {
+			// Bridge unavailable – fall through to OPFS path below.
+		}
 	}
+
+	// In Electron without a working bridge we can still serve files that
+	// were downloaded via the Web OPFS fallback.
 	if (isAndroidNative()) return createAndroidCachedUrl(document);
 
 	const meta = await getDocumentMeta(document.id);
@@ -175,8 +186,28 @@ export async function createCachedObjectUrl(document: OfflineDocument): Promise<
 
 export async function openOnlineDocument(document: OfflineDocument) {
 	const absoluteUrl = toAbsoluteDocumentUrl(document);
+
+	// Electron: try the native bridge first, then fall back to window.open().
+	// In an iframe the contextBridge proxy may not be reachable, so a
+	// window.open() fallback (intercepted by Electron's setWindowOpenHandler)
+	// guarantees the same behaviour as the attendance map feature.
 	const electron = getElectronOfflineDocs();
-	if (electron) return electron.openOnlineDocument(absoluteUrl);
+	if (electron) {
+		try {
+			await electron.openOnlineDocument(absoluteUrl);
+			return;
+		} catch {
+			// Bridge call failed – fall through to the fallback below.
+		}
+	}
+
+	// If we are in Electron but the bridge was missing or failed, window.open
+	// is the only remaining option.  The main process must be configured to
+	// allow external URLs via setWindowOpenHandler.
+	if (isElectronRuntime()) {
+		openExternalLink(absoluteUrl);
+		return;
+	}
 
 	// Android: navigate window.top so Capacitor's shouldOverrideUrlLoading
 	// intercepts and opens the URL in the system browser.
@@ -193,12 +224,30 @@ export async function openOnlineDocument(document: OfflineDocument) {
 	openExternalLink(absoluteUrl);
 }
 
+/** Detect whether we are running inside an Electron renderer (main frame or iframe). */
+function isElectronRuntime(): boolean {
+	try {
+		if ((window as Window & { ccsElectron?: ElectronBridge }).ccsElectron?.platform) return true;
+		if ((window.top as Window & { ccsElectron?: ElectronBridge } | null)?.ccsElectron?.platform) return true;
+	} catch { /* cross-origin top – ignore */ }
+	return /Electron/i.test(navigator.userAgent);
+}
+
 export async function openCachedDocument(document: OfflineDocument): Promise<void> {
+	// Electron: try the native bridge; it copies the file to a temp directory
+	// and opens it with the system default handler.
 	const electron = getElectronOfflineDocs();
-	if (electron) return electron.openCachedDocument(document.id);
+	if (electron) {
+		try {
+			return await electron.openCachedDocument(document.id);
+		} catch {
+			// Bridge unavailable – fall through to the OPFS / blob-URL path below.
+		}
+	}
+
 	if (isAndroidNative()) return openAndroidCachedDocument(document);
 
-	// Web: create a blob URL from OPFS and open in a new tab
+	// Web (and Electron fallback): create a blob URL from OPFS and open in a new tab
 	const source = await createCachedObjectUrl(document);
 	if (!source.url) throw new Error(source.message ?? '本地没有可用缓存');
 	openExternalLink(source.url);
@@ -269,8 +318,24 @@ export async function downloadDocumentToOpfs(
 	onProgress: (progress: DownloadProgress) => void,
 	options: { force?: boolean; signal?: AbortSignal } = {}
 ): Promise<CachedDocumentMeta> {
+	// Electron: prefer the native bridge (downloads via Node.js in the main
+	// process), but fall back to Web OPFS when the bridge is broken
+	// (e.g. contextBridge proxy unreachable from an iframe).
 	const electron = getElectronOfflineDocs();
-	if (electron) return downloadDocumentWithElectron(electron, document, onProgress, options);
+	if (electron) {
+		try {
+			return await downloadDocumentWithElectron(electron, document, onProgress, options);
+		} catch (bridgeError) {
+			// When the bridge call itself fails the proxy is likely stale;
+			// try the Web OPFS path below instead of surfacing an opaque error.
+			if (isOpfsAvailable()) {
+				console.warn('[offline-docs] Electron bridge download failed, falling back to Web OPFS:', bridgeError);
+			} else {
+				throw bridgeError;
+			}
+		}
+	}
+
 	if (isAndroidNative()) return downloadDocumentWithAndroid(document, onProgress, options);
 
 	if (!isOpfsAvailable()) throw new Error('当前浏览器不支持 OPFS，无法离线缓存大文件');
