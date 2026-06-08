@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./attendance": "./src/attendance/index.ts",
+    "./offline-docs": "./src/offline-docs/index.ts",
     "./card.css": "./src/card.css"
   },
   "scripts": {
@@ -15,7 +17,20 @@
   "dependencies": {
     "i18next": "latest"
   },
+  "peerDependencies": {
+    "@capacitor-community/file-opener": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@capacitor-community/file-opener": { "optional": true },
+    "@capacitor/core": { "optional": true },
+    "@capacitor/filesystem": { "optional": true }
+  },
   "devDependencies": {
+    "@capacitor-community/file-opener": "^8.0.1",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
     "typescript": "latest",
     "vitest": "latest"
   }

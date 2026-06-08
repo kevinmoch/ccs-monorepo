@@ -1,4 +1,8 @@
-export type DocumentFileType = 'image' | 'pdf' | 'docx' | 'xlsx' | 'doc' | 'xls';
+/**
+ * 离线文档模块 —— 公共类型定义。
+ */
+
+export type DocumentFileType = 'image' | 'pdf' | 'docx' | 'xlsx' | 'doc' | 'xls' | (string & {});
 
 export type DocumentStatus = 'not-downloaded' | 'downloading' | 'offline' | 'update-available' | 'failed';
 
@@ -9,7 +13,8 @@ export type OfflineStorageKind = 'opfs' | 'electron' | 'android' | 'unavailable'
 export interface OfflineDocument {
 	id: string;
 	title: string;
-	fileType: DocumentFileType;
+	/** 文件类型，可选。缺失时从 mimeType 自动推导。 */
+	fileType?: DocumentFileType;
 	mimeType: string;
 	url: string;
 	size?: number;

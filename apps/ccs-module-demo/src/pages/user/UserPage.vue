@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { isDocumentsSiteDocument, loadDocumentCatalog } from './offline-docs/catalog';
 import {
+	createDocumentCatalog,
+	isDocumentsSiteDocument,
 	checkDocumentUpdate,
 	downloadDocumentToOpfs,
 	getAllMetadata,
@@ -11,11 +12,28 @@ import {
 	openOnlineDocument,
 	removeDocumentCache,
 	removeManyDocumentCaches,
-	writeCatalogSnapshot
-} from './offline-docs/opfs';
-import type { CachedDocumentMeta, DocumentFileType, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats } from './offline-docs/types';
+	writeCatalogSnapshot,
+} from '@ccs/shared/offline-docs';
+import { formatBytes, normalizeError, deriveFileType } from '@ccs/shared';
+import type {
+	CachedDocumentMeta,
+	DocumentStatus,
+	DownloadProgress,
+	OfflineDocument,
+	StorageStats,
+} from '@ccs/shared/offline-docs';
+import localDocuments from '../../data/offline-documents.json';
 
 const APP_WATERMARK_RATIO = 0.86;
+
+// ---------------------------------------------------------------------------
+// 文档目录（注入本地清单）
+// ---------------------------------------------------------------------------
+
+const catalog = createDocumentCatalog(
+	localDocuments as OfflineDocument[],
+	import.meta.env.VITE_CCS_OFFLINE_DOCS_MANIFEST as string | undefined,
+);
 
 const documents = ref<OfflineDocument[]>([]);
 const metaMap = ref<Map<string, CachedDocumentMeta>>(new Map());
@@ -78,12 +96,12 @@ onUnmounted(() => {
 async function initializePage() {
 	isLoading.value = true;
 	try {
-		documents.value = await loadDocumentCatalog();
+		documents.value = await catalog.loadDocumentCatalog();
 		if (isOpfsAvailable()) await writeCatalogSnapshot(documents.value);
 		await refreshMetadata();
 		selectedId.value = '';
 	} catch (error) {
-		pageMessage.value = normalizeError(error);
+		pageMessage.value = String(error instanceof Error ? error.message : error);
 	} finally {
 		isLoading.value = false;
 	}
@@ -266,28 +284,16 @@ function statusLabel(status: DocumentStatus) {
 	return labels[status];
 }
 
-function typeLabel(type: DocumentFileType) {
-	const labels: Record<DocumentFileType, string> = {
+function typeLabel(type: string) {
+	const labels: Record<string, string> = {
 		image: 'IMG',
 		pdf: 'PDF',
 		docx: 'DOCX',
 		xlsx: 'XLSX',
 		doc: 'DOC',
-		xls: 'XLS'
+		xls: 'XLS',
 	};
-	return labels[type];
-}
-
-function formatBytes(bytes?: number) {
-	if (!bytes || bytes <= 0) return '0 B';
-	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-	let value = bytes;
-	let unitIndex = 0;
-	while (value >= 1024 && unitIndex < units.length - 1) {
-		value /= 1024;
-		unitIndex += 1;
-	}
-	return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+	return labels[type] ?? type.toUpperCase();
 }
 
 function formatDate(value?: string) {
@@ -295,11 +301,6 @@ function formatDate(value?: string) {
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return value;
 	return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
-}
-
-function normalizeError(error: unknown) {
-	if (error instanceof Error && error.message) return error.message;
-	return '操作失败，请稍后重试';
 }
 </script>
 
@@ -352,7 +353,7 @@ function normalizeError(error: unknown) {
 								<input v-model="checkedIds" type="checkbox" :value="row.document.id" :disabled="!row.meta" />
 							</label>
 							<div class="doc-link">
-								<span class="type-badge">{{ typeLabel(row.document.fileType) }}</span>
+								<span class="type-badge">{{ typeLabel(row.document.fileType ?? deriveFileType(row.document.mimeType)) }}</span>
 								<span>
 									<strong>{{ row.document.title }}</strong>
 								</span>

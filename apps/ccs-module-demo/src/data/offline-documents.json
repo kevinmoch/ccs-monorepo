@@ -2,53 +2,25 @@
   {
     "id": "safety-handbook-image",
     "title": "安全文明施工图示",
-    "fileType": "image",
     "mimeType": "image/png",
-    "url": "safety-handbook.png",
-    "size": 6125302,
-    "etag": "demo-image-v1",
-    "lastModified": "Wed, 03 Jun 2026 02:00:00 GMT",
-    "updatedAt": "2026-06-03T02:00:00.000Z",
-    "allowOffline": true,
-    "description": "施工现场安全文明标准图示，适合移动端离线查看。"
+    "url": "safety-handbook.png"
   },
   {
     "id": "contract-template-pdf",
     "title": "合同评审操作手册",
-    "fileType": "pdf",
     "mimeType": "application/pdf",
-    "url": "contract-review.pdf",
-    "size": 134739734,
-    "etag": "demo-pdf-v1",
-    "lastModified": "Wed, 03 Jun 2026 02:30:00 GMT",
-    "updatedAt": "2026-06-03T02:30:00.000Z",
-    "allowOffline": true,
-    "description": "合同评审流程、节点说明和常见问题。"
+    "url": "contract-review.pdf"
   },
   {
     "id": "docx-process-guide",
     "title": "流程制度说明 DOCX",
-    "fileType": "docx",
     "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "url": "process-guide.docx",
-    "size": 150352096,
-    "etag": "demo-docx-v1",
-    "lastModified": "Wed, 03 Jun 2026 03:00:00 GMT",
-    "updatedAt": "2026-06-03T03:00:00.000Z",
-    "allowOffline": true,
-    "description": "DOCX 文档离线缓存后可在查看区解析预览。"
+    "url": "process-guide.docx"
   },
   {
     "id": "xlsx-cost-ledger",
     "title": "成本台账 XLSX",
-    "fileType": "xlsx",
     "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "url": "cost-ledger.xlsx",
-    "size": 15439,
-    "etag": "demo-xlsx-v1",
-    "lastModified": "Wed, 03 Jun 2026 03:30:00 GMT",
-    "updatedAt": "2026-06-03T03:30:00.000Z",
-    "allowOffline": true,
-    "description": "XLSX 文件离线缓存后展示工作表前 80 行预览。"
+    "url": "cost-ledger.xlsx"
   }
 ]
