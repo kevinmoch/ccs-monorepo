@@ -58,8 +58,11 @@ const CATALOG_FILE = 'catalog.json';
 
 export function isOpfsAvailable(): boolean {
 	const nativeKind = getNativeStorageKind();
-	if (nativeKind === 'electron' || nativeKind === 'android') return true;
-	return typeof navigator !== 'undefined' && typeof (navigator.storage as OpfsStorageManager | undefined)?.getDirectory === 'function';
+	if (nativeKind === 'electron' || nativeKind === 'android') {
+		return true;
+	}
+	const webOpfs = typeof navigator !== 'undefined' && typeof (navigator.storage as OpfsStorageManager | undefined)?.getDirectory === 'function';
+	return webOpfs;
 }
 
 export async function persistOpfsStorage(): Promise<boolean> {
@@ -125,7 +128,9 @@ export async function saveDocumentMeta(meta: CachedDocumentMeta) {
 
 export async function getStorageStats(): Promise<StorageStats> {
 	const electron = getElectronOfflineDocs();
-	if (electron) return { ...await electron.getStorageStats(), opfsAvailable: true, storageKind: 'electron', storageLabel: 'Electron userData' };
+	if (electron) {
+		return { ...await electron.getStorageStats(), opfsAvailable: true, storageKind: 'electron', storageLabel: 'Electron userData' };
+	}
 	if (isAndroidNative()) return getAndroidStorageStats();
 
 	if (!isOpfsAvailable()) {
@@ -329,7 +334,6 @@ export async function downloadDocumentToOpfs(
 			// When the bridge call itself fails the proxy is likely stale;
 			// try the Web OPFS path below instead of surfacing an opaque error.
 			if (isOpfsAvailable()) {
-				console.warn('[offline-docs] Electron bridge download failed, falling back to Web OPFS:', bridgeError);
 			} else {
 				throw bridgeError;
 			}
@@ -451,11 +455,14 @@ function getNativeStorageKind(): OfflineStorageKind {
 
 function getElectronOfflineDocs(): ElectronOfflineDocsBridge | undefined {
 	const current = (window as Window & { ccsElectron?: ElectronBridge }).ccsElectron?.offlineDocs;
-	if (current) return current;
+	if (current) {
+		return current;
+	}
 
 	try {
-		return (window.top as Window & { ccsElectron?: ElectronBridge } | null)?.ccsElectron?.offlineDocs;
-	} catch {
+		const topBridge = (window.top as Window & { ccsElectron?: ElectronBridge } | null)?.ccsElectron;
+		return topBridge?.offlineDocs;
+	} catch (err) {
 		return undefined;
 	}
 }
@@ -496,7 +503,8 @@ async function downloadDocumentWithElectron(
 	});
 
 	try {
-		return await electron.downloadDocument({ downloadId, document, absoluteUrl: toAbsoluteDocumentUrl(document), force: options.force });
+		const result = await electron.downloadDocument({ downloadId, document, absoluteUrl: toAbsoluteDocumentUrl(document), force: options.force });
+		return result;
 	} finally {
 		unsubscribe();
 	}
