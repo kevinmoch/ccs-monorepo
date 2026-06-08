@@ -468,14 +468,14 @@ function getElectronOfflineDocs(): ElectronOfflineDocsBridge | undefined {
 }
 
 function isAndroidNative() {
-	// 只有 Capacitor 确认运行在原生平台时，才走 Android 文件系统路径。
-	// 普通安卓手机浏览器（Chrome 等）UA 也包含 Android，但 Capacitor 桥不可用，
-	// 此时应回退到 Web OPFS 路径，避免误判导致文件系统操作超时。
 	try {
-		if (Capacitor.isNativePlatform?.()) {
-			return Capacitor.getPlatform?.() === 'android'
-				|| getTopCapacitor()?.getPlatform?.() === 'android';
+		const here = Capacitor.isNativePlatform?.();
+		if (here) {
+			return Capacitor.getPlatform?.() === 'android';
 		}
+		const topCapacitor = getTopCapacitor();
+		const topNative = topCapacitor?.isNativePlatform?.();
+		if (topNative) return topCapacitor?.getPlatform?.() === 'android';
 		return false;
 	} catch {
 		return false;
@@ -626,7 +626,8 @@ async function downloadDocumentWithAndroid(
 	if (startByte > 0) requestHeaders.set('Range', `bytes=${startByte}-`);
 
 	try {
-		const response = await fetch(toAbsoluteDocumentUrl(document), { headers: requestHeaders, cache: 'no-store', signal: options.signal });
+		const absoluteUrl = toAbsoluteDocumentUrl(document);
+		const response = await fetch(absoluteUrl, { headers: requestHeaders, cache: 'no-store', signal: options.signal });
 		if (!response.ok && response.status !== 206) throw new Error(`下载失败：HTTP ${response.status}`);
 		validateDocumentResponse(response, document);
 		if (!response.body) throw new Error('当前环境无法读取下载流');
@@ -649,21 +650,37 @@ async function downloadDocumentWithAndroid(
 
 		const reader = response.body.getReader();
 		let lastMetaWriteAt = 0;
+		const BATCH_BYTES = 512 * 1024; // flush every 512 KB to reduce postMessage overhead
+		const chunks: Uint8Array[] = [];
+		let batchBytes = 0;
+
+		async function flushBatch() {
+			if (!chunks.length) return;
+			const merged = new Uint8Array(batchBytes);
+			let offset = 0;
+			for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+			const data = bytesToBase64(merged);
+			if (hasWrittenChunk) await androidFilesystem('appendFile', { path: localPath, data, directory: Directory.Data });
+			else {
+				await androidFilesystem('writeFile', { path: localPath, data, directory: Directory.Data, recursive: true });
+				hasWrittenChunk = true;
+			}
+			chunks.length = 0;
+			batchBytes = 0;
+		}
 
 		while (true) {
 			const { done, value } = await reader.read();
 			if (done) break;
 			if (!value) continue;
 
-			const data = bytesToBase64(value);
-			if (hasWrittenChunk) await androidFilesystem('appendFile', { path: localPath, data, directory: Directory.Data });
-			else {
-				await androidFilesystem('writeFile', { path: localPath, data, directory: Directory.Data, recursive: true });
-				hasWrittenChunk = true;
-			}
+			chunks.push(value);
+			batchBytes += value.byteLength;
 
 			receivedBytes += value.byteLength;
 			onProgress(buildProgress(document.id, receivedBytes, totalBytes, canResume));
+
+			if (batchBytes >= BATCH_BYTES) await flushBatch();
 
 			const now = Date.now();
 			if (now - lastMetaWriteAt > 1000) {
@@ -678,6 +695,9 @@ async function downloadDocumentWithAndroid(
 				}));
 			}
 		}
+
+		// Flush any remaining buffered data
+		await flushBatch();
 
 		const completed = createMeta(document, localName, {
 			status: 'offline',
@@ -810,8 +830,11 @@ function resolveDocumentUrl(url: string) {
 		return new URL(url, base).toString();
 	}
 
-	// 默认：与 Web 应用同主机、端口 8080 的文档服务器（HTTPS）
-	return `https://${window.location.hostname}:8080/${url}`;
+	// 默认：与 Web 应用同主机、端口 8080。
+	// Android Capacitor WebView 中 fetch() 会拒绝自签名 HTTPS 证书，
+	// 因此 Android 原生环境下默认使用 HTTP（capacitor.config 已设 cleartext:true）。
+	const scheme = isAndroidNative() ? 'http' : 'https';
+	return `${scheme}://${window.location.hostname}:8080/${url}`;
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -824,7 +847,10 @@ function bytesToBase64(bytes: Uint8Array) {
 }
 
 function androidFilesystem<T = unknown>(method: AndroidFilesystemMethod, args: Record<string, unknown>): Promise<T> {
-	if (!shouldUseParentAndroidFilesystemBridge()) {
+	// When Capacitor native platform is available on the CURRENT window,
+	// use the plugin directly.  PostMessage is only needed as a fallback
+	// when Capacitor lives exclusively in the parent frame.
+	if (!shouldUseParentPostMessageBridge()) {
 		const operation = Filesystem[method] as unknown as (options: Record<string, unknown>) => Promise<T>;
 		return operation(args);
 	}
@@ -850,7 +876,7 @@ function androidFilesystem<T = unknown>(method: AndroidFilesystemMethod, args: R
 }
 
 function androidOpenFile(filePath: string, contentType: string): Promise<void> {
-	if (!shouldUseParentAndroidFilesystemBridge()) {
+	if (!shouldUseParentPostMessageBridge()) {
 		return FileOpener.open({ filePath, contentType, openWithDefault: true });
 	}
 
@@ -874,8 +900,23 @@ function androidOpenFile(filePath: string, contentType: string): Promise<void> {
 	});
 }
 
+/**
+ * Returns true only when running in an iframe inside a Capacitor Android
+ * app.  In that case we MUST use postMessage to relay filesystem / file-open
+ * calls to the parent frame, because Capacitor plugins (Filesystem,
+ * FileOpener) are only fully initialized in the main frame's JavaScript
+ * context — not in child iframes, even when the Capacitor bridge object
+ * happens to be visible there.
+ */
+function shouldUseParentPostMessageBridge() {
+	if (window === window.top) return false;
+	if (!isAndroidNative()) return false;
+	return true;
+}
+
+// Keep old name as alias for backward-compatibility within this module.
 function shouldUseParentAndroidFilesystemBridge() {
-	return window !== window.top && isAndroidNative();
+	return shouldUseParentPostMessageBridge();
 }
 
 async function getRootDirectory(): Promise<FileSystemDirectoryHandle> {

@@ -97,7 +97,20 @@ async function refreshMetadata() {
 
 	const metadata = await getAllMetadata();
 	metaMap.value = new Map(metadata.map((meta) => [meta.id, meta]));
-	stats.value = await getStorageStats();
+	const cachedBytes = metadata.reduce((t, m) => t + m.cachedBytes, 0);
+	const partialBytes = metadata.reduce((t, m) => t + m.partialBytes, 0);
+	stats.value = {
+		opfsAvailable: true,
+		storageKind: stats.value.storageKind,
+		storageLabel: stats.value.storageLabel,
+		quotaBytes: stats.value.quotaBytes,
+		usageBytes: stats.value.usageBytes,
+		persisted: stats.value.persisted,
+		usedBytes: cachedBytes + partialBytes + 2048,
+		cachedBytes,
+		partialBytes,
+		metadataBytes: 2048,
+	};
 }
 
 async function openOnline(document: OfflineDocument) {
