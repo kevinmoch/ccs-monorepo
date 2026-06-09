@@ -16,7 +16,6 @@
  * ```
  */
 
-import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import {
@@ -25,6 +24,12 @@ import {
 	isElectronRuntime,
 	resolveOfflineDocsUrl,
 } from '../runtime';
+import {
+	androidFilesystem,
+	androidOpenFile,
+	bytesToBase64,
+	persistOpfsStorage,
+} from '../storage/native-fs';
 import {
 	deriveFileType,
 	getFileExtension,
@@ -84,29 +89,6 @@ type ElectronOfflineDocsBridge = {
 	) => () => void;
 };
 
-type AndroidFilesystemMethod =
-	| 'mkdir'
-	| 'readdir'
-	| 'readFile'
-	| 'writeFile'
-	| 'appendFile'
-	| 'deleteFile'
-	| 'stat'
-	| 'getUri';
-
-type AndroidFilesystemResponse<T> = {
-	type: 'CCS_ANDROID_FS_RESPONSE';
-	id: string;
-	result?: T;
-	error?: string;
-};
-
-type AndroidFileOpenResponse = {
-	type: 'CCS_ANDROID_FILE_OPEN_RESPONSE';
-	id: string;
-	error?: string;
-};
-
 // ---------------------------------------------------------------------------
 // 常量
 // ---------------------------------------------------------------------------
@@ -130,15 +112,6 @@ export function isOpfsAvailable(): boolean {
 		&& typeof (navigator.storage as OpfsStorageManager | undefined)
 			?.getDirectory === 'function';
 	return webOpfs;
-}
-
-export async function persistOpfsStorage(): Promise<boolean> {
-	if (!navigator.storage?.persist) return false;
-	try {
-		return await navigator.storage.persist();
-	} catch {
-		return false;
-	}
 }
 
 export async function writeCatalogSnapshot(documents: OfflineDocument[]) {
@@ -1049,117 +1022,6 @@ function getAndroidDocPath(localName: string) {
 
 function getAndroidMetaPath(id: string) {
 	return `${getAndroidMetaDir()}/${getMetaName(id)}`;
-}
-
-// ---------------------------------------------------------------------------
-// 内部 —— Android postMessage 桥接
-// ---------------------------------------------------------------------------
-
-function bytesToBase64(bytes: Uint8Array) {
-	let binary = '';
-	const chunkSize = 0x8000;
-	for (let index = 0; index < bytes.length; index += chunkSize) {
-		binary += String.fromCharCode(
-			...bytes.subarray(index, index + chunkSize),
-		);
-	}
-	return btoa(binary);
-}
-
-function androidFilesystem<T = unknown>(
-	method: AndroidFilesystemMethod,
-	args: Record<string, unknown>,
-): Promise<T> {
-	if (!shouldUseParentPostMessageBridge()) {
-		const operation = Filesystem[method] as unknown as (
-			options: Record<string, unknown>,
-		) => Promise<T>;
-		return operation(args);
-	}
-
-	return new Promise<T>((resolve, reject) => {
-		const id = `${method}-${Date.now()}-${Math.random()
-			.toString(36)
-			.slice(2)}`;
-		const timeout = window.setTimeout(() => {
-			window.removeEventListener('message', handleResponse);
-			reject(new Error('Android 文件系统操作超时'));
-		}, 30000);
-
-		function handleResponse(
-			event: MessageEvent<AndroidFilesystemResponse<T>>,
-		) {
-			if (
-				event.data?.type !== 'CCS_ANDROID_FS_RESPONSE'
-				|| event.data.id !== id
-			)
-				return;
-			window.clearTimeout(timeout);
-			window.removeEventListener('message', handleResponse);
-			if (event.data.error) reject(new Error(event.data.error));
-			else resolve(event.data.result as T);
-		}
-
-		window.addEventListener('message', handleResponse);
-		window.top?.postMessage(
-			{ type: 'CCS_ANDROID_FS_REQUEST', id, method, args },
-			'*',
-		);
-	});
-}
-
-function androidOpenFile(
-	filePath: string,
-	contentType: string,
-): Promise<void> {
-	if (!shouldUseParentPostMessageBridge()) {
-		return FileOpener.open({
-			filePath,
-			contentType,
-			openWithDefault: true,
-		});
-	}
-
-	return new Promise<void>((resolve, reject) => {
-		const id = `open-file-${Date.now()}-${Math.random()
-			.toString(36)
-			.slice(2)}`;
-		const timeout = window.setTimeout(() => {
-			window.removeEventListener('message', handleResponse);
-			reject(new Error('Android 文件打开操作超时'));
-		}, 30000);
-
-		function handleResponse(
-			event: MessageEvent<AndroidFileOpenResponse>,
-		) {
-			if (
-				event.data?.type !== 'CCS_ANDROID_FILE_OPEN_RESPONSE'
-				|| event.data.id !== id
-			)
-				return;
-			window.clearTimeout(timeout);
-			window.removeEventListener('message', handleResponse);
-			if (event.data.error) reject(new Error(event.data.error));
-			else resolve();
-		}
-
-		window.addEventListener('message', handleResponse);
-		window.top?.postMessage(
-			{
-				type: 'CCS_ANDROID_FILE_OPEN_REQUEST',
-				id,
-				filePath,
-				contentType,
-			},
-			'*',
-		);
-	});
-}
-
-function shouldUseParentPostMessageBridge() {
-	if (window === window.top) return false;
-	if (!isAndroidNative()) return false;
-	return true;
 }
 
 // ---------------------------------------------------------------------------

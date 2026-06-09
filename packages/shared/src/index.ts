@@ -3,5 +3,7 @@ export * from './i18n';
 export * from './theme';
 export * from './utils';
 export * from './runtime';
+export * from './storage';
 export * from './attendance';
 export * from './offline-docs';
+export * from './offline-photos';
