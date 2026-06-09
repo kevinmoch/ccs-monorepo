@@ -114,8 +114,7 @@ async function handleUpload(
 	const capturedAt = typeof capturedAtRaw === 'string' ? capturedAtRaw : null;
 
 	const receivedAt = new Date().toISOString();
-	const prefix = sanitizeName(id || `upload-${Date.now()}`);
-	const savedAs = `${prefix}__${sanitizeName(file.name)}`;
+	const savedAs = sanitizeName(file.name);
 	const targetPath = join(UPLOAD_DIR, savedAs);
 
 	const bytes = Buffer.from(await file.arrayBuffer());
