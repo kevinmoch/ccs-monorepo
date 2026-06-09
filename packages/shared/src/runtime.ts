@@ -209,39 +209,32 @@ export function getRuntimeKind(): RuntimeKind {
 	return detectRuntime().kind;
 }
 
-// ---------------------------------------------------------------------------
-// 离线文档 URL 解析
-// ---------------------------------------------------------------------------
+let _offlineDocsBaseUrl: string;
+
+/**
+ * 设置离线文档服务器地址。
+ * 所有平台（Web / Windows / Android）统一读取此地址。
+ */
+export function setOfflineDocsBaseUrl(url: string): void {
+	_offlineDocsBaseUrl = url;
+}
+
+/**
+ * 获取当前离线文档服务器地址。
+ */
+export function getOfflineDocsBaseUrl(): string {
+	return _offlineDocsBaseUrl;
+}
 
 /**
  * 将文档的相对路径解析为绝对 URL。
  * - 已是绝对 URL → 原样返回
- * - Android 平台 → 使用 import.meta.env.OFFLINE_DOCS_ANDROID
- * - Web / Electron → 使用 import.meta.env.OFFLINE_DOCS_SERVER
- * - 均未配置 → 默认 https://{当前主机名}:8080/{路径}
+ * - 使用 setOfflineDocsBaseUrl() 设置的运行时地址
  */
 export function resolveOfflineDocsUrl(url: string): string {
 	if (/^https?:\/\//i.test(url)) return url;
 
-	// 注意：必须使用 import.meta.env.XXX 的直接属性访问，
-	// 以确保 Vite 的 define 插件能正确替换这些值。
-	const androidUrl = import.meta.env.OFFLINE_DOCS_ANDROID as string | undefined;
-	const serverUrl = import.meta.env.OFFLINE_DOCS_SERVER as string | undefined;
-	const baseUrl = import.meta.env.VITE_CCS_DOCS_BASE_URL as string | undefined;
-
-	const configured = (isAndroidNative()
-		? androidUrl
-		: serverUrl)
-		|| (typeof process !== 'undefined'
-			&& (process.env as Record<string, string | undefined>).OFFLINE_DOCS_SERVER)
-		|| baseUrl;
-
-	if (configured) {
-		const base = configured.endsWith('/') ? configured : `${configured}/`;
-		return new URL(url, base).toString();
-	}
-
-	// 默认：端口 8080，Android 原生环境使用 HTTP
-	const scheme = isAndroidNative() ? 'http' : 'https';
-	return `${scheme}://${window.location.hostname}:8080/${url}`;
+	const baseUrl = getOfflineDocsBaseUrl();
+	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+	return new URL(url, base).toString();
 }

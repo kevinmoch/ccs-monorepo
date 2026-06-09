@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
 	createDocumentCatalog,
 	isDocumentsSiteDocument,
@@ -14,7 +14,7 @@ import {
 	removeManyDocumentCaches,
 	writeCatalogSnapshot,
 } from '@ccs/shared/offline-docs';
-import { formatBytes, normalizeError, deriveFileType } from '@ccs/shared';
+import { formatBytes, normalizeError, deriveFileType, setOfflineDocsBaseUrl } from '@ccs/shared';
 import type {
 	CachedDocumentMeta,
 	DocumentStatus,
@@ -45,7 +45,26 @@ const isLoading = ref(true);
 const isCheckingUpdates = ref(false);
 const pageMessage = ref('');
 const autoLru = ref(true);
+const docsBaseUrl = ref('https://192.168.43.232:8080/');
 const stats = ref<StorageStats>({ usedBytes: 0, cachedBytes: 0, partialBytes: 0, metadataBytes: 0, opfsAvailable: isOpfsAvailable() });
+
+// ---------------------------------------------------------------------------
+// Popover 消息提示
+// ---------------------------------------------------------------------------
+
+const messagePopover = ref<HTMLElement | null>(null);
+let messageTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch(pageMessage, async (msg) => {
+	if (msg && messagePopover.value) {
+		clearTimeout(messageTimer);
+		await nextTick();
+		messagePopover.value.showPopover();
+		messageTimer = setTimeout(() => {
+			messagePopover.value?.hidePopover();
+		}, 3000);
+	}
+});
 
 const documentRows = computed(() => documents.value.map((document) => {
 	const progress = progressMap.value.get(document.id);
@@ -95,6 +114,7 @@ onUnmounted(() => {
 
 async function initializePage() {
 	isLoading.value = true;
+	setOfflineDocsBaseUrl(docsBaseUrl.value);
 	try {
 		documents.value = await catalog.loadDocumentCatalog();
 		if (isOpfsAvailable()) await writeCatalogSnapshot(documents.value);
@@ -309,7 +329,17 @@ function formatDate(value?: string) {
 		<header class="doc-hero">
 			<div>
 				<p class="eyebrow">ccs-module-demo</p>
-				<h1>离线文档</h1>
+				<div class="title-row">
+					<h1>离线文档</h1>
+					<div class="docs-server-input">
+						<input
+							id="docs-server-url"
+							v-model="docsBaseUrl"
+							type="text"
+							@change="setOfflineDocsBaseUrl(docsBaseUrl)"
+						/>
+					</div>
+				</div>
 				<span>{{ stats.storageLabel ?? 'Web OPFS' }} 大文件缓存 · {{ isOnline ? '在线' : '离线' }} · {{ pressureLabel }}</span>
 			</div>
 			<div class="hero-metrics">
@@ -331,7 +361,11 @@ function formatDate(value?: string) {
 			</div>
 		</header>
 
-		<p v-if="pageMessage" class="page-message">{{ pageMessage }}</p>
+		<div
+			ref="messagePopover"
+			popover="manual"
+			class="page-message-popover"
+		>{{ pageMessage }}</div>
 
 		<div v-if="isLoading" class="empty-state">正在加载文档清单</div>
 		<div v-else class="doc-workspace">
@@ -377,7 +411,7 @@ function formatDate(value?: string) {
 							<button type="button" :disabled="!isOnline" @click.stop="openOnline(row.document)">在线查看</button>
 							<button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click.stop="cacheDocument(row.document)">缓存本地</button>
 							<button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" @click.stop="openOffline(row.document)">离线查看</button>
-							<button v-if="row.meta" type="button" @click.stop="cacheDocument(row.document, true)">更新缓存</button>
+							<button v-if="row.meta" type="button" :disabled="row.status !== 'update-available'" @click.stop="cacheDocument(row.document, true)">更新缓存</button>
 							<button v-if="row.meta" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">删除缓存</button>
 						</div>
 					</article>
@@ -456,6 +490,48 @@ function formatDate(value?: string) {
 	letter-spacing: 0;
 }
 
+.title-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.title-row h1 {
+	margin-top: 0;
+}
+
+.docs-server-input {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.docs-server-input label {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ccs-text-secondary, #475569);
+	white-space: nowrap;
+}
+
+.docs-server-input input {
+	width: 260px;
+	height: 34px;
+	padding: 0 10px;
+	border: 1px solid rgba(15, 23, 42, 0.15);
+	border-radius: 6px;
+	font-size: 13px;
+	color: var(--ccs-text, #101828);
+	background: var(--ccs-input-background, #ffffff);
+	outline: none;
+	transition: border-color 0.15s;
+}
+
+.docs-server-input input:focus {
+	border-color: #2563eb;
+	box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
 .eyebrow,
 .panel-heading span,
 .cache-stats span,
@@ -517,8 +593,7 @@ function formatDate(value?: string) {
 
 .doc-list-panel {
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
-	min-height: 0;
+	grid-template-rows: auto 1fr;
 }
 
 .panel-heading,
@@ -539,10 +614,6 @@ function formatDate(value?: string) {
 	display: grid;
 	gap: 10px;
 	margin-top: 14px;
-	min-height: 0;
-	max-height: clamp(520px, calc(100dvh - 290px), 720px);
-	overflow: auto;
-	padding-right: 4px;
 }
 
 .doc-row {
@@ -651,7 +722,8 @@ function formatDate(value?: string) {
 .progress-area {
 	display: grid;
 	gap: 6px;
-	min-height: 36px;
+	height: 36px;
+	overflow: hidden;
 }
 
 .progress-area small {
@@ -719,23 +791,41 @@ button:disabled {
 	background: #dc2626;
 }
 
-.page-message,
-.empty-state {
+.page-message-popover {
+	margin: 0;
+	padding: 12px 20px;
+	border: 0;
 	border-radius: 8px;
-	padding: 12px;
+	background: #1e293b;
+	color: #f1f5f9;
+	font-weight: 700;
+	font-size: 14px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+	position: fixed;
+	inset: auto;
+	top: 16px;
+	left: 50%;
+	translate: -50% 0;
+	animation: message-slide-in 0.25s ease-out;
 }
 
-.page-message {
-	margin: 0;
-	background: #f8fafc;
-	color: #475569;
-	font-weight: 700;
+.page-message-popover::backdrop {
+	display: none;
+}
+
+@keyframes message-slide-in {
+	from {
+		opacity: 0;
+		translate: -50% -12px;
+	}
 }
 
 .empty-state {
 	display: grid;
 	min-height: 240px;
 	place-items: center;
+	border-radius: 8px;
+	padding: 12px;
 	color: #667085;
 	font-weight: 800;
 	text-align: center;

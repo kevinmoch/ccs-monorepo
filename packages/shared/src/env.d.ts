@@ -4,8 +4,6 @@
  */
 
 interface ImportMetaEnv {
-	readonly OFFLINE_DOCS_SERVER?: string;
-	readonly OFFLINE_DOCS_ANDROID?: string;
 	readonly VITE_CCS_DOCS_BASE_URL?: string;
 	readonly VITE_CCS_OFFLINE_DOCS_MANIFEST?: string;
 	[key: string]: string | undefined;

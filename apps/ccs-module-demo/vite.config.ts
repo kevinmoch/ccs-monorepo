@@ -13,10 +13,6 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [vue(), tailwindcss()],
     base: process.env.CCS_WEB_BASE ?? (command === 'serve' ? `/${moduleName}/` : '/'),
-    define: {
-      'import.meta.env.OFFLINE_DOCS_SERVER': JSON.stringify(env.OFFLINE_DOCS_SERVER || ''),
-      'import.meta.env.OFFLINE_DOCS_ANDROID': JSON.stringify(env.OFFLINE_DOCS_ANDROID || ''),
-    },
     server: {
       port: 5173,
       host: '0.0.0.0',
