@@ -6,7 +6,7 @@
  *   uploadPhoto() 发送的表单字段保持一致。
  * - 行为：把图片落盘到 uploads/ 并写一个同名 .json 元数据，返回 JSON 结果。
  *
- * 启动：pnpm upload:server
+ * 启动：pnpm upload:server（HTTP） / pnpm upload:ssl（HTTPS）
  * 可选环境变量：
  *   UPLOAD_PORT       监听端口（默认 8082）
  *   UPLOAD_HOST       监听地址（默认 0.0.0.0）
@@ -30,7 +30,7 @@ const PORT = Number(process.env.UPLOAD_PORT ?? 8082);
 const HOST = process.env.UPLOAD_HOST ?? '0.0.0.0';
 const UPLOAD_DIR = process.env.UPLOAD_DIR
 	? resolve(process.env.UPLOAD_DIR)
-	: join(PACKAGE_ROOT, 'uploads');
+	: resolve(PACKAGE_ROOT, '../../documents');
 const TLS_CERT = process.env.UPLOAD_TLS_CERT;
 const TLS_KEY = process.env.UPLOAD_TLS_KEY;
 

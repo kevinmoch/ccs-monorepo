@@ -27,7 +27,7 @@ const storageAvailable = isPhotoStorageAvailable();
 const photos = ref<OfflinePhoto[]>([]);
 const checkedIds = ref<string[]>([]);
 const uploadTargetId = ref('');
-const uploadUrl = ref('http://192.168.43.232:8082/upload');
+const uploadUrl = ref('https://192.168.43.232:8083/upload');
 const isLoading = ref(true);
 const isCapturing = ref(false);
 const isUploading = ref(false);
@@ -961,6 +961,7 @@ button:disabled {
 .viewer-dialog {
 	width: min(640px, 92vw);
 	max-width: 92vw;
+	margin: auto;
 	padding: 0;
 	border: 0;
 	border-radius: 12px;
