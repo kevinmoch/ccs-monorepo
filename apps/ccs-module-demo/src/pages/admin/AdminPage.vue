@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
 	captureAndroidPhoto,
 	clearAllPhotos,
+	createAttendanceService,
 	detectRuntime,
 	formatBytes,
 	getPhotoStorageStats,
@@ -118,6 +119,21 @@ onUnmounted(() => {
 	releaseViewerUrl();
 });
 
+// ---------------------------------------------------------------------------
+// 定位（复用 attendance 模块的 locate，自动按平台选择最佳策略）
+// ---------------------------------------------------------------------------
+
+const { locate } = createAttendanceService();
+
+/** 获取当前位置，失败时静默返回 undefined（不阻断拍照流程） */
+async function getCurrentLocation() {
+	try {
+		return await locate();
+	} catch {
+		return undefined;
+	}
+}
+
 async function initialize() {
 	isLoading.value = true;
 	try {
@@ -157,11 +173,20 @@ async function handleCapture() {
 async function captureWithNativeCamera() {
 	try {
 		isCapturing.value = true;
-		const result = await captureAndroidPhoto();
+		const [result, location] = await Promise.all([
+			captureAndroidPhoto(),
+			getCurrentLocation(),
+		]);
 		await savePhoto(result.blob, {
 			source: 'camera',
 			runtimeLabel: runtime.label,
 			mimeType: result.mimeType,
+			...location && {
+				latitude: location.latitude,
+				longitude: location.longitude,
+				locationAccuracy: location.accuracy,
+				locationProvider: location.provider,
+			},
 		});
 		await refresh();
 		pageMessage.value = '已离线保存照片';
@@ -176,7 +201,11 @@ async function openWebCamera() {
 	cameraError.value = '';
 	try {
 		cameraStream = await navigator.mediaDevices.getUserMedia({
-			video: { facingMode: 'environment' },
+			video: {
+				width: { ideal: 8000 },
+				height: { ideal: 8000 },
+				facingMode: 'environment' 
+			},
 			audio: false,
 		});
 	} catch (error) {
@@ -223,10 +252,18 @@ async function takeWebPhoto() {
 			return;
 		}
 
+		const location = await getCurrentLocation();
+
 		await savePhoto(blob, {
 			source: 'camera',
 			runtimeLabel: runtime.label,
 			mimeType: 'image/jpeg',
+			...location && {
+				latitude: location.latitude,
+				longitude: location.longitude,
+				locationAccuracy: location.accuracy,
+				locationProvider: location.provider,
+			},
 		});
 		closeCamera();
 		await refresh();
@@ -381,6 +418,14 @@ function dimensionLabel(photo: OfflinePhoto) {
 	if (!photo.width || !photo.height) return '尺寸未知';
 	return `${photo.width} × ${photo.height}`;
 }
+
+function locationLabel(photo: OfflinePhoto) {
+	if (photo.latitude == null || photo.longitude == null) return '';
+	const lat = photo.latitude.toFixed(6);
+	const lng = photo.longitude.toFixed(6);
+	const acc = photo.locationAccuracy != null ? ` ±${Math.round(photo.locationAccuracy)}m` : '';
+	return `${lat}, ${lng}${acc}`;
+}
 </script>
 
 <template>
@@ -449,6 +494,9 @@ function dimensionLabel(photo: OfflinePhoto) {
 							<div class="photo-meta-line">
 								<span>{{ dimensionLabel(photo) }}</span>
 								<span>{{ sourceLabel(photo.source) }}</span>
+							</div>
+							<div v-if="locationLabel(photo)" class="photo-meta-line photo-location" :title="`${photo.locationProvider ?? '定位'} · 精度 ${photo.locationAccuracy != null ? Math.round(photo.locationAccuracy) + 'm' : '未知'}`">
+								<span>📍 {{ locationLabel(photo) }}</span>
 							</div>
 							<span class="upload-badge">{{ uploadStatusLabel(photo.uploadStatus) }}</span>
 						</div>
@@ -522,6 +570,10 @@ function dimensionLabel(photo: OfflinePhoto) {
 					<button type="button" class="ghost-button" @click="closeViewer">关闭</button>
 				</div>
 				<img v-if="viewerUrl" :src="viewerUrl" :alt="viewerPhoto?.name ?? '照片'" />
+				<div v-if="viewerPhoto && locationLabel(viewerPhoto)" class="viewer-location">
+					<span>📍 {{ locationLabel(viewerPhoto) }}</span>
+					<small v-if="viewerPhoto.locationProvider">{{ viewerPhoto.locationProvider }}</small>
+				</div>
 			</div>
 		</dialog>
 	</section>
@@ -780,6 +832,11 @@ function dimensionLabel(photo: OfflinePhoto) {
 	font-size: 12px;
 }
 
+.photo-location {
+	color: #2563eb;
+	font-weight: 600;
+}
+
 .upload-badge {
 	justify-self: start;
 	padding: 3px 8px;
@@ -1032,6 +1089,24 @@ button:disabled {
 	border-radius: 8px;
 	object-fit: contain;
 	background: #0f172a;
+}
+
+.viewer-location {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: #eff6ff;
+	color: #1d4ed8;
+	font-weight: 700;
+	font-size: 14px;
+}
+
+.viewer-location small {
+	color: #64748b;
+	font-weight: 500;
 }
 
 @media (max-width: 1100px) {

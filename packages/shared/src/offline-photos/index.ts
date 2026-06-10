@@ -132,6 +132,11 @@ export async function savePhoto(
 		runtimeLabel?: string;
 		name?: string;
 		mimeType?: string;
+		/** 拍摄位置（可选） */
+		latitude?: number;
+		longitude?: number;
+		locationAccuracy?: number;
+		locationProvider?: string;
 	},
 ): Promise<OfflinePhoto> {
 	if (!isPhotoStorageAvailable()) {
@@ -163,6 +168,10 @@ export async function savePhoto(
 		capturedAt: capturedAt.toISOString(),
 		source: info.source,
 		runtimeLabel: info.runtimeLabel,
+		latitude: info.latitude,
+		longitude: info.longitude,
+		locationAccuracy: info.locationAccuracy,
+		locationProvider: info.locationProvider,
 		uploadStatus: 'local',
 	};
 

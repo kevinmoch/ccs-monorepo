@@ -411,8 +411,8 @@ function formatDate(value?: string) {
 							<button type="button" :disabled="!isOnline" @click.stop="openOnline(row.document)">在线查看</button>
 							<button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click.stop="cacheDocument(row.document)">缓存本地</button>
 							<button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" @click.stop="openOffline(row.document)">离线查看</button>
-							<button v-if="row.meta" type="button" :disabled="row.status !== 'update-available'" @click.stop="cacheDocument(row.document, true)">更新缓存</button>
-							<button v-if="row.meta" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">删除缓存</button>
+							<button v-if="row.status === 'update-available'" type="button" @click.stop="cacheDocument(row.document, true)">更新缓存</button>
+							<button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" class="ghost-button" @click.stop="clearOne(row.document.id)">删除缓存</button>
 						</div>
 					</article>
 				</div>

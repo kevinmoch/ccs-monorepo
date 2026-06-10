@@ -27,6 +27,14 @@ export interface OfflinePhoto {
 	source: PhotoSource;
 	/** 采集时所处运行时标签 */
 	runtimeLabel?: string;
+	/** 拍摄位置 —— 纬度 */
+	latitude?: number;
+	/** 拍摄位置 —— 经度 */
+	longitude?: number;
+	/** 定位精度（米） */
+	locationAccuracy?: number;
+	/** 定位来源 */
+	locationProvider?: string;
 	uploadStatus: PhotoUploadStatus;
 	uploadedAt?: string;
 	uploadError?: string;
