@@ -450,8 +450,9 @@ export async function generateThumbnail(
 			return '';
 		}
 		context.drawImage(bitmap, 0, 0, width, height);
+		const dataUrl = canvas.toDataURL('image/jpeg', quality);
 		bitmap.close();
-		return canvas.toDataURL('image/jpeg', quality);
+		return dataUrl;
 	} catch {
 		return '';
 	}
