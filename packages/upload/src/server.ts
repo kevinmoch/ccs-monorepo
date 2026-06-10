@@ -47,6 +47,10 @@ type UploadRecord = {
 	sizeBytes: number;
 	capturedAt: string | null;
 	receivedAt: string;
+	latitude?: number;
+	longitude?: number;
+	locationAccuracy?: number;
+	locationProvider?: string;
 };
 
 function setCorsHeaders(res: ServerResponse): void {
@@ -65,6 +69,12 @@ function sendJson(res: ServerResponse, statusCode: number, body: unknown): void 
 function sanitizeName(name: string): string {
 	const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
 	return cleaned || 'photo';
+}
+
+function parseFloatOrUndefined(val: string | undefined): number | undefined {
+	if (val == null) return undefined;
+	const n = Number(val);
+	return Number.isFinite(n) ? n : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +189,10 @@ async function handleUpload(
 				sizeBytes: fileBytes,
 				capturedAt,
 				receivedAt,
+				latitude: parseFloatOrUndefined(fields.get('latitude')),
+				longitude: parseFloatOrUndefined(fields.get('longitude')),
+				locationAccuracy: parseFloatOrUndefined(fields.get('locationAccuracy')),
+				locationProvider: fields.get('locationProvider') || undefined,
 			};
 
 			writeFile(`${savedPath}.json`, JSON.stringify(record, null, 2))

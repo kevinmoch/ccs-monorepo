@@ -380,6 +380,10 @@ export async function uploadPhoto(
 		);
 		formData.append('id', meta.id);
 		formData.append('capturedAt', meta.capturedAt);
+		if (meta.latitude != null) formData.append('latitude', String(meta.latitude));
+		if (meta.longitude != null) formData.append('longitude', String(meta.longitude));
+		if (meta.locationAccuracy != null) formData.append('locationAccuracy', String(meta.locationAccuracy));
+		if (meta.locationProvider) formData.append('locationProvider', meta.locationProvider);
 
 		const response = await fetch(uploadUrl, {
 			method: 'POST',
