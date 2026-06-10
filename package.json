@@ -12,7 +12,7 @@
     "build:android": "node scripts/build-android.mjs",
     "doc": "cd documents && npx http-server -p 8081 --gzip --cors",
     "doc:ssl": "cd documents && npx http-server -p 8080 --gzip --cors --ssl -C cert.pem -K key.pem",
-    "upload:server": "pnpm --filter @ccs/upload start",
+    "upload": "pnpm --filter @ccs/upload start",
     "upload:ssl": "cross-env UPLOAD_PORT=8083 UPLOAD_TLS_CERT=documents/cert.pem UPLOAD_TLS_KEY=documents/key.pem tsx packages/upload/src/server.ts",
     "preview": "node scripts/preview-ssl.mjs",
     "lint": "turbo run lint",
