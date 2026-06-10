@@ -18,10 +18,12 @@
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Busboy } from '@fastify/busboy';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(HERE, '..');
@@ -60,28 +62,14 @@ function sendJson(res: ServerResponse, statusCode: number, body: unknown): void 
 	res.end(payload);
 }
 
-function readRequestBody(req: IncomingMessage): Promise<Buffer> {
-	return new Promise((resolvePromise, rejectPromise) => {
-		const chunks: Buffer[] = [];
-		let total = 0;
-		req.on('data', (chunk: Buffer) => {
-			total += chunk.length;
-			if (total > MAX_BODY_BYTES) {
-				rejectPromise(new Error('请求体超出大小上限'));
-				req.destroy();
-				return;
-			}
-			chunks.push(chunk);
-		});
-		req.on('end', () => resolvePromise(Buffer.concat(chunks)));
-		req.on('error', rejectPromise);
-	});
-}
-
 function sanitizeName(name: string): string {
 	const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
 	return cleaned || 'photo';
 }
+
+// ---------------------------------------------------------------------------
+// 上传处理（基于 @fastify/busboy 流式解析，不缓冲整个文件）
+// ---------------------------------------------------------------------------
 
 async function handleUpload(
 	req: IncomingMessage,
@@ -93,50 +81,140 @@ async function handleUpload(
 		return;
 	}
 
-	const bodyBuffer = await readRequestBody(req);
+	// 将事件驱动的 busboy 包装为 Promise，确保 await 等待上传完成再响应
+	const UPLOAD_TIMEOUT_MS = 120_000; // 2 分钟超时
+	return new Promise<void>((resolve) => {
+		const busboy = new Busboy({
+			headers: { 'content-type': contentType },
+			limits: { fileSize: MAX_BODY_BYTES },
+		});
 
-	// 借助 Node 内置的 Request/FormData（基于 undici）解析 multipart，零额外依赖。
-	const request = new Request('http://localhost/upload', {
-		method: 'POST',
-		headers: { 'content-type': contentType },
-		body: bodyBuffer,
+		const fields = new Map<string, string>();
+		let filename = '';
+		let mimeType = 'application/octet-stream';
+		let savedPath = '';
+		let fileBytes = 0;
+		let fileWriteStream: ReturnType<typeof createWriteStream> | null = null;
+		let resolved = false;
+
+		// 超时保护
+		const timer = setTimeout(() => {
+			if (resolved) return;
+			console.error('[upload] 上传超时');
+			if (fileWriteStream) {
+				fileWriteStream.close();
+				import('node:fs/promises').then((fs) =>
+					fs.unlink(savedPath).catch(() => undefined),
+				);
+			}
+			req.destroy();
+			sendJson(res, 408, { ok: false, message: '上传超时' });
+			done();
+		}, UPLOAD_TIMEOUT_MS);
+
+		function done() {
+			if (resolved) return;
+			resolved = true;
+			clearTimeout(timer);
+			resolve();
+		}
+
+		busboy.on(
+			'file',
+			(
+				fieldname: string,
+				fileStream: NodeJS.ReadableStream,
+				filenameStr: string,
+				_encoding: string,
+				mimeTypeStr: string,
+			) => {
+				filename = filenameStr;
+				if (!filename) {
+					// 无文件名的 part，丢弃数据并继续
+					fileStream.resume();
+					return;
+				}
+				mimeType = mimeTypeStr || 'application/octet-stream';
+				savedPath = join(UPLOAD_DIR, sanitizeName(filename));
+				fileWriteStream = createWriteStream(savedPath);
+
+				fileWriteStream.on('error', (err) => {
+					console.error('[upload] 写文件失败:', err.message);
+					req.destroy();
+					sendJson(res, 500, { ok: false, message: '文件写入失败' });
+					done();
+				});
+
+				fileStream.on('data', (chunk: Buffer) => {
+					fileBytes += chunk.length;
+				});
+
+				fileStream.pipe(fileWriteStream);
+			},
+		);
+
+		busboy.on('field', (fieldname: string, val: string) => {
+			fields.set(fieldname, val);
+		});
+
+		busboy.on('finish', () => {
+			if (resolved) return;
+
+			if (!filename) {
+				sendJson(res, 400, { ok: false, message: '缺少 file 字段' });
+				done();
+				return;
+			}
+
+			const id = fields.get('id') ?? '';
+			const capturedAt = fields.get('capturedAt') ?? null;
+			const receivedAt = new Date().toISOString();
+
+			const record: UploadRecord = {
+				ok: true,
+				id,
+				savedAs: filename,
+				originalName: filename,
+				mimeType,
+				sizeBytes: fileBytes,
+				capturedAt,
+				receivedAt,
+			};
+
+			writeFile(`${savedPath}.json`, JSON.stringify(record, null, 2))
+				.then(() => {
+					console.log(
+						`[upload] 已接收 ${record.originalName} (${record.sizeBytes} bytes) -> ${filename}`,
+					);
+					sendJson(res, 200, record);
+					done();
+				})
+				.catch((err) => {
+					console.error('[upload] 写元数据失败:', err);
+					sendJson(res, 500, { ok: false, message: '元数据写入失败' });
+					done();
+				});
+		});
+
+		busboy.on('error', (err: Error) => {
+			if (resolved) return;
+			console.error('[upload] busboy 解析失败:', err.message);
+			if (fileWriteStream) {
+				fileWriteStream.close();
+				import('node:fs/promises').then((fs) =>
+					fs.unlink(savedPath).catch(() => undefined),
+				);
+			}
+			sendJson(res, 400, { ok: false, message: err.message });
+			req.destroy();
+			done();
+		});
+
+		req.pipe(busboy);
 	});
-
-	const form = await request.formData();
-	const file = form.get('file');
-	if (!(file instanceof File)) {
-		sendJson(res, 400, { ok: false, message: '缺少 file 字段' });
-		return;
-	}
-
-	const id = typeof form.get('id') === 'string' ? (form.get('id') as string) : '';
-	const capturedAtRaw = form.get('capturedAt');
-	const capturedAt = typeof capturedAtRaw === 'string' ? capturedAtRaw : null;
-
-	const receivedAt = new Date().toISOString();
-	const savedAs = sanitizeName(file.name);
-	const targetPath = join(UPLOAD_DIR, savedAs);
-
-	const bytes = Buffer.from(await file.arrayBuffer());
-	await writeFile(targetPath, bytes);
-
-	const record: UploadRecord = {
-		ok: true,
-		id,
-		savedAs,
-		originalName: file.name,
-		mimeType: file.type || 'application/octet-stream',
-		sizeBytes: bytes.byteLength,
-		capturedAt,
-		receivedAt,
-	};
-	await writeFile(`${targetPath}.json`, JSON.stringify(record, null, 2));
-
-	console.log(
-		`[upload] 已接收 ${record.originalName} (${record.sizeBytes} bytes) -> ${savedAs}`,
-	);
-	sendJson(res, 200, record);
 }
+
+
 
 async function handler(
 	req: IncomingMessage,
