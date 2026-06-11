@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./CardGrid.vue": "./src/components/CardGrid.vue",
-    "./CcsCardShell.vue": "./src/components/CcsCardShell.vue"
+    "./CardShell.vue": "./src/components/CardShell.vue"
   },
   "scripts": {
     "build": "vue-tsc -p tsconfig.json --noEmit",

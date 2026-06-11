@@ -22,4 +22,4 @@ export function createCardRegistry(cards: CardRegistry) {
   return cards;
 }
 export { default as CardGrid } from './components/CardGrid.vue';
-export { default as CcsCardShell } from './components/CcsCardShell.vue';
+export { default as CardShell } from './components/CardShell.vue';
