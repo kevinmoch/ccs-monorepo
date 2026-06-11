@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/test',
       name: 'Test',
-      component: () => import('../pages/test/TestPage.vue')
+      component: () => import('../pages/attendance/AttendancePage.vue')
     },
 		// ccs-cli:route
 	]

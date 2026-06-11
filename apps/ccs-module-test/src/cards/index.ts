@@ -1,13 +1,13 @@
 import { createCardRegistry } from '@ccs/ui-vue';
-import StatCard from './StatCard.vue';
-import TitleCard from './TitleCard.vue';
-import ListCard from './ListCard.vue';
-import GeolocationCard from './GeolocationCard.vue';
+import AttendanceShiftCard from './AttendanceShiftCard.vue';
+import AttendanceTitleCard from './AttendanceTitleCard.vue';
+import AttendanceListCard from './AttendanceListCard.vue';
+import AttendanceGeolocationCard from './AttendanceGeolocationCard.vue';
 // ccs-cli:card-import
 export const cardRegistry = createCardRegistry({
-  stat: StatCard,
-  title: TitleCard,
-  list: ListCard,
-  geolocation: GeolocationCard
+  'attendance-shift': AttendanceShiftCard,
+  'attendance-title': AttendanceTitleCard,
+  'attendance-list': AttendanceListCard,
+  'attendance-geolocation': AttendanceGeolocationCard
   // ccs-cli:card-register
 });
