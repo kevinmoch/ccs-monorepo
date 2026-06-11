@@ -1,20 +1,8 @@
 <template>
-	<CcsCardShell :title="title">
-		<div class="metric-card">
-			<span>{{ label }}</span>
-			<strong>{{ value }}</strong>
-			<small>{{ trend }}</small>
-		</div>
-	</CcsCardShell>
+	<CardShell>
+	</CardShell>
 </template>
 
 <script setup lang="ts">
-import { CcsCardShell } from '@ccs/ui-vue';
-
-withDefaults(defineProps<{ title?: string; label?: string; value?: string | number; trend?: string }>(), {
-	title: '__CARD_TITLE__',
-	label: '__CARD_NAME__',
-	value: '--',
-	trend: ''
-});
+import { CardShell } from '@ccs/ui-vue';
 </script>

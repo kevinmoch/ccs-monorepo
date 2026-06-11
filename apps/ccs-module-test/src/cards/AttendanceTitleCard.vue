@@ -4,7 +4,7 @@
       <div class="title-card__main">
         <div class="title-card__text">
           <p class="title-card__eyebrow">ccs-module-test</p>
-          <h2 class="title-card__heading">{{ label ?? __('attendance') }}</h2>
+          <h2 class="title-card__heading">{{ __('attendance') }}</h2>
           <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
         </div>
         <div class="title-card__pill">{{ store.runtime.label }}</div>
@@ -18,11 +18,6 @@ import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useAttendanceStore } from '../stores/attendance';
 import { createCardTranslator } from '../lib/card-i18n';
-
-withDefaults(defineProps<{ title?: string; label?: string }>(), {
-  title: undefined,
-  label: undefined
-});
 
 const msgs = {
   'zh-CN': {
@@ -40,6 +35,7 @@ const msgs = {
     statusPending: 'Pending check-in'
   }
 } as const;
+
 const __ = createCardTranslator(msgs);
 
 const store = useAttendanceStore();

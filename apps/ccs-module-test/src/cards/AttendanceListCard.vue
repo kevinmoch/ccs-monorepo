@@ -16,15 +16,11 @@ import { RUNTIME_OPTIONS } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 import { createCardTranslator } from '../lib/card-i18n';
 
-withDefaults(defineProps<{ title?: string; label?: string }>(), {
-  title: undefined,
-  label: undefined
-});
-
 const msgs = {
   'zh-CN': { locationMethod: '定位方式' },
   'en-US': { locationMethod: 'Location Method' }
 } as const;
+
 const __ = createCardTranslator(msgs);
 
 const store = useAttendanceStore();

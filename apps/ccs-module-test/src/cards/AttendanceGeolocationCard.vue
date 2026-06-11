@@ -32,11 +32,6 @@ import { CardShell } from '@ccs/ui-vue';
 import { useAttendanceStore } from '../stores/attendance';
 import { createCardTranslator } from '../lib/card-i18n';
 
-withDefaults(defineProps<{ title?: string; label?: string }>(), {
-  title: undefined,
-  label: undefined
-});
-
 const msgs = {
   'zh-CN': {
     currentTime: '当前时间',
@@ -61,6 +56,7 @@ const msgs = {
     meter: 'm'
   }
 } as const;
+
 const __ = createCardTranslator(msgs);
 
 const store = useAttendanceStore();
