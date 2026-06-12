@@ -89,15 +89,16 @@ const store = useOfflineDocsStore();
 }
 
 .od-title-card__main-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .od-title-card__title-area {
   display: grid;
   gap: 6px;
+  flex: 1 1 280px;
   min-width: 0;
 }
 
@@ -135,6 +136,8 @@ const store = useOfflineDocsStore();
   display: grid;
   grid-template-columns: repeat(3, minmax(80px, 1fr));
   gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .od-title-card__metrics div {
@@ -179,10 +182,12 @@ const store = useOfflineDocsStore();
 }
 
 @media (max-width: 640px) {
-  .od-title-card__main-row {
-    grid-template-columns: 1fr;
+  .od-title-card__title-area {
+    flex: 1 1 100%;
   }
   .od-title-card__metrics {
+    margin-left: 0;
+    flex: 1 1 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .od-title-card__url-input {
