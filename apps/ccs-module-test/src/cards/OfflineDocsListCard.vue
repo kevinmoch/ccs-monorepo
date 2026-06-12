@@ -200,7 +200,7 @@ onUnmounted(() => {
 }
 
 .od-list-card__head strong {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--ccs-text, #0f172a);
 }
 

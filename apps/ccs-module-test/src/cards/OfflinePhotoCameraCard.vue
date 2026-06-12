@@ -38,14 +38,14 @@ import { createCardTranslator } from '../lib/card-i18n';
 const msgs = {
   'zh-CN': {
     photoCapture: '拍照采集',
-    allPhotosOffline: '所有照片先离线保存，再按需手动上传',
+    allPhotosOffline: '照片先离线保存，再按需上传',
     capturing: '处理中...',
     nativeCapture: '调用相机拍照',
     webCapture: '打开相机拍照'
   },
   'en-US': {
     photoCapture: 'Photo Capture',
-    allPhotosOffline: 'All photos saved offline first, then upload manually',
+    allPhotosOffline: 'Photos are saved offline first',
     capturing: 'Processing...',
     nativeCapture: 'Open Camera',
     webCapture: 'Open Camera'
