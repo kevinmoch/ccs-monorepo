@@ -27,7 +27,7 @@ export function readIframeProps(win: Window = window): Partial<CcsRuntimeProps> 
 
 export async function applyRuntimeProps(props: Partial<CcsRuntimeProps>) {
   if (props.theme) applyTheme(props.theme);
-  if (props.language) await initCcsI18n(props.language);
+  await initCcsI18n(props.language);
 }
 
 export function bindIframeMessageHandlers(options: IframeRuntimeOptions, win: Window = window) {

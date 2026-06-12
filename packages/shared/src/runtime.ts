@@ -5,6 +5,8 @@
  * 因此可以在 @ccs/shared 包中安全使用。
  */
 
+import i18next from 'i18next';
+
 // ---------------------------------------------------------------------------
 // 类型定义
 // ---------------------------------------------------------------------------
@@ -37,26 +39,32 @@ export interface ElectronBridge {
 // 运行时描述常量
 // ---------------------------------------------------------------------------
 
-export const RUNTIME_OPTIONS: RuntimeInfo[] = [
-  {
-    kind: 'web',
-    label: 'Web 页面',
-    strategy: '浏览器 Geolocation API + HTTPS 权限',
-    accuracy: '优先 GPS / Wi-Fi / 蜂窝网络融合定位'
-  },
-  {
-    kind: 'electron',
-    label: 'Windows 程序',
-    strategy: 'Electron 授权 Chromium Geolocation，地图用默认浏览器打开 Bing',
-    accuracy: '优先系统位置服务和 Wi-Fi/IP 辅助定位'
-  },
-  {
-    kind: 'android',
-    label: 'Android 应用',
-    strategy: 'Capacitor 原生定位 + 外层超时保护，地图用系统浏览器能力打开 Bing',
-    accuracy: '优先 GPS 高精度定位，超时或异常时回退 WebView 定位'
-  }
-];
+/**
+ * 获取运行时描述选项（含国际化标签）。
+ * 返回的 label / strategy / accuracy 会根据当前 i18next 语言动态翻译。
+ */
+export function getRuntimeOptions(): RuntimeInfo[] {
+  return [
+    {
+      kind: 'web',
+      label: i18next.t('attendance.runtimeWebLabel'),
+      strategy: i18next.t('attendance.runtimeWebStrategy'),
+      accuracy: i18next.t('attendance.runtimeWebAccuracy')
+    },
+    {
+      kind: 'electron',
+      label: i18next.t('attendance.runtimeElectronLabel'),
+      strategy: i18next.t('attendance.runtimeElectronStrategy'),
+      accuracy: i18next.t('attendance.runtimeElectronAccuracy')
+    },
+    {
+      kind: 'android',
+      label: i18next.t('attendance.runtimeAndroidLabel'),
+      strategy: i18next.t('attendance.runtimeAndroidStrategy'),
+      accuracy: i18next.t('attendance.runtimeAndroidAccuracy')
+    }
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Capacitor 相关检测
@@ -177,22 +185,22 @@ export function detectRuntime(): RuntimeInfo {
 
   try {
     if (capacitor?.getPlatform?.() === 'android' || (capacitor?.isNativePlatform?.() && /Android/i.test(navigator.userAgent))) {
-      return RUNTIME_OPTIONS[2]; // android
+      return getRuntimeOptions()[2]; // android
     }
   } catch {
     // 继续后续检测
   }
 
   if (getResolvedElectron()?.platform || /Electron/i.test(navigator.userAgent)) {
-    return RUNTIME_OPTIONS[1]; // electron
+    return getRuntimeOptions()[1]; // electron
   }
 
   // Capacitor 开发服务器场景
   if ((window.location.protocol === 'http:' || window.location.protocol === 'https:') && window.location.hostname === 'localhost' && /Android/i.test(navigator.userAgent)) {
-    return RUNTIME_OPTIONS[2]; // android
+    return getRuntimeOptions()[2]; // android
   }
 
-  return RUNTIME_OPTIONS[0]; // web
+  return getRuntimeOptions()[0]; // web
 }
 
 /**

@@ -3,7 +3,6 @@ import {
   captureAndroidPhoto,
   clearAllPhotos,
   detectRuntime,
-  formatBytes,
   getPhotoStorageStats,
   getPhotoViewSource,
   isPhotoStorageAvailable,

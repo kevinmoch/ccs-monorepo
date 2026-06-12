@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 import {
   createDocumentCatalog,
-  isDocumentsSiteDocument,
   checkDocumentUpdate,
   downloadDocumentToOpfs,
   getAllMetadata,
@@ -13,7 +12,7 @@ import {
   removeManyDocumentCaches,
   writeCatalogSnapshot
 } from '@ccs/shared/offline-docs';
-import { formatBytes, normalizeError, deriveFileType, setOfflineDocsBaseUrl } from '@ccs/shared';
+import { normalizeError, setOfflineDocsBaseUrl } from '@ccs/shared';
 import type { CachedDocumentMeta, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats } from '@ccs/shared/offline-docs';
 import localDocuments from '../../../../documents/offline-documents.json';
 import { i18n } from '../i18n/instance';

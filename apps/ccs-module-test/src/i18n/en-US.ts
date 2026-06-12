@@ -3,6 +3,12 @@
  * Organized by domain with nested structure to avoid key collisions.
  */
 export default {
+  storage: {
+    errorAndroidFsTimeout: 'Android filesystem operation timed out',
+    errorAndroidFileOpenTimeout: 'Android file open operation timed out',
+    errorAndroidCameraTimeout: 'Android camera operation timed out'
+  },
+
   attendance: {
     // AttendanceShiftCard
     shiftInfo: 'Shift Info',
@@ -39,7 +45,25 @@ export default {
     accuracyHigh: 'High',
     accuracyOk: 'Usable',
     accuracyReview: 'Review',
-    accuracyNone: 'No Fix'
+    accuracyNone: 'No Fix',
+
+    // Shared attendance service
+    providerAndroidNative: 'Android Native Location',
+    providerWindowsSystem: 'Windows System Location',
+    providerAndroidWebView: 'Android WebView Location',
+    providerBrowser: 'Browser Location',
+    errorGeolocationUnavailable: 'Geolocation is not available in this environment',
+    errorCapacitorNotInjected: 'Capacitor Geolocation plugin not injected',
+    errorAndroidPermissionDenied: 'Please grant precise location permission on Android',
+    errorPermissionDenied: 'Location permission denied, please enable in system or browser settings',
+    errorPositionUnavailable: 'Unable to get location, please check network, GPS, or system location services',
+    errorTimeout: 'Location timeout, please move to an open area and try again',
+    errorUnknown: 'Location failed, please try again later',
+    errorAndroidTimeoutFallback: 'Android native location timed out, switched to WebView location',
+    punchCheckIn: 'Check In',
+    punchCheckOut: 'Check Out',
+    mapViewInBing: 'View in Bing Maps',
+    mapViewInBrowser: 'View Map in Browser'
   },
 
   offlineDocs: {
@@ -106,7 +130,20 @@ export default {
     offlineCantCheckUpdates: 'Offline, unable to check for updates',
     updateCheckDone: 'Update check complete',
     lruCleared: 'LRU cleared: {title}',
-    notRecorded: 'Not recorded'
+    notRecorded: 'Not recorded',
+
+    // Shared opfs service
+    storageUnavailableLabel: 'Unavailable',
+    storageAndroidDir: 'Android Private Directory',
+    noCacheAvailableViewer: 'No local cache available',
+    errorOpfsUnavailable: 'OPFS not supported, cannot cache large files offline',
+    errorOfflineNotAllowed: 'This document does not allow offline caching',
+    errorNoReadableStream: 'Unable to read download stream in this environment',
+    errorDownloadFailed: 'Download failed: HTTP {status}',
+    resumingDownload: 'Resuming download',
+    downloadingProgress: 'Downloading',
+    downloadedOffline: 'Offline',
+    errorHtmlResponse: 'Server returned HTML page, document file not available'
   },
 
   offlinePhoto: {
@@ -178,6 +215,18 @@ export default {
     camera: 'Camera',
     file: 'File',
     notRecorded: 'Not recorded',
-    unknownDimension: 'Unknown'
+    unknownDimension: 'Unknown',
+
+    // Shared offline-photos service
+    errorNoPhotoData: 'No photo data received',
+    errorNoCameraPlugin: 'Camera plugin not injected',
+    errorStorageUnavailable: 'Offline photo storage is not available in this environment',
+    photoNameTemplate: 'Photo {name}',
+    storageUnavailableLabel: 'Unavailable',
+    storageAndroidDir: 'Android Private Directory',
+    errorPhotoNotFound: 'Photo not found',
+    errorUploadFailedHttp: 'Upload failed: HTTP {status}',
+    uploadSuccess: 'Upload successful',
+    errorUploadFailed: 'Upload failed: {message}'
   }
 };

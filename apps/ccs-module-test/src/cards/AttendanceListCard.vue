@@ -1,7 +1,7 @@
 <template>
   <CardShell>
     <div class="list-card">
-      <div v-for="option in RUNTIME_OPTIONS" :key="option.kind" class="list-card__item" :class="{ active: option.kind === store.runtime.kind }">
+      <div v-for="option in runtimeOptions" :key="option.kind" class="list-card__item" :class="{ active: option.kind === store.runtime.kind }">
         <span class="list-card__label">{{ option.label }}</span>
         <strong class="list-card__strategy">{{ option.strategy }}</strong>
         <small class="list-card__accuracy">{{ option.accuracy }}</small>
@@ -11,14 +11,20 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { CardShell } from '@ccs/ui-vue';
-import { RUNTIME_OPTIONS } from '@ccs/shared';
+import { getRuntimeOptions } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
-import { useScopedT } from '@ccs/shared';
 
-const t = useScopedT('attendance');
-
+const { locale } = useI18n();
 const store = useAttendanceStore();
+
+const runtimeOptions = computed(() => {
+  // 依赖 locale.value 确保切换语言时重新计算
+  void locale.value;
+  return getRuntimeOptions();
+});
 </script>
 
 <style scoped>

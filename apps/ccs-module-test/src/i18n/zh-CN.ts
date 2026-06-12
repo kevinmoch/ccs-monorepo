@@ -3,6 +3,12 @@
  * 按领域（domain）组织，使用嵌套结构避免 key 冲突。
  */
 export default {
+  storage: {
+    errorAndroidFsTimeout: 'Android 文件系统操作超时',
+    errorAndroidFileOpenTimeout: 'Android 文件打开操作超时',
+    errorAndroidCameraTimeout: 'Android 相机操作超时'
+  },
+
   attendance: {
     // AttendanceShiftCard
     shiftInfo: '今日班次',
@@ -39,7 +45,25 @@ export default {
     accuracyHigh: '高精度',
     accuracyOk: '可用',
     accuracyReview: '需复核',
-    accuracyNone: '未定位'
+    accuracyNone: '未定位',
+
+    // Shared attendance service
+    providerAndroidNative: 'Android 原生定位',
+    providerWindowsSystem: 'Windows 系统定位',
+    providerAndroidWebView: 'Android WebView 定位',
+    providerBrowser: '浏览器定位',
+    errorGeolocationUnavailable: '当前环境不支持定位服务',
+    errorCapacitorNotInjected: 'Capacitor Geolocation 插件未注入',
+    errorAndroidPermissionDenied: '请允许安卓精确定位权限后再打卡',
+    errorPermissionDenied: '定位权限被拒绝，请在系统或浏览器设置中允许位置权限',
+    errorPositionUnavailable: '暂时无法获取位置，请确认网络、GPS 或系统位置服务已开启',
+    errorTimeout: '定位超时，请移动到开阔区域后重试',
+    errorUnknown: '定位失败，请稍后重试',
+    errorAndroidTimeoutFallback: 'Android 原生定位超时，已切换到 WebView 定位',
+    punchCheckIn: '上班打卡',
+    punchCheckOut: '下班打卡',
+    mapViewInBing: '在 Bing 地图中查看',
+    mapViewInBrowser: '在浏览器中查看地图'
   },
 
   offlineDocs: {
@@ -106,7 +130,20 @@ export default {
     offlineCantCheckUpdates: '当前离线，无法检查服务器更新',
     updateCheckDone: '更新检查完成',
     lruCleared: '已按 LRU 清理：{title}',
-    notRecorded: '未记录'
+    notRecorded: '未记录',
+
+    // Shared opfs service
+    storageUnavailableLabel: '不可用',
+    storageAndroidDir: 'Android 私有目录',
+    noCacheAvailableViewer: '本地没有可用缓存',
+    errorOpfsUnavailable: '当前浏览器不支持 OPFS，无法离线缓存大文件',
+    errorOfflineNotAllowed: '该文档未开放离线缓存',
+    errorNoReadableStream: '当前环境无法读取下载流',
+    errorDownloadFailed: '下载失败：HTTP {status}',
+    resumingDownload: '正在续传',
+    downloadingProgress: '正在下载',
+    downloadedOffline: '已离线',
+    errorHtmlResponse: '服务器返回了 HTML 页面，未获取到真实文档文件'
   },
 
   offlinePhoto: {
@@ -178,6 +215,18 @@ export default {
     camera: '相机',
     file: '文件',
     notRecorded: '未记录',
-    unknownDimension: '尺寸未知'
+    unknownDimension: '尺寸未知',
+
+    // Shared offline-photos service
+    errorNoPhotoData: '未获取到照片数据',
+    errorNoCameraPlugin: '当前环境未注入相机插件',
+    errorStorageUnavailable: '当前环境不支持离线照片存储',
+    photoNameTemplate: '照片 {name}',
+    storageUnavailableLabel: '不可用',
+    storageAndroidDir: 'Android 私有目录',
+    errorPhotoNotFound: '照片不存在',
+    errorUploadFailedHttp: '上传失败：HTTP {status}',
+    uploadSuccess: '上传成功',
+    errorUploadFailed: '上传失败：{message}'
   }
 };
