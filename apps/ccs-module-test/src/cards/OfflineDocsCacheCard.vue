@@ -56,7 +56,7 @@ const msgs = {
     partialFiles: '中断文件',
     metadata: '元数据',
     selected: '已选择',
-    lruHint: '下载前启用 LRU 空间整理',
+    lruHint: '启用 LRU 整理',
     clearSelected: '清除所选',
     clearOldest: '清理最久未访问',
     clearAll: '全部清除'
@@ -68,7 +68,7 @@ const msgs = {
     partialFiles: 'Partial',
     metadata: 'Metadata',
     selected: 'Selected',
-    lruHint: 'Enable LRU before download',
+    lruHint: 'Enable LRU',
     clearSelected: 'Clear Selected',
     clearOldest: 'Clear Oldest',
     clearAll: 'Clear All'

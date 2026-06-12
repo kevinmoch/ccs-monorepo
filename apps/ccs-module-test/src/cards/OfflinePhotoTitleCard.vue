@@ -4,18 +4,14 @@
       <div class="op-title-card__main-row">
         <div class="op-title-card__title-area">
           <h2 class="op-title-card__heading">{{ __('offlinePhoto') }}</h2>
-          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ __('offlineFirst') }} · {{ __('total') }} {{ store.stats.count }} {{ __('photos') }} </span>
+          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ __('total') }} {{ store.stats.count }} {{ __('photos') }} </span>
+          <span class="op-title-card__pill">{{ store.runtime.label }}</span>
         </div>
 
         <div class="op-title-card__metrics">
-          <div class="op-title-card__pill">{{ store.runtime.label }}</div>
           <div>
             <span>{{ __('usedSpace') }}</span>
             <strong>{{ formatBytes(store.stats.usedBytes) }}</strong>
-          </div>
-          <div>
-            <span>{{ __('photoCount') }}</span>
-            <strong>{{ store.stats.count }}</strong>
           </div>
           <div>
             <span>{{ __('offlineStorage') }}</span>
@@ -36,22 +32,18 @@ import { createCardTranslator } from '../lib/card-i18n';
 const msgs = {
   'zh-CN': {
     offlinePhoto: '离线拍照',
-    offlineFirst: '离线优先',
     total: '共',
     photos: '张',
     usedSpace: '已用空间',
-    photoCount: '照片数量',
     offlineStorage: '离线存储',
     available: '可用',
     unavailable: '不可用'
   },
   'en-US': {
     offlinePhoto: 'Offline Photo',
-    offlineFirst: 'Offline First',
     total: '',
     photos: 'photos',
     usedSpace: 'Used Space',
-    photoCount: 'Photos',
     offlineStorage: 'Storage',
     available: 'Available',
     unavailable: 'Unavailable'
@@ -81,16 +73,29 @@ const store = useOfflinePhotoStore();
 .op-title-card__title-area {
   display: grid;
   gap: 6px;
-  flex: 1 1 180px;
+  flex: 1 1 140px;
   min-width: 0;
 }
 
 .op-title-card__heading {
   margin: 0;
-  font-size: clamp(20px, 3vw, 26px);
+  font-size: clamp(20px, 3vw, 20px);
   font-weight: 900;
   line-height: 1;
   color: var(--ccs-text, #0f172a);
+}
+
+.op-title-card__pill {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
+  color: var(--ccs-primary, #2563eb);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  max-width: 120px;
 }
 
 .op-title-card__status {
@@ -100,7 +105,7 @@ const store = useOfflinePhotoStore();
 
 .op-title-card__metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  grid-template-columns: repeat(2, minmax(90px, 1fr));
   gap: 8px;
   flex: 0 0 auto;
   margin-left: auto;

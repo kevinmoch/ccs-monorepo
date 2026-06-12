@@ -12,9 +12,6 @@
         </div>
 
         <div class="od-title-card__metrics">
-          <button type="button" class="od-title-card__update-btn" :disabled="store.isCheckingUpdates" @click="store.checkUpdates()">
-            {{ store.isCheckingUpdates ? __('checking') : __('checkUpdates') }}
-          </button>
           <div>
             <span>{{ __('usedSpace') }}</span>
             <strong>{{ formatBytes(store.stats.usageBytes ?? store.stats.usedBytes) }}</strong>
@@ -60,7 +57,7 @@ const msgs = {
     checkUpdates: 'Check Updates',
     usedSpace: 'Used Space',
     quota: 'Quota',
-    offlineStorage: 'Offline Storage',
+    offlineStorage: 'Storage',
     available: 'Available',
     unavailable: 'Unavailable'
   }
@@ -98,13 +95,13 @@ const store = useOfflineDocsStore();
 .od-title-card__title-area {
   display: grid;
   gap: 6px;
-  flex: 1 1 280px;
+  flex: 1 1 200px;
   min-width: 0;
 }
 
 .od-title-card__heading {
   margin: 0;
-  font-size: clamp(20px, 3vw, 26px);
+  font-size: clamp(20px, 3vw, 20px);
   font-weight: 900;
   line-height: 1;
   color: var(--ccs-text, #0f172a);
@@ -134,7 +131,7 @@ const store = useOfflineDocsStore();
 
 .od-title-card__metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(75px, 1fr));
+  grid-template-columns: repeat(2, minmax(90px, 1fr));
   gap: 8px;
   flex: 0 0 auto;
   margin-left: auto;
@@ -158,27 +155,6 @@ const store = useOfflineDocsStore();
 .od-title-card__metrics strong {
   font-size: 15px;
   color: var(--ccs-text, #0f172a);
-}
-
-.od-title-card__update-btn {
-  align-self: stretch;
-  height: auto;
-  min-height: 48px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-  color: var(--ccs-primary, #2563eb);
-  font-size: 13px;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
-}
-
-.od-title-card__update-btn:disabled {
-  cursor: wait;
-  opacity: 0.6;
 }
 
 @media (max-width: 640px) {

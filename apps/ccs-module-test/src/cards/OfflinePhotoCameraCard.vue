@@ -45,7 +45,7 @@ const msgs = {
   },
   'en-US': {
     photoCapture: 'Photo Capture',
-    allPhotosOffline: 'Photos are saved offline first',
+    allPhotosOffline: 'Photos saved offline first',
     capturing: 'Processing...',
     nativeCapture: 'Open Camera',
     webCapture: 'Open Camera'
@@ -183,6 +183,7 @@ function stopCamera() {
   cursor: pointer;
   box-shadow: 0 12px 28px color-mix(in srgb, var(--ccs-primary, #2563eb) 32%, transparent);
   transition: transform 160ms ease;
+  white-space: nowrap;
 }
 
 .op-camera-card__btn:hover:not(:disabled) {

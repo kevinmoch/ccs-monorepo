@@ -84,7 +84,7 @@ const todayStatus = computed(() => {
 
 .title-card__heading {
   margin: 0;
-  font-size: clamp(20px, 3vw, 26px);
+  font-size: clamp(20px, 3vw, 20px);
   font-weight: 900;
   line-height: 1;
   color: var(--ccs-text, #0f172a);

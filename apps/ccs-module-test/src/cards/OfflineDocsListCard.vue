@@ -4,7 +4,12 @@
       <!-- heading -->
       <div class="od-list-card__head">
         <span class="od-list-card__label">{{ __('docList') }}</span>
-        <strong>{{ store.documents.length }} {{ __('documents') }}</strong>
+        <div class="od-list-card__head-right">
+          <button type="button" class="od-list-card__update-btn" :disabled="store.isCheckingUpdates" @click="store.checkUpdates()">
+            {{ store.isCheckingUpdates ? __('checking') : __('checkUpdates') }}
+          </button>
+          <strong>{{ store.documents.length }} {{ __('documents') }}</strong>
+        </div>
       </div>
 
       <!-- empty / loading -->
@@ -87,6 +92,8 @@ import { createCardTranslator } from '../lib/card-i18n';
 const msgs = {
   'zh-CN': {
     docList: '文档列表',
+    checking: '检查中',
+    checkUpdates: '检查更新',
     documents: '个文档',
     loading: '正在加载文档清单',
     selectToClear: '选择清理缓存',
@@ -110,6 +117,8 @@ const msgs = {
   },
   'en-US': {
     docList: 'Document List',
+    checking: 'Checking',
+    checkUpdates: 'Check Updates',
     documents: 'docs',
     loading: 'Loading documents...',
     selectToClear: 'Select to clear cache',
@@ -204,11 +213,36 @@ onUnmounted(() => {
   color: var(--ccs-text, #0f172a);
 }
 
+.od-list-card__head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .od-list-card__label {
   font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
+}
+
+.od-list-card__update-btn {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
+  color: var(--ccs-primary, #2563eb);
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.od-list-card__update-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .od-list-card__empty {
