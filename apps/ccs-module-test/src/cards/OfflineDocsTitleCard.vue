@@ -5,7 +5,7 @@
         <div class="od-title-card__title-area">
           <h2 class="od-title-card__heading">{{ t('offlineDocs') }}</h2>
           <span class="od-title-card__status">
-            {{ t(store.stats.storageLabel) }} · {{ store.isOnline ? t('online') : t('offline') }} ·
+            {{ t(store.stats.storageLabel ?? '') }} · {{ store.isOnline ? t('online') : t('offline') }} ·
             {{ store.pressureLabel }}
           </span>
           <input class="od-title-card__url-input" :value="store.docsBaseUrl" type="text" placeholder="https://..." @change="store.setDocsBaseUrl(($event.target as HTMLInputElement).value)" />
