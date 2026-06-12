@@ -98,7 +98,7 @@ const timelineItems = computed(() => [
 }
 
 .shift-card__heading span {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));

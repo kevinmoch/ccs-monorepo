@@ -3,7 +3,6 @@
     <div class="title-card">
       <div class="title-card__main">
         <div class="title-card__text">
-          <p class="title-card__eyebrow">ccs-module-test</p>
           <h2 class="title-card__heading">{{ __('attendance') }}</h2>
           <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
         </div>
@@ -85,7 +84,7 @@ const todayStatus = computed(() => {
 
 .title-card__heading {
   margin: 0;
-  font-size: clamp(24px, 4vw, 40px);
+  font-size: clamp(20px, 3vw, 26px);
   font-weight: 900;
   line-height: 1;
   color: var(--ccs-text, #0f172a);
@@ -103,7 +102,7 @@ const todayStatus = computed(() => {
   border-radius: 999px;
   background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
   color: var(--ccs-primary, #2563eb);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
 }

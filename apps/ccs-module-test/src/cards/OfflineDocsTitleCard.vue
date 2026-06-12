@@ -1,7 +1,6 @@
 <template>
   <CardShell>
     <div class="od-title-card">
-      <p class="od-title-card__eyebrow">ccs-module-test</p>
       <div class="od-title-card__main-row">
         <div class="od-title-card__title-area">
           <h2 class="od-title-card__heading">{{ __('offlineDocs') }}</h2>

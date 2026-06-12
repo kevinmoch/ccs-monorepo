@@ -128,7 +128,7 @@ function handlePrimaryAction() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
@@ -137,7 +137,7 @@ function handlePrimaryAction() {
 .geo-card__topline strong {
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .geo-card__acc--high {

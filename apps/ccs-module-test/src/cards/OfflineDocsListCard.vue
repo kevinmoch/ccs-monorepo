@@ -297,7 +297,7 @@ onUnmounted(() => {
   height: 26px;
   padding: 0 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   background: color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
   color: var(--ccs-text-muted, #475569);
@@ -334,7 +334,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
 }
 
