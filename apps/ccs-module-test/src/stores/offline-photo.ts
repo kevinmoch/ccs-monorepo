@@ -185,8 +185,8 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
       if (this.isUploading) return;
       this.pageMessage = '';
 
-      if (!this.uploadTargetId) {
-        this.pageMessage = '请选择要上传的照片';
+      if (!this.checkedIds.length) {
+        this.pageMessage = '请先在列表中勾选要上传的照片';
         return;
       }
       if (!this.uploadUrl.trim()) {
@@ -194,11 +194,34 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
         return;
       }
 
+      const ids = [...this.checkedIds];
       try {
         this.isUploading = true;
-        const result = await uploadPhoto(this.uploadTargetId, this.uploadUrl.trim());
+        let successCount = 0;
+        let failCount = 0;
+
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i];
+          this.pageMessage = `上传中 (${i + 1}/${ids.length})...`;
+          try {
+            const result = await uploadPhoto(id, this.uploadUrl.trim());
+            if (result.ok) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+        }
+
         await this.refresh();
-        this.pageMessage = result.message;
+        this.checkedIds = [];
+
+        const parts: string[] = [];
+        if (successCount > 0) parts.push(`${successCount} 张上传成功`);
+        if (failCount > 0) parts.push(`${failCount} 张失败`);
+        this.pageMessage = parts.length > 0 ? parts.join('，') : '上传完成';
       } catch (error) {
         this.pageMessage = normalizeError(error);
       } finally {

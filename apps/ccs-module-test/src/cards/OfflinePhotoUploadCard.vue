@@ -11,15 +11,8 @@
           <span>{{ __('uploadUrl') }}</span>
           <input v-model="store.uploadUrl" type="text" placeholder="https://..." />
         </label>
-        <label class="op-upload-card__field">
-          <span>{{ __('selectPhoto') }}</span>
-          <select v-model="store.uploadTargetId" :disabled="!store.uploadablePhotos.length">
-            <option v-if="!store.uploadablePhotos.length" value="">{{ __('noPhotos') }}</option>
-            <option v-for="photo in store.uploadablePhotos" :key="photo.id" :value="photo.id">{{ photo.name }}（{{ store.uploadStatusLabel(photo.uploadStatus) }}）</option>
-          </select>
-        </label>
-        <button type="button" class="op-upload-card__btn" :disabled="store.isUploading || !store.uploadTargetId" @click="store.handleUpload()">
-          {{ store.isUploading ? __('uploading') : __('upload') }}
+        <button type="button" class="op-upload-card__btn" :disabled="store.isUploading || !store.checkedIds.length" @click="store.handleUpload()">
+          {{ uploadButtonText }}
         </button>
       </div>
     </div>
@@ -27,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { createCardTranslator } from '../lib/card-i18n';
@@ -34,26 +28,29 @@ import { createCardTranslator } from '../lib/card-i18n';
 const msgs = {
   'zh-CN': {
     uploadPhoto: '上传图片',
-    selectOne: '选择一张上传',
+    selectOne: '在列表中勾选照片后上传',
     uploadUrl: '上传地址',
-    selectPhoto: '选择照片',
-    noPhotos: '暂无照片',
     uploading: '上传中...',
     upload: '上传所选'
   },
   'en-US': {
     uploadPhoto: 'Upload Photo',
-    selectOne: 'Select one to upload',
+    selectOne: 'Check photos in the list to upload',
     uploadUrl: 'Upload URL',
-    selectPhoto: 'Select Photo',
-    noPhotos: 'No photos',
     uploading: 'Uploading...',
-    upload: 'Upload'
+    upload: 'Upload Selected'
   }
 } as const;
 const __ = createCardTranslator(msgs);
 
 const store = useOfflinePhotoStore();
+
+const uploadButtonText = computed(() => {
+  if (store.isUploading) return __('uploading');
+  const n = store.checkedIds.length;
+  if (n > 1) return `${__('upload')}（${n}）`;
+  return __('upload');
+});
 </script>
 
 <style scoped>
@@ -85,7 +82,7 @@ const store = useOfflinePhotoStore();
 
 .op-upload-card__form {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  grid-template-columns: 1fr auto;
   gap: 10px;
   align-items: end;
 }
