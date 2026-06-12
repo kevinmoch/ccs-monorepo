@@ -18,11 +18,24 @@ import type { CachedDocumentMeta, DocumentStatus, DownloadProgress, OfflineDocum
 import localDocuments from '../../../../documents/offline-documents.json';
 import { i18n } from '../i18n/instance';
 
-const t = (key: string, params?: Record<string, string | number>) => i18n.global.t(key, params) as string;
+const t = (key: string, params?: Record<string, unknown>) => (params ? i18n.global.t(key, params) : i18n.global.t(key)) as string;
 
 const APP_WATERMARK_RATIO = 0.86;
 
 const catalog = createDocumentCatalog(localDocuments as OfflineDocument[], import.meta.env.VITE_CCS_OFFLINE_DOCS_MANIFEST as string | undefined);
+
+// ---- 纯函数（无 store 依赖，getter / action 共用） ----
+
+function isDocCacheMismatch(document: OfflineDocument, meta?: CachedDocumentMeta): boolean {
+  const expectedBytes = meta?.serverSize ?? document.size;
+  return Boolean(expectedBytes && meta?.status === 'offline' && meta.cachedBytes > 0 && meta.cachedBytes !== expectedBytes);
+}
+
+function getDocStatus(document: OfflineDocument, meta?: CachedDocumentMeta): DocumentStatus {
+  if (!meta) return 'not-downloaded';
+  if (meta.status === 'offline' && isDocCacheMismatch(document, meta)) return 'update-available';
+  return meta.status;
+}
 
 export const useOfflineDocsStore = defineStore('offline-docs', {
   state: () => ({
@@ -56,7 +69,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
       return state.documents.map((document) => {
         const progress = state.progressMap.get(document.id);
         const meta = state.metaMap.get(document.id);
-        const status: DocumentStatus = progress ? 'downloading' : this.getDocumentStatus(document, meta);
+        const status: DocumentStatus = progress ? 'downloading' : getDocStatus(document, meta);
         return { document, meta, status, progress };
       });
     },
@@ -151,14 +164,11 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
     // ---- document operations ----
 
     getDocumentStatus(document: OfflineDocument, meta?: CachedDocumentMeta): DocumentStatus {
-      if (!meta) return 'not-downloaded';
-      if (meta.status === 'offline' && this.isCacheSizeMismatch(document, meta)) return 'update-available';
-      return meta.status;
+      return getDocStatus(document, meta);
     },
 
     isCacheSizeMismatch(document: OfflineDocument, meta?: CachedDocumentMeta): boolean {
-      const expectedBytes = meta?.serverSize ?? document.size;
-      return Boolean(expectedBytes && meta?.status === 'offline' && meta.cachedBytes > 0 && meta.cachedBytes !== expectedBytes);
+      return isDocCacheMismatch(document, meta);
     },
 
     async openOnline(document: OfflineDocument) {
@@ -335,7 +345,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
       if (!value) return t('offlineDocs.notRecorded');
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat(i18n.global.locale as string, {
+      return new Intl.DateTimeFormat(i18n.global.locale.value as string, {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',

@@ -18,7 +18,7 @@ import { createAttendanceService } from '@ccs/shared';
 import type { OfflinePhoto, PhotoStorageStats } from '@ccs/shared';
 import { i18n } from '../i18n/instance';
 
-const t = (key: string, params?: Record<string, string | number>) => i18n.global.t(key, params) as string;
+const t = (key: string, params?: Record<string, unknown>) => (params ? i18n.global.t(key, params) : i18n.global.t(key)) as string;
 
 const runtime = detectRuntime();
 const storageAvailable = isPhotoStorageAvailable();
@@ -250,7 +250,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
       if (!value) return t('offlinePhoto.notRecorded');
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat(i18n.global.locale as string, {
+      return new Intl.DateTimeFormat(i18n.global.locale.value as string, {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
