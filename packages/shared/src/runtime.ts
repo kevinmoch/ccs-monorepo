@@ -203,13 +203,6 @@ export function detectRuntime(): RuntimeInfo {
   return getRuntimeOptions()[0]; // web
 }
 
-/**
- * 获取当前运行时种类（快捷方法）。
- */
-export function getRuntimeKind(): RuntimeKind {
-  return detectRuntime().kind;
-}
-
 let _offlineDocsBaseUrl: string;
 
 /**

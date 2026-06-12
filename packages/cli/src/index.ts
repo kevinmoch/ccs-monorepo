@@ -54,10 +54,6 @@ function parsePort(value: string) {
   return port;
 }
 
-function moduleMenuMarker(moduleName: string) {
-  return `// ccs-cli:framework-page:${moduleName}`;
-}
-
 create
   .command('module')
   .argument('<name>', 'module package name, e.g. ccs-module-order')
