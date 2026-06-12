@@ -23,7 +23,7 @@
           <div>
             <span>{{ t(item.titleKey) }} · {{ t('target') }} {{ item.target }}</span>
             <strong>{{ item.entry?.time ?? t('notPunched') }}</strong>
-            <small v-if="item.entry">{{ item.entry.location.provider }} · {{ item.entry.location.accuracy }} {{ t('meter') }}</small>
+            <small v-if="item.entry">{{ t(item.entry.location.provider) }} · {{ item.entry.location.accuracy }} {{ t('meter') }}</small>
           </div>
         </div>
       </div>

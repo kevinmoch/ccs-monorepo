@@ -78,7 +78,7 @@ export function createAttendanceService(deps: AttendanceDependencies = {}) {
       timeout: 18000
     });
 
-    return normalizePosition(position.coords.latitude, position.coords.longitude, position.coords.accuracy, position.timestamp, i18next.t('attendance.providerAndroidNative'));
+    return normalizePosition(position.coords.latitude, position.coords.longitude, position.coords.accuracy, position.timestamp, 'providerAndroidNative');
   }
 
   function locateWithBrowser(timeout: number): Promise<LocationFix> {
@@ -99,9 +99,9 @@ export function createAttendanceService(deps: AttendanceDependencies = {}) {
   }
 
   function getBrowserLocationProvider(): string {
-    if (runtime.kind === 'electron') return i18next.t('attendance.providerWindowsSystem');
-    if (runtime.kind === 'android') return i18next.t('attendance.providerAndroidWebView');
-    return i18next.t('attendance.providerBrowser');
+    if (runtime.kind === 'electron') return 'providerWindowsSystem';
+    if (runtime.kind === 'android') return 'providerAndroidWebView';
+    return 'providerBrowser';
   }
 
   // -----------------------------------------------------------------------
