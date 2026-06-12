@@ -33,7 +33,13 @@ export default {
     checkIn: 'Check In',
     checkOut: 'Check Out',
     waitingLocation: 'Acquiring location...',
-    accuracyPrefix: 'Accuracy ~'
+    accuracyPrefix: 'Accuracy ~',
+
+    // Store: accuracyLevel
+    accuracyHigh: 'High',
+    accuracyOk: 'Usable',
+    accuracyReview: 'Review',
+    accuracyNone: 'No Fix'
   },
 
   offlineDocs: {
@@ -81,7 +87,26 @@ export default {
     lruHint: 'Enable LRU',
     clearSelected: 'Clear Selected',
     clearOldest: 'Clear Oldest',
-    clearAll: 'Clear All'
+    clearAll: 'Clear All',
+
+    // Store: pressureLabel
+    opfsUnavailable: 'OPFS Unavailable',
+    spaceMonitoring: 'Monitoring space...',
+    spaceTight: 'Space tight',
+    spaceNearWatermark: 'Near watermark',
+    spaceNormal: 'Normal',
+
+    // Store: actions & helpers (page messages)
+    offlineCantOpenOnline: 'Offline, unable to open online document',
+    noCacheAvailable: 'No cache available, please cache locally first',
+    cacheMismatch: 'Local cache differs from server manifest, please update cache',
+    preparingDownload: 'Preparing download',
+    cacheUpdated: 'Cache updated: {title}',
+    cacheLocalDone: 'Cached locally: {title}',
+    offlineCantCheckUpdates: 'Offline, unable to check for updates',
+    updateCheckDone: 'Update check complete',
+    lruCleared: 'LRU cleared: {title}',
+    notRecorded: 'Not recorded'
   },
 
   offlinePhoto: {
@@ -103,6 +128,10 @@ export default {
     cancel: 'Cancel',
     saving: 'Saving...',
     takePhoto: 'Capture',
+    cannotOpenCamera: 'Cannot open camera',
+    cameraNotReady: 'Camera not ready',
+    canvasUnsupported: 'Canvas capture not supported',
+    captureFailed: 'Capture failed',
 
     // OfflinePhotoListCard
     offlinePhotos: 'Offline Photos',
@@ -127,6 +156,28 @@ export default {
     photoFiles: 'Photo Files',
     metadata: 'Metadata',
     deleteSelected: 'Delete Selected',
-    clearAll: 'Clear All'
+    clearAll: 'Clear All',
+
+    // Store: state & actions
+    detecting: 'Detecting...',
+    storageUnavailable: 'Offline photo storage unavailable',
+    photoSavedOffline: 'Photo saved offline',
+    selectedPhotosDeleted: 'Selected photos deleted',
+    allPhotosCleared: 'All photos cleared',
+    selectPhotosFirst: 'Please select photos in the list first',
+    enterUploadUrl: 'Please enter upload URL',
+    uploadingProgress: 'Uploading ({current}/{total})...',
+    photosUploaded: '{count} uploaded',
+    photosFailed: '{count} failed',
+    uploadComplete: 'Upload complete',
+
+    // Store: display helpers
+    localOnly: 'Local only',
+    uploaded: 'Uploaded',
+    uploadFailed: 'Upload failed',
+    camera: 'Camera',
+    file: 'File',
+    notRecorded: 'Not recorded',
+    unknownDimension: 'Unknown'
   }
 };

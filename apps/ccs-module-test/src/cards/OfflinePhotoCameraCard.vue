@@ -67,7 +67,7 @@ async function openWebCamera() {
       audio: false
     });
   } catch {
-    store.pageMessage = '无法打开相机';
+    store.pageMessage = t('cannotOpenCamera');
     return;
   }
   cameraDialog.value?.showModal();
@@ -84,7 +84,7 @@ async function takeWebPhoto() {
   const width = video.videoWidth;
   const height = video.videoHeight;
   if (!width || !height) {
-    cameraError.value = '相机尚未就绪';
+    cameraError.value = t('cameraNotReady');
     return;
   }
 
@@ -93,14 +93,14 @@ async function takeWebPhoto() {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    cameraError.value = '不支持画布抓帧';
+    cameraError.value = t('canvasUnsupported');
     return;
   }
   ctx.drawImage(video, 0, 0, width, height);
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
   if (!blob) {
-    cameraError.value = '抓帧失败';
+    cameraError.value = t('captureFailed');
     return;
   }
 

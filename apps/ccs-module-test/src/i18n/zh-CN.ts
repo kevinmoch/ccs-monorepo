@@ -33,7 +33,13 @@ export default {
     checkIn: '上班打卡',
     checkOut: '下班打卡',
     waitingLocation: '等待获取当前位置',
-    accuracyPrefix: '定位精度约'
+    accuracyPrefix: '定位精度约',
+
+    // Store: accuracyLevel
+    accuracyHigh: '高精度',
+    accuracyOk: '可用',
+    accuracyReview: '需复核',
+    accuracyNone: '未定位'
   },
 
   offlineDocs: {
@@ -81,7 +87,26 @@ export default {
     lruHint: '启用 LRU 整理',
     clearSelected: '清除所选',
     clearOldest: '清理最久未访问',
-    clearAll: '全部清除'
+    clearAll: '全部清除',
+
+    // Store: pressureLabel
+    opfsUnavailable: 'OPFS 不可用',
+    spaceMonitoring: '空间监测中',
+    spaceTight: '空间紧张',
+    spaceNearWatermark: '接近建议水位',
+    spaceNormal: '空间正常',
+
+    // Store: actions & helpers (page messages)
+    offlineCantOpenOnline: '当前离线，无法打开在线文档',
+    noCacheAvailable: '本地没有可用缓存，请先缓存本地',
+    cacheMismatch: '本地缓存文件与服务器清单不一致，请更新缓存后再打开',
+    preparingDownload: '准备下载',
+    cacheUpdated: '已更新缓存：{title}',
+    cacheLocalDone: '已缓存本地：{title}',
+    offlineCantCheckUpdates: '当前离线，无法检查服务器更新',
+    updateCheckDone: '更新检查完成',
+    lruCleared: '已按 LRU 清理：{title}',
+    notRecorded: '未记录'
   },
 
   offlinePhoto: {
@@ -103,6 +128,10 @@ export default {
     cancel: '取消',
     saving: '保存中...',
     takePhoto: '拍照',
+    cannotOpenCamera: '无法打开相机',
+    cameraNotReady: '相机尚未就绪',
+    canvasUnsupported: '不支持画布抓帧',
+    captureFailed: '抓帧失败',
 
     // OfflinePhotoListCard
     offlinePhotos: '离线照片',
@@ -127,6 +156,28 @@ export default {
     photoFiles: '照片文件',
     metadata: '元数据',
     deleteSelected: '删除所选',
-    clearAll: '全部清除'
+    clearAll: '全部清除',
+
+    // Store: state & actions
+    detecting: '检测中',
+    storageUnavailable: '当前环境不支持离线照片存储',
+    photoSavedOffline: '已离线保存照片',
+    selectedPhotosDeleted: '已删除所选照片',
+    allPhotosCleared: '已清空离线照片',
+    selectPhotosFirst: '请先在列表中勾选要上传的照片',
+    enterUploadUrl: '请填写上传地址',
+    uploadingProgress: '上传中 ({current}/{total})...',
+    photosUploaded: '{count} 张上传成功',
+    photosFailed: '{count} 张失败',
+    uploadComplete: '上传完成',
+
+    // Store: display helpers
+    localOnly: '仅本地',
+    uploaded: '已上传',
+    uploadFailed: '上传失败',
+    camera: '相机',
+    file: '文件',
+    notRecorded: '未记录',
+    unknownDimension: '尺寸未知'
   }
 };

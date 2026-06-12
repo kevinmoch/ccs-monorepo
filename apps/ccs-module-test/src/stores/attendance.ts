@@ -6,6 +6,8 @@ const attendanceService = createAttendanceService({
   electronOpenMap: getElectron()?.openMap
 });
 
+export type AccuracyKey = 'high' | 'ok' | 'warn' | 'none';
+
 export const useAttendanceStore = defineStore('attendance', {
   state: () => ({
     attendance: attendanceService.loadAttendanceRecord() as AttendanceRecord,
@@ -18,9 +20,9 @@ export const useAttendanceStore = defineStore('attendance', {
     runtime: () => attendanceService.runtime,
 
     todayStatus(state): string {
-      if (state.attendance.checkIn && state.attendance.checkOut) return '今日已完成';
-      if (state.attendance.checkIn) return '已上班，待下班打卡';
-      return '待上班打卡';
+      if (state.attendance.checkIn && state.attendance.checkOut) return 'done';
+      if (state.attendance.checkIn) return 'in';
+      return 'pending';
     },
 
     nextPunch(state): PunchType {
@@ -32,12 +34,12 @@ export const useAttendanceStore = defineStore('attendance', {
       return attendanceService.buildMapLink(state.lastLocation);
     },
 
-    accuracyLevel(state): string {
+    accuracyLevel(state): AccuracyKey {
       const accuracy = state.lastLocation?.accuracy;
-      if (!accuracy) return '未定位';
-      if (accuracy <= 50) return '高精度';
-      if (accuracy <= 150) return '可用';
-      return '需复核';
+      if (!accuracy) return 'none';
+      if (accuracy <= 50) return 'high';
+      if (accuracy <= 150) return 'ok';
+      return 'warn';
     }
   },
 

@@ -1,20 +1,13 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { createI18n } from 'vue-i18n';
 import { applyRuntimeProps, bindIframeMessageHandlers, readIframeProps } from '@ccs/runtime/vue';
-import { applyTheme, resources, type Language, type ThemeMode } from '@ccs/shared';
+import { applyTheme, type Language, type ThemeMode } from '@ccs/shared';
 import App from './App.vue';
 import router from './router';
 import { useRuntimeStore } from './stores/runtime';
-import zhCN from './i18n/zh-CN';
-import enUS from './i18n/en-US';
+import { i18n } from './i18n/instance';
 import './styles.css';
 
-const i18n = createI18n({ legacy: false, locale: 'zh-CN', fallbackLocale: 'zh-CN', messages: { 'zh-CN': resources['zh-CN'].translation, 'en-US': resources['en-US'].translation } as any });
-
-// 注册模块级国际化资源
-i18n.global.mergeLocaleMessage('zh-CN', zhCN);
-i18n.global.mergeLocaleMessage('en-US', enUS);
 const initialIframeRoute = getIframeRoute();
 
 async function render() {

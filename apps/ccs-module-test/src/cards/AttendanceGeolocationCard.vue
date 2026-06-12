@@ -3,7 +3,7 @@
     <div class="geo-card">
       <div class="geo-card__topline">
         <span>{{ t('currentTime') }}</span>
-        <strong :class="accuracyClass">{{ store.accuracyLevel }}</strong>
+        <strong :class="accuracyClass">{{ accuracyLabel }}</strong>
       </div>
 
       <div class="geo-card__clock">{{ formattedTime }}</div>
@@ -75,10 +75,20 @@ const mapLink = computed(() => store.mapLink);
 const accuracyClass = computed(() => {
   const level = store.accuracyLevel;
   return {
-    'geo-card__acc--high': level === '高精度' || level === 'High',
-    'geo-card__acc--ok': level === '可用' || level === 'Usable',
-    'geo-card__acc--warn': level === '需复核' || level === 'Review'
+    'geo-card__acc--high': level === 'high',
+    'geo-card__acc--ok': level === 'ok',
+    'geo-card__acc--warn': level === 'warn'
   };
+});
+
+const accuracyLabel = computed(() => {
+  const map: Record<string, string> = {
+    high: t('accuracyHigh'),
+    ok: t('accuracyOk'),
+    warn: t('accuracyReview'),
+    none: t('accuracyNone')
+  };
+  return map[store.accuracyLevel] ?? store.accuracyLevel;
 });
 
 function handlePrimaryAction() {

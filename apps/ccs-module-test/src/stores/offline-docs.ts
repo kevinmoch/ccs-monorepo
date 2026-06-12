@@ -16,6 +16,9 @@ import {
 import { formatBytes, normalizeError, deriveFileType, setOfflineDocsBaseUrl } from '@ccs/shared';
 import type { CachedDocumentMeta, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats } from '@ccs/shared/offline-docs';
 import localDocuments from '../../../../documents/offline-documents.json';
+import { i18n } from '../i18n/instance';
+
+const t = (key: string, params?: Record<string, string | number>) => i18n.global.t(key, params) as string;
 
 const APP_WATERMARK_RATIO = 0.86;
 
@@ -86,11 +89,11 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
     },
 
     pressureLabel(state): string {
-      if (!state.stats.opfsAvailable) return 'OPFS 不可用';
-      if (!this.measuredQuotaBytes) return '空间监测中';
-      if (this.storagePercent >= 92) return '空间紧张';
-      if (this.storagePercent >= APP_WATERMARK_RATIO * 100) return '接近建议水位';
-      return '空间正常';
+      if (!state.stats.opfsAvailable) return t('offlineDocs.opfsUnavailable');
+      if (!this.measuredQuotaBytes) return t('offlineDocs.spaceMonitoring');
+      if (this.storagePercent >= 92) return t('offlineDocs.spaceTight');
+      if (this.storagePercent >= APP_WATERMARK_RATIO * 100) return t('offlineDocs.spaceNearWatermark');
+      return t('offlineDocs.spaceNormal');
     }
   },
 
@@ -164,7 +167,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
 
       try {
         if (!this.isOnline) {
-          this.pageMessage = '当前离线，无法打开在线文档';
+          this.pageMessage = t('offlineDocs.offlineCantOpenOnline');
           return;
         }
         await openOnlineDocument(document);
@@ -180,12 +183,12 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
       try {
         const meta = this.metaMap.get(document.id);
         if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) {
-          this.pageMessage = '本地没有可用缓存，请先缓存本地';
+          this.pageMessage = t('offlineDocs.noCacheAvailable');
           return;
         }
 
         if (this.isCacheSizeMismatch(document, meta)) {
-          this.pageMessage = '本地缓存文件与服务器清单不一致，请更新缓存后再打开';
+          this.pageMessage = t('offlineDocs.cacheMismatch');
           return;
         }
 
@@ -207,12 +210,12 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
           totalBytes: document.size,
           percent: 0,
           resumable: false,
-          message: '准备下载'
+          message: t('offlineDocs.preparingDownload')
         });
         await this.clearLruIfNeeded(document);
         await downloadDocumentToOpfs(document, (progress) => this.setProgress(document.id, progress), { force });
         await this.refreshMetadata();
-        this.pageMessage = force ? `已更新缓存：${document.title}` : `已缓存本地：${document.title}`;
+        this.pageMessage = force ? t('offlineDocs.cacheUpdated', { title: document.title }) : t('offlineDocs.cacheLocalDone', { title: document.title });
       } catch (error) {
         this.pageMessage = normalizeError(error);
         await this.refreshMetadata();
@@ -223,7 +226,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
 
     async checkUpdates() {
       if (!this.isOnline) {
-        this.pageMessage = '当前离线，无法检查服务器更新';
+        this.pageMessage = t('offlineDocs.offlineCantCheckUpdates');
         return;
       }
 
@@ -233,7 +236,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
           await checkDocumentUpdate(document);
         }
         await this.refreshMetadata();
-        this.pageMessage = '更新检查完成';
+        this.pageMessage = t('offlineDocs.updateCheckDone');
       } finally {
         this.isCheckingUpdates = false;
       }
@@ -278,7 +281,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
 
       if (!oldest) return;
       await this.clearOne(oldest.document.id);
-      this.pageMessage = `已按 LRU 清理：${oldest.document.title}`;
+      this.pageMessage = t('offlineDocs.lruCleared', { title: oldest.document.title });
     },
 
     async clearLruIfNeeded(document: OfflineDocument) {
@@ -307,11 +310,11 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
     // derived helpers (non-reactive, callable from components)
     statusLabel(status: DocumentStatus): string {
       const labels: Record<DocumentStatus, string> = {
-        'not-downloaded': '未下载',
-        downloading: '下载中',
-        offline: '已离线',
-        'update-available': '有更新',
-        failed: '中断'
+        'not-downloaded': t('offlineDocs.statusNotDownloaded'),
+        downloading: t('offlineDocs.statusDownloading'),
+        offline: t('offlineDocs.statusOffline'),
+        'update-available': t('offlineDocs.statusUpdateAvailable'),
+        failed: t('offlineDocs.statusFailed')
       };
       return labels[status];
     },
@@ -329,10 +332,10 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
     },
 
     formatDate(value?: string): string {
-      if (!value) return '未记录';
+      if (!value) return t('offlineDocs.notRecorded');
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat('zh-CN', {
+      return new Intl.DateTimeFormat(i18n.global.locale as string, {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',

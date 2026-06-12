@@ -16,6 +16,9 @@ import {
 } from '@ccs/shared';
 import { createAttendanceService } from '@ccs/shared';
 import type { OfflinePhoto, PhotoStorageStats } from '@ccs/shared';
+import { i18n } from '../i18n/instance';
+
+const t = (key: string, params?: Record<string, string | number>) => i18n.global.t(key, params) as string;
 
 const runtime = detectRuntime();
 const storageAvailable = isPhotoStorageAvailable();
@@ -40,7 +43,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
       metadataBytes: 0,
       opfsAvailable: storageAvailable,
       storageKind: 'unavailable' as const,
-      storageLabel: '检测中'
+      storageLabel: t('offlinePhoto.detecting')
     } as PhotoStorageStats
   }),
 
@@ -62,7 +65,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
       this.isLoading = true;
       try {
         if (!this.storageAvailable) {
-          this.pageMessage = '当前环境不支持离线照片存储';
+          this.pageMessage = t('offlinePhoto.storageUnavailable');
           return;
         }
         await this.refresh();
@@ -105,7 +108,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
           })
         });
         await this.refresh();
-        this.pageMessage = '已离线保存照片';
+        this.pageMessage = t('offlinePhoto.photoSavedOffline');
       } catch (error) {
         this.pageMessage = normalizeError(error);
       } finally {
@@ -128,7 +131,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
           })
         });
         await this.refresh();
-        this.pageMessage = '已离线保存照片';
+        this.pageMessage = t('offlinePhoto.photoSavedOffline');
       } catch (error) {
         this.pageMessage = normalizeError(error);
       } finally {
@@ -163,7 +166,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
         await removeManyPhotos(this.checkedIds);
         this.checkedIds = [];
         await this.refresh();
-        this.pageMessage = '已删除所选照片';
+        this.pageMessage = t('offlinePhoto.selectedPhotosDeleted');
       } catch (error) {
         this.pageMessage = normalizeError(error);
       }
@@ -175,7 +178,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
         await clearAllPhotos();
         this.checkedIds = [];
         await this.refresh();
-        this.pageMessage = '已清空离线照片';
+        this.pageMessage = t('offlinePhoto.allPhotosCleared');
       } catch (error) {
         this.pageMessage = normalizeError(error);
       }
@@ -186,11 +189,11 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
       this.pageMessage = '';
 
       if (!this.checkedIds.length) {
-        this.pageMessage = '请先在列表中勾选要上传的照片';
+        this.pageMessage = t('offlinePhoto.selectPhotosFirst');
         return;
       }
       if (!this.uploadUrl.trim()) {
-        this.pageMessage = '请填写上传地址';
+        this.pageMessage = t('offlinePhoto.enterUploadUrl');
         return;
       }
 
@@ -202,7 +205,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
 
         for (let i = 0; i < ids.length; i++) {
           const id = ids[i];
-          this.pageMessage = `上传中 (${i + 1}/${ids.length})...`;
+          this.pageMessage = t('offlinePhoto.uploadingProgress', { current: i + 1, total: ids.length });
           try {
             const result = await uploadPhoto(id, this.uploadUrl.trim());
             if (result.ok) {
@@ -219,9 +222,9 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
         this.checkedIds = [];
 
         const parts: string[] = [];
-        if (successCount > 0) parts.push(`${successCount} 张上传成功`);
-        if (failCount > 0) parts.push(`${failCount} 张失败`);
-        this.pageMessage = parts.length > 0 ? parts.join('，') : '上传完成';
+        if (successCount > 0) parts.push(t('offlinePhoto.photosUploaded', { count: successCount }));
+        if (failCount > 0) parts.push(t('offlinePhoto.photosFailed', { count: failCount }));
+        this.pageMessage = parts.length > 0 ? parts.join(', ') : t('offlinePhoto.uploadComplete');
       } catch (error) {
         this.pageMessage = normalizeError(error);
       } finally {
@@ -232,22 +235,22 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
     // display helpers
     uploadStatusLabel(status: OfflinePhoto['uploadStatus']): string {
       const labels: Record<OfflinePhoto['uploadStatus'], string> = {
-        local: '仅本地',
-        uploaded: '已上传',
-        failed: '上传失败'
+        local: t('offlinePhoto.localOnly'),
+        uploaded: t('offlinePhoto.uploaded'),
+        failed: t('offlinePhoto.uploadFailed')
       };
       return labels[status];
     },
 
     sourceLabel(source: OfflinePhoto['source']): string {
-      return source === 'camera' ? '相机' : '文件';
+      return source === 'camera' ? t('offlinePhoto.camera') : t('offlinePhoto.file');
     },
 
     formatDate(value?: string): string {
-      if (!value) return '未记录';
+      if (!value) return t('offlinePhoto.notRecorded');
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat('zh-CN', {
+      return new Intl.DateTimeFormat(i18n.global.locale as string, {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
@@ -256,7 +259,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
     },
 
     dimensionLabel(photo: OfflinePhoto): string {
-      if (!photo.width || !photo.height) return '尺寸未知';
+      if (!photo.width || !photo.height) return t('offlinePhoto.unknownDimension');
       return `${photo.width} × ${photo.height}`;
     },
 
