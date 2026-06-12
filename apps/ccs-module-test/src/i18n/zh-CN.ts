@@ -135,6 +135,8 @@ export default {
     // Shared opfs service
     storageUnavailableLabel: '不可用',
     storageAndroidDir: 'Android 私有目录',
+    storageLabelWebOpfs: 'Web OPFS',
+    storageLabelElectron: 'Electron userData',
     noCacheAvailableViewer: '本地没有可用缓存',
     errorOpfsUnavailable: '当前浏览器不支持 OPFS，无法离线缓存大文件',
     errorOfflineNotAllowed: '该文档未开放离线缓存',
@@ -224,6 +226,7 @@ export default {
     photoNameTemplate: '照片 {name}',
     storageUnavailableLabel: '不可用',
     storageAndroidDir: 'Android 私有目录',
+    storageLabelWebOpfs: 'Web OPFS',
     errorPhotoNotFound: '照片不存在',
     errorUploadFailedHttp: '上传失败：HTTP {status}',
     uploadSuccess: '上传成功',

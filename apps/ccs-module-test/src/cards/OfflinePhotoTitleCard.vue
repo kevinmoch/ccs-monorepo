@@ -4,7 +4,7 @@
       <div class="op-title-card__main-row">
         <div class="op-title-card__title-area">
           <h2 class="op-title-card__heading">{{ t('offlinePhoto') }}</h2>
-          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ t('total') }} {{ store.stats.count }} {{ t('photos') }} </span>
+          <span class="op-title-card__status"> {{ t(store.stats.storageLabel) }} · {{ t('total') }} {{ store.stats.count }} {{ t('photos') }} </span>
           <span class="op-title-card__pill">{{ runtimeLabel }}</span>
         </div>
 

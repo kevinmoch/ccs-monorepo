@@ -41,6 +41,8 @@ export const resources: Resource = {
       offlineDocs: {
         storageUnavailableLabel: '不可用',
         storageAndroidDir: 'Android 私有目录',
+        storageLabelWebOpfs: 'Web OPFS',
+        storageLabelElectron: 'Electron userData',
         noCacheAvailableViewer: '本地没有可用缓存',
         errorOpfsUnavailable: '当前浏览器不支持 OPFS，无法离线缓存大文件',
         errorOfflineNotAllowed: '该文档未开放离线缓存',
@@ -58,6 +60,7 @@ export const resources: Resource = {
         photoNameTemplate: '照片 {name}',
         storageUnavailableLabel: '不可用',
         storageAndroidDir: 'Android 私有目录',
+        storageLabelWebOpfs: 'Web OPFS',
         errorPhotoNotFound: '照片不存在',
         errorUploadFailedHttp: '上传失败：HTTP {status}',
         uploadSuccess: '上传成功',
@@ -104,6 +107,8 @@ export const resources: Resource = {
       offlineDocs: {
         storageUnavailableLabel: 'Unavailable',
         storageAndroidDir: 'Android Private Directory',
+        storageLabelWebOpfs: 'Web OPFS',
+        storageLabelElectron: 'Electron userData',
         noCacheAvailableViewer: 'No local cache available',
         errorOpfsUnavailable: 'OPFS not supported, cannot cache large files offline',
         errorOfflineNotAllowed: 'This document does not allow offline caching',
@@ -121,6 +126,7 @@ export const resources: Resource = {
         photoNameTemplate: 'Photo {name}',
         storageUnavailableLabel: 'Unavailable',
         storageAndroidDir: 'Android Private Directory',
+        storageLabelWebOpfs: 'Web OPFS',
         errorPhotoNotFound: 'Photo not found',
         errorUploadFailedHttp: 'Upload failed: HTTP {status}',
         uploadSuccess: 'Upload successful',

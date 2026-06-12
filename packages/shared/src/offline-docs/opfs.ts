@@ -137,7 +137,7 @@ export async function getStorageStats(): Promise<StorageStats> {
       ...(await electron.getStorageStats()),
       opfsAvailable: true,
       storageKind: 'electron',
-      storageLabel: 'Electron userData'
+      storageLabel: 'storageLabelElectron'
     };
   }
   if (isAndroidNative()) return getAndroidStorageStats();
@@ -150,7 +150,7 @@ export async function getStorageStats(): Promise<StorageStats> {
       partialBytes: 0,
       opfsAvailable: false,
       storageKind: 'unavailable',
-      storageLabel: i18next.t('offlineDocs.storageUnavailableLabel')
+      storageLabel: 'storageUnavailableLabel'
     };
   }
 
@@ -536,7 +536,7 @@ async function getAndroidStorageStats(): Promise<StorageStats> {
     metadataBytes,
     opfsAvailable: true,
     storageKind: 'android',
-    storageLabel: i18next.t('offlineDocs.storageAndroidDir')
+    storageLabel: 'storageAndroidDir'
   };
 }
 

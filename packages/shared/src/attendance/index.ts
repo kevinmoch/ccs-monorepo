@@ -125,7 +125,7 @@ export function createAttendanceService(deps: AttendanceDependencies = {}) {
         minute: '2-digit',
         hour12: false
       }).format(new Date()),
-      label: type === 'checkIn' ? i18next.t('attendance.punchCheckIn') : i18next.t('attendance.punchCheckOut'),
+      label: type === 'checkIn' ? 'punchCheckIn' : 'punchCheckOut',
       location
     };
 

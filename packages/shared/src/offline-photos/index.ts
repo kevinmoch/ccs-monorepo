@@ -133,7 +133,7 @@ export async function savePhoto(
 
   const meta: OfflinePhoto = {
     id,
-    name: info.name || i18next.t('offlinePhoto.photoNameTemplate', { name: formatCaptureName(capturedAt) }),
+    name: info.name || `Photo ${formatCaptureName(capturedAt)}`,
     localName,
     mimeType,
     sizeBytes: blob.size,
@@ -276,7 +276,7 @@ export async function getPhotoStorageStats(): Promise<PhotoStorageStats> {
       metadataBytes: 0,
       opfsAvailable: false,
       storageKind: 'unavailable',
-      storageLabel: i18next.t('offlinePhoto.storageUnavailableLabel')
+      storageLabel: 'storageUnavailableLabel'
     };
   }
 
@@ -294,7 +294,7 @@ export async function getPhotoStorageStats(): Promise<PhotoStorageStats> {
       metadataBytes,
       opfsAvailable: true,
       storageKind: 'android',
-      storageLabel: i18next.t('offlinePhoto.storageAndroidDir')
+      storageLabel: 'storageAndroidDir'
     };
   }
 
@@ -311,7 +311,7 @@ export async function getPhotoStorageStats(): Promise<PhotoStorageStats> {
     usageBytes: estimate?.usage,
     opfsAvailable: true,
     storageKind: 'opfs',
-    storageLabel: 'Web OPFS'
+    storageLabel: 'storageLabelWebOpfs'
   };
 }
 
@@ -506,12 +506,5 @@ function getMetaName(id: string) {
 }
 
 function formatCaptureName(date: Date): string {
-  return new Intl.DateTimeFormat(i18next.language, {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(date);
+  return date.toISOString().replace('T', ' ').slice(0, 19);
 }

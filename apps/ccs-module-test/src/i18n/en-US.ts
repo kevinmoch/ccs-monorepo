@@ -135,6 +135,8 @@ export default {
     // Shared opfs service
     storageUnavailableLabel: 'Unavailable',
     storageAndroidDir: 'Android Private Directory',
+    storageLabelWebOpfs: 'Web OPFS',
+    storageLabelElectron: 'Electron userData',
     noCacheAvailableViewer: 'No local cache available',
     errorOpfsUnavailable: 'OPFS not supported, cannot cache large files offline',
     errorOfflineNotAllowed: 'This document does not allow offline caching',
@@ -224,6 +226,7 @@ export default {
     photoNameTemplate: 'Photo {name}',
     storageUnavailableLabel: 'Unavailable',
     storageAndroidDir: 'Android Private Directory',
+    storageLabelWebOpfs: 'Web OPFS',
     errorPhotoNotFound: 'Photo not found',
     errorUploadFailedHttp: 'Upload failed: HTTP {status}',
     uploadSuccess: 'Upload successful',

@@ -4,7 +4,7 @@
       <div class="op-camera-card__copy">
         <span class="op-camera-card__label">{{ t('photoCapture') }}</span>
         <strong>{{ t('allPhotosOffline') }}</strong>
-        <small>{{ store.runtime.strategy }}</small>
+        <small>{{ runtimeStrategy }}</small>
       </div>
 
       <button class="op-camera-card__btn" type="button" :disabled="!store.storageAvailable || store.isCapturing" @click="handleCapture">
@@ -32,12 +32,20 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
+import { useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';
 
 const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
+
+const runtimeOptions = useRuntimeOptions();
+
+const runtimeStrategy = computed(() => {
+  const option = runtimeOptions.value.find((o: RuntimeInfo) => o.kind === store.runtime.kind);
+  return option?.strategy ?? '';
+});
 
 const cameraDialog = ref<HTMLDialogElement | null>(null);
 const cameraVideo = ref<HTMLVideoElement | null>(null);
