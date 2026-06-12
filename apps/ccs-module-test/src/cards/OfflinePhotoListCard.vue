@@ -2,12 +2,12 @@
   <CardShell>
     <div class="op-list-card">
       <div class="op-list-card__head">
-        <span class="op-list-card__label">{{ __('offlinePhotos') }}</span>
-        <strong>{{ store.photos.length }} {{ __('photos') }}</strong>
+        <span class="op-list-card__label">{{ t('offlinePhotos') }}</span>
+        <strong>{{ store.photos.length }} {{ t('photos') }}</strong>
       </div>
 
-      <div v-if="store.isLoading" class="op-list-card__empty">{{ __('loading') }}</div>
-      <div v-else-if="!store.photos.length" class="op-list-card__empty">{{ __('noPhotosHint') }}</div>
+      <div v-if="store.isLoading" class="op-list-card__empty">{{ t('loading') }}</div>
+      <div v-else-if="!store.photos.length" class="op-list-card__empty">{{ t('noPhotosHint') }}</div>
 
       <div v-else class="op-list-card__grid">
         <article v-for="photo in store.photos" :key="photo.id" class="op-list-card__item" :class="`upload-${photo.uploadStatus}`">
@@ -17,7 +17,7 @@
 
           <button type="button" class="op-list-card__thumb" @click="openViewer(photo)">
             <img v-if="photo.thumbnailDataUrl" :src="photo.thumbnailDataUrl" :alt="photo.name" loading="lazy" />
-            <span v-else class="op-list-card__thumb-fb">{{ __('noPreview') }}</span>
+            <span v-else class="op-list-card__thumb-fb">{{ t('noPreview') }}</span>
           </button>
 
           <div class="op-list-card__info">
@@ -37,8 +37,8 @@
           </div>
 
           <div class="op-list-card__actions">
-            <button type="button" @click="openViewer(photo)">{{ __('view') }}</button>
-            <button type="button" class="ghost" @click="store.removeOne(photo.id)">{{ __('delete') }}</button>
+            <button type="button" @click="openViewer(photo)">{{ t('view') }}</button>
+            <button type="button" class="ghost" @click="store.removeOne(photo.id)">{{ t('delete') }}</button>
           </div>
         </article>
       </div>
@@ -48,7 +48,7 @@
         <div class="op-list-card__viewer-body">
           <div class="op-list-card__viewer-head">
             <strong>{{ viewerPhoto?.name }}</strong>
-            <button type="button" class="ghost" @click="closeViewer">关闭</button>
+            <button type="button" class="ghost" @click="closeViewer">{{ t('close') }}</button>
           </div>
           <img v-if="viewerSrc" :src="viewerSrc" :alt="viewerPhoto?.name ?? ''" />
           <div v-if="viewerPhoto && store.locationLabel(viewerPhoto)" class="op-list-card__viewer-loc">
@@ -70,29 +70,9 @@ import { CardShell } from '@ccs/ui-vue';
 import { formatBytes } from '@ccs/shared';
 import type { OfflinePhoto } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    offlinePhotos: '离线照片',
-    photos: '张',
-    loading: '正在加载离线相册',
-    noPhotosHint: '还没有照片，点击拍照按钮开始',
-    noPreview: '无预览',
-    view: '查看',
-    delete: '删除'
-  },
-  'en-US': {
-    offlinePhotos: 'Offline Photos',
-    photos: '',
-    loading: 'Loading album...',
-    noPhotosHint: 'No photos yet, tap capture to start',
-    noPreview: 'No Preview',
-    view: 'View',
-    delete: 'Delete'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
 

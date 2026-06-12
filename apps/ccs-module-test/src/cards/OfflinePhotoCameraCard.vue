@@ -2,8 +2,8 @@
   <CardShell>
     <div class="op-camera-card">
       <div class="op-camera-card__copy">
-        <span class="op-camera-card__label">{{ __('photoCapture') }}</span>
-        <strong>{{ __('allPhotosOffline') }}</strong>
+        <span class="op-camera-card__label">{{ t('photoCapture') }}</span>
+        <strong>{{ t('allPhotosOffline') }}</strong>
         <small>{{ store.runtime.strategy }}</small>
       </div>
 
@@ -18,9 +18,9 @@
           <video ref="cameraVideo" playsinline muted></video>
           <p v-if="cameraError" class="op-camera-card__dialog-error">{{ cameraError }}</p>
           <div class="op-camera-card__dialog-actions">
-            <button type="button" class="op-camera-card__btn ghost" @click="closeCamera">取消</button>
+            <button type="button" class="op-camera-card__btn ghost" @click="closeCamera">{{ t('cancel') }}</button>
             <button type="button" class="op-camera-card__btn" :disabled="store.isCapturing" @click="takeWebPhoto">
-              {{ store.isCapturing ? '保存中...' : '拍照' }}
+              {{ store.isCapturing ? t('saving') : t('takePhoto') }}
             </button>
           </div>
         </div>
@@ -33,25 +33,9 @@
 import { computed, nextTick, ref } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    photoCapture: '拍照采集',
-    allPhotosOffline: '照片先离线保存，再按需上传',
-    capturing: '处理中...',
-    nativeCapture: '调用相机拍照',
-    webCapture: '打开相机拍照'
-  },
-  'en-US': {
-    photoCapture: 'Photo Capture',
-    allPhotosOffline: 'Photos saved offline first',
-    capturing: 'Processing...',
-    nativeCapture: 'Open Camera',
-    webCapture: 'Open Camera'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
 
@@ -61,8 +45,8 @@ const cameraError = ref('');
 let cameraStream: MediaStream | null = null;
 
 const captureLabel = computed(() => {
-  if (store.isCapturing) return __('capturing');
-  return store.runtime.kind === 'android' ? __('nativeCapture') : __('webCapture');
+  if (store.isCapturing) return t('capturing');
+  return store.runtime.kind === 'android' ? t('nativeCapture') : t('webCapture');
 });
 
 async function handleCapture() {

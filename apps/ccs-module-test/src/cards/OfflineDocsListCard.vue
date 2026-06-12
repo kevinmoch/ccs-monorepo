@@ -3,17 +3,17 @@
     <div class="od-list-card">
       <!-- heading -->
       <div class="od-list-card__head">
-        <span class="od-list-card__label">{{ __('docList') }}</span>
+        <span class="od-list-card__label">{{ t('docList') }}</span>
         <div class="od-list-card__head-right">
           <button type="button" class="od-list-card__update-btn" :disabled="store.isCheckingUpdates" @click="store.checkUpdates()">
-            {{ store.isCheckingUpdates ? __('checking') : __('checkUpdates') }}
+            {{ store.isCheckingUpdates ? t('checking') : t('checkUpdates') }}
           </button>
-          <strong>{{ store.documents.length }} {{ __('documents') }}</strong>
+          <strong>{{ store.documents.length }} {{ t('documents') }}</strong>
         </div>
       </div>
 
       <!-- empty / loading -->
-      <div v-if="store.isLoading" class="od-list-card__empty">{{ __('loading') }}</div>
+      <div v-if="store.isLoading" class="od-list-card__empty">{{ t('loading') }}</div>
 
       <!-- document rows -->
       <div v-else class="od-list-card__rows">
@@ -27,7 +27,7 @@
           }"
         >
           <div class="od-list-card__row-top">
-            <label class="od-list-card__checkbox" :title="row.meta ? __('selectToClear') : __('noCache')">
+            <label class="od-list-card__checkbox" :title="row.meta ? t('selectToClear') : t('noCache')">
               <input v-model="store.checkedIds" type="checkbox" :value="row.document.id" :disabled="!row.meta" />
             </label>
 
@@ -38,15 +38,15 @@
               <strong>{{ row.document.title }}</strong>
             </div>
 
-            <span class="od-list-card__status-badge">{{ __status(row.status) }}</span>
+            <span class="od-list-card__status-badge">{{ statusLabel(row.status) }}</span>
           </div>
 
           <p class="od-list-card__desc">{{ row.document.description }}</p>
 
           <div class="od-list-card__meta">
-            <span>{{ __('updated') }} {{ store.formatDate(row.document.updatedAt ?? row.document.lastModified) }}</span>
-            <span>{{ __('cached') }} {{ formatBytes((row.meta?.cachedBytes ?? 0) + (row.meta?.partialBytes ?? 0)) }}</span>
-            <span>{{ isDocumentsSiteDocument(row.document) ? __('docSite') : __('remoteDoc') }}</span>
+            <span>{{ t('updated') }} {{ store.formatDate(row.document.updatedAt ?? row.document.lastModified) }}</span>
+            <span>{{ t('cached') }} {{ formatBytes((row.meta?.cachedBytes ?? 0) + (row.meta?.partialBytes ?? 0)) }}</span>
+            <span>{{ isDocumentsSiteDocument(row.document) ? t('docSite') : t('remoteDoc') }}</span>
           </div>
 
           <!-- progress -->
@@ -56,21 +56,21 @@
             </div>
             <small v-if="row.progress">
               {{ row.progress.percent ?? 0 }}% · {{ formatBytes(row.progress.receivedBytes) }} / {{ row.progress.totalBytes ? formatBytes(row.progress.totalBytes) : '?' }} ·
-              {{ row.progress.message ?? (row.progress.resumable ? __('resuming') : __('downloading')) }}
+              {{ row.progress.message ?? (row.progress.resumable ? t('resuming') : t('downloading')) }}
             </small>
           </div>
 
           <!-- actions -->
           <div class="od-list-card__actions">
-            <button type="button" :disabled="!store.isOnline" @click="store.openOnline(row.document)">{{ __('viewOnline') }}</button>
+            <button type="button" :disabled="!store.isOnline" @click="store.openOnline(row.document)">{{ t('viewOnline') }}</button>
 
-            <button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click="store.cacheDocument(row.document)">{{ __('cacheLocal') }}</button>
+            <button v-if="row.status === 'not-downloaded' || row.status === 'failed'" type="button" @click="store.cacheDocument(row.document)">{{ t('cacheLocal') }}</button>
 
-            <button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" @click="store.openOffline(row.document)">{{ __('viewOffline') }}</button>
+            <button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" @click="store.openOffline(row.document)">{{ t('viewOffline') }}</button>
 
-            <button v-if="row.status === 'update-available'" type="button" @click="store.cacheDocument(row.document, true)">{{ __('updateCache') }}</button>
+            <button v-if="row.status === 'update-available'" type="button" @click="store.cacheDocument(row.document, true)">{{ t('updateCache') }}</button>
 
-            <button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" class="ghost" @click="store.clearOne(row.document.id)">{{ __('deleteCache') }}</button>
+            <button v-if="row.status === 'offline' || row.status === 'update-available'" type="button" class="ghost" @click="store.clearOne(row.document.id)">{{ t('deleteCache') }}</button>
           </div>
         </article>
       </div>
@@ -87,69 +87,17 @@ import { CardShell } from '@ccs/ui-vue';
 import { formatBytes, deriveFileType, isDocumentsSiteDocument } from '@ccs/shared';
 import type { DocumentStatus } from '@ccs/shared/offline-docs';
 import { useOfflineDocsStore } from '../stores/offline-docs';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    docList: '文档列表',
-    checking: '检查中',
-    checkUpdates: '检查更新',
-    documents: '个文档',
-    loading: '正在加载文档清单',
-    selectToClear: '选择清理缓存',
-    noCache: '暂无缓存',
-    updated: '更新',
-    cached: '缓存',
-    docSite: '文档站点',
-    remoteDoc: '远程文档',
-    resuming: '续传中',
-    downloading: '下载中',
-    viewOnline: '在线查看',
-    cacheLocal: '缓存本地',
-    viewOffline: '离线查看',
-    updateCache: '更新缓存',
-    deleteCache: '删除缓存',
-    statusNotDownloaded: '未下载',
-    statusDownloading: '下载中',
-    statusOffline: '已离线',
-    statusUpdateAvailable: '有更新',
-    statusFailed: '中断'
-  },
-  'en-US': {
-    docList: 'Document List',
-    checking: 'Checking',
-    checkUpdates: 'Check Updates',
-    documents: 'docs',
-    loading: 'Loading documents...',
-    selectToClear: 'Select to clear cache',
-    noCache: 'No cache',
-    updated: 'Updated',
-    cached: 'Cached',
-    docSite: 'Doc Site',
-    remoteDoc: 'Remote',
-    resuming: 'Resuming',
-    downloading: 'Downloading',
-    viewOnline: 'View Online',
-    cacheLocal: 'Cache Local',
-    viewOffline: 'View Offline',
-    updateCache: 'Update Cache',
-    deleteCache: 'Delete Cache',
-    statusNotDownloaded: 'Not Downloaded',
-    statusDownloading: 'Downloading',
-    statusOffline: 'Offline',
-    statusUpdateAvailable: 'Update Available',
-    statusFailed: 'Failed'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlineDocs');
 
-const __status = (status: DocumentStatus): string => {
+const statusLabel = (status: DocumentStatus): string => {
   const map: Record<DocumentStatus, string> = {
-    'not-downloaded': __('statusNotDownloaded'),
-    downloading: __('statusDownloading'),
-    offline: __('statusOffline'),
-    'update-available': __('statusUpdateAvailable'),
-    failed: __('statusFailed')
+    'not-downloaded': t('statusNotDownloaded'),
+    downloading: t('statusDownloading'),
+    offline: t('statusOffline'),
+    'update-available': t('statusUpdateAvailable'),
+    failed: t('statusFailed')
   };
   return map[status] ?? status;
 };

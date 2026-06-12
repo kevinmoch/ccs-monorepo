@@ -3,19 +3,19 @@
     <div class="op-title-card">
       <div class="op-title-card__main-row">
         <div class="op-title-card__title-area">
-          <h2 class="op-title-card__heading">{{ __('offlinePhoto') }}</h2>
-          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ __('total') }} {{ store.stats.count }} {{ __('photos') }} </span>
+          <h2 class="op-title-card__heading">{{ t('offlinePhoto') }}</h2>
+          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ t('total') }} {{ store.stats.count }} {{ t('photos') }} </span>
           <span class="op-title-card__pill">{{ store.runtime.label }}</span>
         </div>
 
         <div class="op-title-card__metrics">
           <div>
-            <span>{{ __('usedSpace') }}</span>
+            <span>{{ t('usedSpace') }}</span>
             <strong>{{ formatBytes(store.stats.usedBytes) }}</strong>
           </div>
           <div>
-            <span>{{ __('offlineStorage') }}</span>
-            <strong>{{ store.stats.opfsAvailable ? __('available') : __('unavailable') }}</strong>
+            <span>{{ t('offlineStorage') }}</span>
+            <strong>{{ store.stats.opfsAvailable ? t('available') : t('unavailable') }}</strong>
           </div>
         </div>
       </div>
@@ -27,29 +27,9 @@
 import { CardShell } from '@ccs/ui-vue';
 import { formatBytes } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    offlinePhoto: '离线拍照',
-    total: '共',
-    photos: '张',
-    usedSpace: '已用空间',
-    offlineStorage: '离线存储',
-    available: '可用',
-    unavailable: '不可用'
-  },
-  'en-US': {
-    offlinePhoto: 'Offline Photo',
-    total: '',
-    photos: 'photos',
-    usedSpace: 'Used Space',
-    offlineStorage: 'Storage',
-    available: 'Available',
-    unavailable: 'Unavailable'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
 </script>

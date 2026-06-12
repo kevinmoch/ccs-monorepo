@@ -2,8 +2,8 @@
   <CardShell>
     <div class="od-cache-card">
       <div class="od-cache-card__head">
-        <span class="od-cache-card__label">{{ __('cacheMgmt') }}</span>
-        <strong>{{ store.cachedRows.length }} {{ __('documents') }}</strong>
+        <span class="od-cache-card__label">{{ t('cacheMgmt') }}</span>
+        <strong>{{ store.cachedRows.length }} {{ t('documents') }}</strong>
       </div>
 
       <div class="od-cache-card__bar">
@@ -12,19 +12,19 @@
 
       <div class="od-cache-card__stats">
         <div>
-          <span>{{ __('cachedFiles') }}</span>
+          <span>{{ t('cachedFiles') }}</span>
           <strong>{{ formatBytes(store.stats.cachedBytes) }}</strong>
         </div>
         <div>
-          <span>{{ __('partialFiles') }}</span>
+          <span>{{ t('partialFiles') }}</span>
           <strong>{{ formatBytes(store.stats.partialBytes) }}</strong>
         </div>
         <div>
-          <span>{{ __('metadata') }}</span>
+          <span>{{ t('metadata') }}</span>
           <strong>{{ formatBytes(store.stats.metadataBytes) }}</strong>
         </div>
         <div>
-          <span>{{ __('selected') }}</span>
+          <span>{{ t('selected') }}</span>
           <strong>{{ formatBytes(store.totalSelectedBytes) }}</strong>
         </div>
       </div>
@@ -32,11 +32,11 @@
       <div class="od-cache-card__actions">
         <label class="od-cache-card__lru">
           <input v-model="store.autoLru" type="checkbox" />
-          {{ __('lruHint') }}
+          {{ t('lruHint') }}
         </label>
-        <button type="button" class="od-cache-card__btn secondary" :disabled="!store.checkedIds.length" @click="store.clearSelected()">{{ __('clearSelected') }}</button>
-        <button type="button" class="od-cache-card__btn secondary" :disabled="!store.cachedRows.length" @click="store.clearOldestCache()">{{ __('clearOldest') }}</button>
-        <button type="button" class="od-cache-card__btn danger" :disabled="!store.cachedRows.length" @click="store.clearAll()">{{ __('clearAll') }}</button>
+        <button type="button" class="od-cache-card__btn secondary" :disabled="!store.checkedIds.length" @click="store.clearSelected()">{{ t('clearSelected') }}</button>
+        <button type="button" class="od-cache-card__btn secondary" :disabled="!store.cachedRows.length" @click="store.clearOldestCache()">{{ t('clearOldest') }}</button>
+        <button type="button" class="od-cache-card__btn danger" :disabled="!store.cachedRows.length" @click="store.clearAll()">{{ t('clearAll') }}</button>
       </div>
     </div>
   </CardShell>
@@ -46,35 +46,9 @@
 import { CardShell } from '@ccs/ui-vue';
 import { formatBytes } from '@ccs/shared';
 import { useOfflineDocsStore } from '../stores/offline-docs';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    cacheMgmt: '缓存管理',
-    documents: '个文档',
-    cachedFiles: '缓存文件',
-    partialFiles: '中断文件',
-    metadata: '元数据',
-    selected: '已选择',
-    lruHint: '启用 LRU 整理',
-    clearSelected: '清除所选',
-    clearOldest: '清理最久未访问',
-    clearAll: '全部清除'
-  },
-  'en-US': {
-    cacheMgmt: 'Cache Management',
-    documents: 'docs',
-    cachedFiles: 'Cached',
-    partialFiles: 'Partial',
-    metadata: 'Metadata',
-    selected: 'Selected',
-    lruHint: 'Enable LRU',
-    clearSelected: 'Clear Selected',
-    clearOldest: 'Clear Oldest',
-    clearAll: 'Clear All'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlineDocs');
 
 const store = useOfflineDocsStore();
 </script>

@@ -3,7 +3,7 @@
     <div class="title-card">
       <div class="title-card__main">
         <div class="title-card__text">
-          <h2 class="title-card__heading">{{ __('attendance') }}</h2>
+          <h2 class="title-card__heading">{{ t('attendance') }}</h2>
           <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
         </div>
         <div class="title-card__pill">{{ store.runtime.label }}</div>
@@ -16,33 +16,16 @@
 import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useAttendanceStore } from '../stores/attendance';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    attendance: '考勤打卡',
-    locale: 'zh-CN',
-    statusDone: '今日已完成',
-    statusIn: '已上班，待下班打卡',
-    statusPending: '待上班打卡'
-  },
-  'en-US': {
-    attendance: 'Attendance',
-    locale: 'en-US',
-    statusDone: 'Completed today',
-    statusIn: 'Checked in, pending check-out',
-    statusPending: 'Pending check-in'
-  }
-} as const;
-
-const __ = createCardTranslator(msgs);
+const t = useScopedT('attendance');
 
 const store = useAttendanceStore();
 
 const now = computed(() => new Date());
 
 const formattedDate = computed(() =>
-  new Intl.DateTimeFormat(__('locale'), {
+  new Intl.DateTimeFormat(t('locale'), {
     month: 'long',
     day: 'numeric',
     weekday: 'long'
@@ -50,9 +33,9 @@ const formattedDate = computed(() =>
 );
 
 const todayStatus = computed(() => {
-  if (store.attendance.checkIn && store.attendance.checkOut) return __('statusDone');
-  if (store.attendance.checkIn) return __('statusIn');
-  return __('statusPending');
+  if (store.attendance.checkIn && store.attendance.checkOut) return t('statusDone');
+  if (store.attendance.checkIn) return t('statusIn');
+  return t('statusPending');
 });
 </script>
 

@@ -17,7 +17,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "i18next": "latest"
+    "i18next": "latest",
+    "vue-i18n": "^11.0.0"
   },
   "peerDependencies": {
     "@capacitor-community/file-opener": "^8.0.0",
@@ -25,9 +26,15 @@
     "@capacitor/filesystem": "^8.0.0"
   },
   "peerDependenciesMeta": {
-    "@capacitor-community/file-opener": { "optional": true },
-    "@capacitor/core": { "optional": true },
-    "@capacitor/filesystem": { "optional": true }
+    "@capacitor-community/file-opener": {
+      "optional": true
+    },
+    "@capacitor/core": {
+      "optional": true
+    },
+    "@capacitor/filesystem": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@capacitor-community/file-opener": "^8.0.1",

@@ -2,7 +2,7 @@
   <CardShell>
     <div class="geo-card">
       <div class="geo-card__topline">
-        <span>{{ __('currentTime') }}</span>
+        <span>{{ t('currentTime') }}</span>
         <strong :class="accuracyClass">{{ store.accuracyLevel }}</strong>
       </div>
 
@@ -20,7 +20,7 @@
           <a v-if="mapLink && store.runtime.kind === 'web'" class="geo-card__map-link" :href="mapLink.href" target="_blank" rel="noreferrer">{{ mapLink.label }}</a>
           <button v-else-if="mapLink" type="button" class="geo-card__map-link" @click="store.openMap()">{{ mapLink.label }}</button>
         </div>
-        <small v-if="store.lastLocation">{{ __('accuracyPrefix') }} {{ store.lastLocation.accuracy }} {{ __('meter') }}</small>
+        <small v-if="store.lastLocation">{{ t('accuracyPrefix') }} {{ store.lastLocation.accuracy }} {{ t('meter') }}</small>
       </div>
     </div>
   </CardShell>
@@ -30,34 +30,9 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useAttendanceStore } from '../stores/attendance';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    currentTime: '当前时间',
-    locale: 'zh-CN',
-    locating: '定位中...',
-    updateLocation: '更新定位',
-    checkIn: '上班打卡',
-    checkOut: '下班打卡',
-    waitingLocation: '等待获取当前位置',
-    accuracyPrefix: '定位精度约',
-    meter: '米'
-  },
-  'en-US': {
-    currentTime: 'Current Time',
-    locale: 'en-US',
-    locating: 'Locating...',
-    updateLocation: 'Update Location',
-    checkIn: 'Check In',
-    checkOut: 'Check Out',
-    waitingLocation: 'Acquiring location...',
-    accuracyPrefix: 'Accuracy ~',
-    meter: 'm'
-  }
-} as const;
-
-const __ = createCardTranslator(msgs);
+const t = useScopedT('attendance');
 
 const store = useAttendanceStore();
 
@@ -75,7 +50,7 @@ onUnmounted(() => {
 });
 
 const formattedTime = computed(() =>
-  new Intl.DateTimeFormat(__('locale'), {
+  new Intl.DateTimeFormat(t('locale'), {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -84,14 +59,14 @@ const formattedTime = computed(() =>
 );
 
 const primaryActionText = computed(() => {
-  if (store.isLocating) return __('locating');
-  if (store.attendance.checkIn && store.attendance.checkOut) return __('updateLocation');
-  return store.nextPunch === 'checkIn' ? __('checkIn') : __('checkOut');
+  if (store.isLocating) return t('locating');
+  if (store.attendance.checkIn && store.attendance.checkOut) return t('updateLocation');
+  return store.nextPunch === 'checkIn' ? t('checkIn') : t('checkOut');
 });
 
 const locationSummary = computed(() => {
   if (store.locationError) return store.locationError;
-  if (!store.lastLocation) return __('waitingLocation');
+  if (!store.lastLocation) return t('waitingLocation');
   return `${store.lastLocation.latitude.toFixed(6)}, ${store.lastLocation.longitude.toFixed(6)}`;
 });
 

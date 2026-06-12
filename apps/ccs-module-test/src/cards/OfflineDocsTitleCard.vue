@@ -3,9 +3,9 @@
     <div class="od-title-card">
       <div class="od-title-card__main-row">
         <div class="od-title-card__title-area">
-          <h2 class="od-title-card__heading">{{ __('offlineDocs') }}</h2>
+          <h2 class="od-title-card__heading">{{ t('offlineDocs') }}</h2>
           <span class="od-title-card__status">
-            {{ store.stats.storageLabel ?? 'Web OPFS' }} · {{ store.isOnline ? __('online') : __('offline') }} ·
+            {{ store.stats.storageLabel ?? 'Web OPFS' }} · {{ store.isOnline ? t('online') : t('offline') }} ·
             {{ store.pressureLabel }}
           </span>
           <input class="od-title-card__url-input" :value="store.docsBaseUrl" type="text" placeholder="https://..." @change="store.setDocsBaseUrl(($event.target as HTMLInputElement).value)" />
@@ -13,16 +13,16 @@
 
         <div class="od-title-card__metrics">
           <div>
-            <span>{{ __('usedSpace') }}</span>
+            <span>{{ t('usedSpace') }}</span>
             <strong>{{ formatBytes(store.stats.usageBytes ?? store.stats.usedBytes) }}</strong>
           </div>
           <div v-if="store.measuredQuotaBytes">
-            <span>{{ __('quota') }}</span>
+            <span>{{ t('quota') }}</span>
             <strong>{{ formatBytes(store.measuredQuotaBytes) }}</strong>
           </div>
           <div>
-            <span>{{ __('offlineStorage') }}</span>
-            <strong>{{ store.stats.opfsAvailable ? __('available') : __('unavailable') }}</strong>
+            <span>{{ t('offlineStorage') }}</span>
+            <strong>{{ store.stats.opfsAvailable ? t('available') : t('unavailable') }}</strong>
           </div>
         </div>
       </div>
@@ -34,35 +34,9 @@
 import { CardShell } from '@ccs/ui-vue';
 import { formatBytes } from '@ccs/shared';
 import { useOfflineDocsStore } from '../stores/offline-docs';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    offlineDocs: '离线文档',
-    online: '在线',
-    offline: '离线',
-    checking: '检查中',
-    checkUpdates: '检查更新',
-    usedSpace: '已用空间',
-    quota: '浏览器配额',
-    offlineStorage: '离线存储',
-    available: '可用',
-    unavailable: '不可用'
-  },
-  'en-US': {
-    offlineDocs: 'Offline Docs',
-    online: 'Online',
-    offline: 'Offline',
-    checking: 'Checking',
-    checkUpdates: 'Check Updates',
-    usedSpace: 'Used Space',
-    quota: 'Quota',
-    offlineStorage: 'Storage',
-    available: 'Available',
-    unavailable: 'Unavailable'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlineDocs');
 
 const store = useOfflineDocsStore();
 </script>

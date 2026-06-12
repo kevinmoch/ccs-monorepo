@@ -2,18 +2,18 @@
   <CardShell>
     <div class="shift-card">
       <div class="shift-card__heading">
-        <span>{{ __('shiftInfo') }}</span>
+        <span>{{ t('shiftInfo') }}</span>
         <strong>09:00 - 18:00</strong>
       </div>
 
       <div class="shift-card__metrics">
         <div>
-          <span>{{ __('flexWindow') }}</span>
-          <strong>30 {{ __('minutes') }}</strong>
+          <span>{{ t('flexWindow') }}</span>
+          <strong>30 {{ t('minutes') }}</strong>
         </div>
         <div>
-          <span>{{ __('attendanceRange') }}</span>
-          <strong>{{ __('mobilePunch') }}</strong>
+          <span>{{ t('attendanceRange') }}</span>
+          <strong>{{ t('mobilePunch') }}</strong>
         </div>
       </div>
 
@@ -21,9 +21,9 @@
         <div v-for="item in timelineItems" :key="item.titleKey" class="shift-card__tli" :class="{ done: item.entry }">
           <div class="shift-card__tli-dot"></div>
           <div>
-            <span>{{ __(item.titleKey) }} · {{ __('target') }} {{ item.target }}</span>
-            <strong>{{ item.entry?.time ?? __('notPunched') }}</strong>
-            <small v-if="item.entry">{{ item.entry.location.provider }} · {{ item.entry.location.accuracy }} {{ __('meter') }}</small>
+            <span>{{ t(item.titleKey) }} · {{ t('target') }} {{ item.target }}</span>
+            <strong>{{ item.entry?.time ?? t('notPunched') }}</strong>
+            <small v-if="item.entry">{{ item.entry.location.provider }} · {{ item.entry.location.accuracy }} {{ t('meter') }}</small>
           </div>
         </div>
       </div>
@@ -35,36 +35,9 @@
 import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useAttendanceStore } from '../stores/attendance';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    shiftInfo: '今日班次',
-    flexWindow: '弹性窗口',
-    minutes: '分钟',
-    attendanceRange: '考勤范围',
-    mobilePunch: '移动打卡',
-    checkInTitle: '上班',
-    checkOutTitle: '下班',
-    target: '目标',
-    notPunched: '未打卡',
-    meter: '米'
-  },
-  'en-US': {
-    shiftInfo: 'Shift Info',
-    flexWindow: 'Flex Window',
-    minutes: 'min',
-    attendanceRange: 'Range',
-    mobilePunch: 'Mobile Punch',
-    checkInTitle: 'Check-in',
-    checkOutTitle: 'Check-out',
-    target: 'Target',
-    notPunched: 'Not punched',
-    meter: 'm'
-  }
-} as const;
-
-const __ = createCardTranslator(msgs);
+const t = useScopedT('attendance');
 
 const store = useAttendanceStore();
 

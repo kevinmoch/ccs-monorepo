@@ -2,12 +2,12 @@
   <CardShell>
     <div class="op-upload-card">
       <div class="op-upload-card__head">
-        <span class="op-upload-card__label">{{ __('uploadPhoto') }}</span>
+        <span class="op-upload-card__label">{{ t('uploadPhoto') }}</span>
       </div>
 
       <div class="op-upload-card__form">
         <label class="op-upload-card__field">
-          <span>{{ __('uploadUrl') }}</span>
+          <span>{{ t('uploadUrl') }}</span>
           <input v-model="store.uploadUrl" type="text" placeholder="https://..." />
         </label>
         <button type="button" class="op-upload-card__btn" :disabled="store.isUploading || !store.checkedIds.length" @click="store.handleUpload()">
@@ -22,31 +22,17 @@
 import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    uploadPhoto: '上传图片',
-    uploadUrl: '上传地址',
-    uploading: '上传中...',
-    upload: '上传所选'
-  },
-  'en-US': {
-    uploadPhoto: 'Upload Photo',
-    uploadUrl: 'Upload URL',
-    uploading: 'Uploading...',
-    upload: 'Upload Selected'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
 
 const uploadButtonText = computed(() => {
-  if (store.isUploading) return __('uploading');
+  if (store.isUploading) return t('uploading');
   const n = store.checkedIds.length;
-  if (n > 1) return `${__('upload')}（${n}）`;
-  return __('upload');
+  if (n > 1) return `${t('upload')}（${n}）`;
+  return t('upload');
 });
 </script>
 

@@ -2,31 +2,31 @@
   <CardShell>
     <div class="op-cache-card">
       <div class="op-cache-card__head">
-        <span class="op-cache-card__label">{{ __('albumMgmt') }}</span>
-        <strong>{{ store.photos.length }} {{ __('photos') }} · {{ __('selected') }} {{ store.checkedIds.length }}</strong>
+        <span class="op-cache-card__label">{{ t('albumMgmt') }}</span>
+        <strong>{{ store.photos.length }} {{ t('photos') }} · {{ t('selected') }} {{ store.checkedIds.length }}</strong>
       </div>
 
       <div class="op-cache-card__stats">
         <div>
-          <span>{{ __('photoFiles') }}</span>
+          <span>{{ t('photoFiles') }}</span>
           <strong>{{ formatBytes(store.stats.photoBytes) }}</strong>
         </div>
         <div>
-          <span>{{ __('metadata') }}</span>
+          <span>{{ t('metadata') }}</span>
           <strong>{{ formatBytes(store.stats.metadataBytes) }}</strong>
         </div>
         <div>
-          <span>{{ __('selected') }}</span>
+          <span>{{ t('selected') }}</span>
           <strong>{{ formatBytes(store.totalSelectedBytes) }}</strong>
         </div>
       </div>
 
       <div class="op-cache-card__actions">
         <button type="button" class="op-cache-card__btn secondary" :disabled="!store.checkedIds.length" @click="store.removeSelected()">
-          {{ __('deleteSelected') }}
+          {{ t('deleteSelected') }}
         </button>
         <button type="button" class="op-cache-card__btn danger" :disabled="!store.photos.length" @click="store.removeAll()">
-          {{ __('clearAll') }}
+          {{ t('clearAll') }}
         </button>
       </div>
     </div>
@@ -37,29 +37,9 @@
 import { CardShell } from '@ccs/ui-vue';
 import { formatBytes } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
-import { createCardTranslator } from '../lib/card-i18n';
+import { useScopedT } from '@ccs/shared';
 
-const msgs = {
-  'zh-CN': {
-    albumMgmt: '相册管理',
-    photos: '张',
-    selected: '已选',
-    photoFiles: '照片文件',
-    metadata: '元数据',
-    deleteSelected: '删除所选',
-    clearAll: '全部清除'
-  },
-  'en-US': {
-    albumMgmt: 'Album Management',
-    photos: '',
-    selected: 'Selected',
-    photoFiles: 'Photo Files',
-    metadata: 'Metadata',
-    deleteSelected: 'Delete Selected',
-    clearAll: 'Clear All'
-  }
-} as const;
-const __ = createCardTranslator(msgs);
+const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
 </script>
