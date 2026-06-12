@@ -68,6 +68,7 @@ const store = useOfflinePhotoStore();
   display: flex;
   flex-direction: column;
   gap: 10px;
+  justify-content: center;
 }
 
 .op-title-card__main-row {
@@ -110,13 +111,14 @@ const store = useOfflinePhotoStore();
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 30%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
   color: var(--ccs-primary, #2563eb);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
 }
 
 .op-title-card__metrics div:not(.op-title-card__pill) {

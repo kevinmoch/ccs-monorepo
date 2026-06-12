@@ -11,11 +11,11 @@ export default {
     },
     {
       type: 'offline-photo-camera',
-      layout: { colSpan: { base: 12, md: 6 }, rowSpan: 3 }
+      layout: { colSpan: { base: 12, md: 6 }, rowSpan: 2 }
     },
     {
       type: 'offline-photo-upload',
-      layout: { colSpan: { base: 12, md: 6 }, rowSpan: 3 }
+      layout: { colSpan: { base: 12, md: 6 }, rowSpan: 2 }
     },
     {
       type: 'offline-photo-list',
