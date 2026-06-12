@@ -5,7 +5,7 @@
         <div class="op-title-card__title-area">
           <h2 class="op-title-card__heading">{{ t('offlinePhoto') }}</h2>
           <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ t('total') }} {{ store.stats.count }} {{ t('photos') }} </span>
-          <span class="op-title-card__pill">{{ store.runtime.label }}</span>
+          <span class="op-title-card__pill">{{ runtimeLabel }}</span>
         </div>
 
         <div class="op-title-card__metrics">
@@ -24,14 +24,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
-import { formatBytes } from '@ccs/shared';
+import { formatBytes, useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';
 
 const t = useScopedT('offlinePhoto');
 
 const store = useOfflinePhotoStore();
+
+const runtimeOptions = useRuntimeOptions();
+
+const runtimeLabel = computed(() => {
+  const option = runtimeOptions.value.find((o: RuntimeInfo) => o.kind === store.runtime.kind);
+  return option?.label ?? '';
+});
 </script>
 
 <style scoped>

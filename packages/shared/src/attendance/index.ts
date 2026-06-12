@@ -151,7 +151,7 @@ export function createAttendanceService(deps: AttendanceDependencies = {}) {
     const bingWebUrl = new URL('https://www.bing.com/maps');
     bingWebUrl.searchParams.set('q', `${latitude},${longitude}`);
     const href = bingWebUrl.toString();
-    const label = runtime.kind === 'web' ? i18next.t('attendance.mapViewInBing') : i18next.t('attendance.mapViewInBrowser');
+    const label = runtime.kind === 'web' ? 'mapViewInBing' : 'mapViewInBrowser';
 
     return { href, fallbackHref: href, label };
   }

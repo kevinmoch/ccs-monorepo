@@ -17,8 +17,8 @@
         <span>{{ locationProvider }}</span>
         <div class="geo-card__loc-row">
           <strong>{{ locationSummary }}</strong>
-          <a v-if="mapLink && store.runtime.kind === 'web'" class="geo-card__map-link" :href="mapLink.href" target="_blank" rel="noreferrer">{{ mapLink.label }}</a>
-          <button v-else-if="mapLink" type="button" class="geo-card__map-link" @click="store.openMap()">{{ mapLink.label }}</button>
+          <a v-if="mapLink && store.runtime.kind === 'web'" class="geo-card__map-link" :href="mapLink.href" target="_blank" rel="noreferrer">{{ t(mapLink.label) }}</a>
+          <button v-else-if="mapLink" type="button" class="geo-card__map-link" @click="store.openMap()">{{ t(mapLink.label) }}</button>
         </div>
         <small v-if="store.lastLocation">{{ t('accuracyPrefix') }} {{ store.lastLocation.accuracy }} {{ t('meter') }}</small>
       </div>
@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
-import { getRuntimeOptions } from '@ccs/shared';
+import { useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 import { useScopedT } from '@ccs/shared';
 
@@ -37,10 +37,11 @@ const t = useScopedT('attendance');
 
 const store = useAttendanceStore();
 
+const runtimeOptions = useRuntimeOptions();
+
 const locationProvider = computed(() => {
   if (store.lastLocation?.provider) return t(store.lastLocation.provider);
-  const options = getRuntimeOptions();
-  const option = options.find((o) => o.kind === store.runtime.kind);
+  const option = runtimeOptions.value.find((o: RuntimeInfo) => o.kind === store.runtime.kind);
   return option?.strategy ?? '';
 });
 

@@ -6,7 +6,7 @@
           <h2 class="title-card__heading">{{ t('attendance') }}</h2>
           <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
         </div>
-        <div class="title-card__pill">{{ store.runtime.label }}</div>
+        <div class="title-card__pill">{{ runtimeLabel }}</div>
       </div>
     </div>
   </CardShell>
@@ -15,12 +15,20 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
+import { useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 import { useScopedT } from '@ccs/shared';
 
 const t = useScopedT('attendance');
 
 const store = useAttendanceStore();
+
+const runtimeOptions = useRuntimeOptions();
+
+const runtimeLabel = computed(() => {
+  const option = runtimeOptions.value.find((o: RuntimeInfo) => o.kind === store.runtime.kind);
+  return option?.label ?? '';
+});
 
 const now = computed(() => new Date());
 

@@ -11,20 +11,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { CardShell } from '@ccs/ui-vue';
-import { getRuntimeOptions } from '@ccs/shared';
+import { useRuntimeOptions } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 
-const { locale } = useI18n();
+const runtimeOptions = useRuntimeOptions();
 const store = useAttendanceStore();
-
-const runtimeOptions = computed(() => {
-  // 依赖 locale.value 确保切换语言时重新计算
-  void locale.value;
-  return getRuntimeOptions();
-});
 </script>
 
 <style scoped>
