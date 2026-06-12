@@ -3,7 +3,6 @@
     <div class="op-upload-card">
       <div class="op-upload-card__head">
         <span class="op-upload-card__label">{{ __('uploadPhoto') }}</span>
-        <strong>{{ __('selectOne') }}</strong>
       </div>
 
       <div class="op-upload-card__form">
@@ -28,14 +27,12 @@ import { createCardTranslator } from '../lib/card-i18n';
 const msgs = {
   'zh-CN': {
     uploadPhoto: '上传图片',
-    selectOne: '在列表中勾选照片后上传',
     uploadUrl: '上传地址',
     uploading: '上传中...',
     upload: '上传所选'
   },
   'en-US': {
     uploadPhoto: 'Upload Photo',
-    selectOne: 'Check photos in the list to upload',
     uploadUrl: 'Upload URL',
     uploading: 'Uploading...',
     upload: 'Upload Selected'
