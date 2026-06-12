@@ -140,16 +140,14 @@ function stopCamera() {
 .op-camera-card {
   height: 100%;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
 }
 
 .op-camera-card__copy {
   display: grid;
   gap: 4px;
-  text-align: center;
 }
 
 .op-camera-card__label {
@@ -245,5 +243,16 @@ function stopCamera() {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .op-camera-card {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .op-camera-card__copy {
+    text-align: center;
+  }
 }
 </style>
