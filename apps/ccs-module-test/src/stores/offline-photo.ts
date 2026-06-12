@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import {
+  buildRuntimeUrl,
   captureAndroidPhoto,
   clearAllPhotos,
   detectRuntime,
@@ -30,7 +31,7 @@ export const useOfflinePhotoStore = defineStore('offline-photo', {
     photos: [] as OfflinePhoto[],
     checkedIds: [] as string[],
     uploadTargetId: '',
-    uploadUrl: 'https://192.168.43.232:8083/upload',
+    uploadUrl: buildRuntimeUrl(8083, '/upload', { androidPort: 8082 }),
     isLoading: true,
     isCapturing: false,
     isUploading: false,

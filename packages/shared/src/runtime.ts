@@ -203,6 +203,44 @@ export function detectRuntime(): RuntimeInfo {
   return getRuntimeOptions()[0]; // web
 }
 
+// ---------------------------------------------------------------------------
+// 运行时 URL 构建
+// ---------------------------------------------------------------------------
+
+/** Windows / Android 环境下固定的服务端 IP */
+const DEFAULT_SERVER_HOST = '192.168.43.232';
+
+/**
+ * 根据当前运行时环境构建服务 URL。
+ *
+ * - Web：IP/域名取自浏览器地址栏，协议与端口沿用默认值
+ * - Windows (Electron)：固定 IP，使用 HTTPS
+ * - Android：固定 IP，使用 HTTP，可指定不同的端口
+ *
+ * @param port      默认端口（Web / Windows 使用）
+ * @param path      URL 路径，默认 '/'
+ * @param options.androidPort  Android 环境使用的端口（不传则使用默认端口）
+ */
+export function buildRuntimeUrl(port: number, path = '/', options?: { androidPort?: number }): string {
+  const runtime = detectRuntime();
+
+  if (runtime.kind === 'android') {
+    const effectivePort = options?.androidPort ?? port;
+    return `http://${DEFAULT_SERVER_HOST}:${effectivePort}${path}`;
+  }
+
+  if (runtime.kind === 'electron') {
+    return `https://${DEFAULT_SERVER_HOST}:${port}${path}`;
+  }
+
+  // web: 从浏览器地址栏获取 hostname，协议与端口沿用当前页面
+  return `${window.location.protocol}//${window.location.hostname}:${port}${path}`;
+}
+
+// ---------------------------------------------------------------------------
+// 离线文档基地址
+// ---------------------------------------------------------------------------
+
 let _offlineDocsBaseUrl: string;
 
 /**

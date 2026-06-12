@@ -12,7 +12,7 @@ import {
   removeManyDocumentCaches,
   writeCatalogSnapshot
 } from '@ccs/shared/offline-docs';
-import { normalizeError, setOfflineDocsBaseUrl } from '@ccs/shared';
+import { buildRuntimeUrl, normalizeError, setOfflineDocsBaseUrl } from '@ccs/shared';
 import type { CachedDocumentMeta, DocumentStatus, DownloadProgress, OfflineDocument, StorageStats } from '@ccs/shared/offline-docs';
 import localDocuments from '../../../../documents/offline-documents.json';
 import { i18n } from '../i18n/instance';
@@ -48,7 +48,7 @@ export const useOfflineDocsStore = defineStore('offline-docs', {
     isCheckingUpdates: false,
     pageMessage: '',
     autoLru: true,
-    docsBaseUrl: 'https://192.168.43.232:8080/',
+    docsBaseUrl: buildRuntimeUrl(8080, '/', { androidPort: 8081 }),
     stats: {
       usedBytes: 0,
       cachedBytes: 0,
