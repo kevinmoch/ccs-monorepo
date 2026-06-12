@@ -205,7 +205,7 @@ onUnmounted(() => {
 }
 
 .od-list-card__label {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
@@ -217,7 +217,7 @@ onUnmounted(() => {
   flex: 1;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
   font-weight: 800;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .od-list-card__rows {
@@ -269,7 +269,7 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--ccs-text, #0f172a);
 }
 
@@ -278,11 +278,11 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 42px;
+  height: 26px;
+  padding: 0 8px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   background: color-mix(in srgb, var(--ccs-primary, #2563eb) 12%, transparent);
   color: var(--ccs-primary, #2563eb);
@@ -293,11 +293,11 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 42px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 48px;
+  height: 26px;
+  padding: 0 8px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   background: color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
   color: var(--ccs-text-muted, #475569);
@@ -325,7 +325,7 @@ onUnmounted(() => {
 
 .od-list-card__desc {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
 }
@@ -334,7 +334,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
 }
 
@@ -364,7 +364,7 @@ onUnmounted(() => {
 }
 
 .od-list-card__progress small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
   overflow: hidden;
   text-overflow: ellipsis;
@@ -379,13 +379,13 @@ onUnmounted(() => {
 }
 
 .od-list-card__actions button {
-  height: 30px;
-  padding: 0 10px;
+  height: 34px;
+  padding: 0 12px;
   border: 0;
   border-radius: 6px;
   background: var(--ccs-primary, #2563eb);
   color: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;

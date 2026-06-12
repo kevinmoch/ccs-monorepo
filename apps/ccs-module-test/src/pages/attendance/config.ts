@@ -3,7 +3,7 @@ export default {
   cards: [
     {
       type: 'attendance-title',
-      layout: { colSpan: { base: 12, md: 12 }, rowSpan: 2 }
+      layout: { colSpan: { base: 12, md: 12 }, rowSpan: 1 }
     },
     {
       type: 'attendance-geolocation',
@@ -15,7 +15,7 @@ export default {
     },
     {
       type: 'attendance-list',
-      layout: { colSpan: { base: 12, md: 12 }, rowSpan: 2 }
+      layout: { colSpan: { base: 12, md: 12 }, rowSpan: 1 }
     }
   ] satisfies CardDefinition[]
 };
