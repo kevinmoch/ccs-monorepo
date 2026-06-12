@@ -10,7 +10,7 @@ export const resources: Resource = {
   'en-US': { translation: enUS }
 };
 
-export async function initCcsI18n(language: Language = 'zh-CN') {
+export async function initI18n(language: Language = 'zh-CN') {
   if (!i18next.isInitialized) await i18next.init({ lng: language, fallbackLng: 'zh-CN', resources, interpolation: { escapeValue: false } });
   else await i18next.changeLanguage(language);
   return i18next;

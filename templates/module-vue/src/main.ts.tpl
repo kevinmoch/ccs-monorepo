@@ -1,17 +1,18 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { createI18n } from 'vue-i18n';
 import { applyRuntimeProps, bindIframeMessageHandlers, readIframeProps } from '@ccs/runtime/vue';
-import { applyTheme, resources, type Language, type ThemeMode } from '@ccs/shared';
+import { applyTheme, initI18n, type Language, type ThemeMode } from '@ccs/shared';
 import App from './App.vue';
 import router from './router';
 import { useRuntimeStore } from './stores/runtime';
+import { i18n } from './i18n/instance';
 import './styles.css';
 
-const i18n = createI18n({ legacy: false, locale: 'zh-CN', fallbackLocale: 'zh-CN', messages: { 'zh-CN': resources['zh-CN'].translation, 'en-US': resources['en-US'].translation } as any });
 const initialIframeRoute = getIframeRoute();
 
 async function render() {
+	// 确保 i18next 始终初始化（不受 query 参数影响）
+	await initI18n();
 	const props = readIframeProps();
 	await applyRuntimeProps(props);
 	const app = createApp(App);
@@ -25,6 +26,7 @@ async function render() {
 	if (props.language) {
 		runtime.setLanguage(props.language as Language);
 		(i18n.global.locale as any).value = props.language;
+		await initI18n(props.language);
 	}
 
 	bindIframeMessageHandlers({
@@ -35,6 +37,7 @@ async function render() {
 		onLanguage(language) {
 			runtime.setLanguage(language);
 			(i18n.global.locale as any).value = language;
+			initI18n(language);
 		},
 		onNavigate(routePath) {
 			navigateToRoute(routePath);

@@ -1,4 +1,4 @@
-import { applyTheme, CCS_EVENTS, initCcsI18n, type Language, type ThemeMode } from '@ccs/shared';
+import { applyTheme, CCS_EVENTS, initI18n, type Language, type ThemeMode } from '@ccs/shared';
 import type { CcsRuntimeProps } from './index';
 
 export interface IframeRuntimeOptions {
@@ -27,7 +27,7 @@ export function readIframeProps(win: Window = window): Partial<CcsRuntimeProps> 
 
 export async function applyRuntimeProps(props: Partial<CcsRuntimeProps>) {
   if (props.theme) applyTheme(props.theme);
-  await initCcsI18n(props.language);
+  await initI18n(props.language);
 }
 
 export function bindIframeMessageHandlers(options: IframeRuntimeOptions, win: Window = window) {

@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { applyRuntimeProps, bindIframeMessageHandlers, readIframeProps } from '@ccs/runtime/vue';
-import { applyTheme, initCcsI18n, type Language, type ThemeMode } from '@ccs/shared';
+import { applyTheme, initI18n, type Language, type ThemeMode } from '@ccs/shared';
 import App from './App.vue';
 import router from './router';
 import { useRuntimeStore } from './stores/runtime';
@@ -12,7 +12,7 @@ const initialIframeRoute = getIframeRoute();
 
 async function render() {
   // 确保 i18next 始终初始化（不受 query 参数影响）
-  await initCcsI18n();
+  await initI18n();
   const props = readIframeProps();
   await applyRuntimeProps(props);
   const app = createApp(App);
@@ -26,7 +26,7 @@ async function render() {
   if (props.language) {
     runtime.setLanguage(props.language as Language);
     (i18n.global.locale as any).value = props.language;
-    await initCcsI18n(props.language);
+    await initI18n(props.language);
   }
 
   bindIframeMessageHandlers({
@@ -37,7 +37,7 @@ async function render() {
     onLanguage(language) {
       runtime.setLanguage(language);
       (i18n.global.locale as any).value = language;
-      initCcsI18n(language);
+      initI18n(language);
     },
     onNavigate(routePath) {
       navigateToRoute(routePath);
