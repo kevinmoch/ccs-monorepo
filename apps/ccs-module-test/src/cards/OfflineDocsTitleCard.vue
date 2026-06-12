@@ -76,6 +76,7 @@ const store = useOfflineDocsStore();
   display: flex;
   flex-direction: column;
   gap: 10px;
+  justify-content: center;
 }
 
 .od-title-card__eyebrow {
@@ -133,7 +134,7 @@ const store = useOfflineDocsStore();
 
 .od-title-card__metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(80px, 1fr));
+  grid-template-columns: repeat(3, minmax(75px, 1fr));
   gap: 8px;
   flex: 0 0 auto;
   margin-left: auto;
