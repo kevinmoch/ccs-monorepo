@@ -29,6 +29,11 @@ const router = createRouter({
       name: 'Test',
       component: () => import('../pages/attendance/AttendancePage.vue')
     },
+    {
+      path: '/offline-docs',
+      name: 'OfflineDocs',
+      component: () => import('../pages/offline-docs/OfflineDocsPage.vue')
+    },
 		// ccs-cli:route
 	]
 });
