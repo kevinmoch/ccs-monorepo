@@ -1,0 +1,152 @@
+<template>
+  <CardShell>
+    <div class="op-title-card">
+      <div class="op-title-card__main-row">
+        <div class="op-title-card__title-area">
+          <h2 class="op-title-card__heading">{{ __('offlinePhoto') }}</h2>
+          <span class="op-title-card__status"> {{ store.stats.storageLabel }} · {{ __('offlineFirst') }} · {{ __('total') }} {{ store.stats.count }} {{ __('photos') }} </span>
+        </div>
+
+        <div class="op-title-card__metrics">
+          <div class="op-title-card__pill">{{ store.runtime.label }}</div>
+          <div>
+            <span>{{ __('usedSpace') }}</span>
+            <strong>{{ formatBytes(store.stats.usedBytes) }}</strong>
+          </div>
+          <div>
+            <span>{{ __('photoCount') }}</span>
+            <strong>{{ store.stats.count }}</strong>
+          </div>
+          <div>
+            <span>{{ __('offlineStorage') }}</span>
+            <strong>{{ store.stats.opfsAvailable ? __('available') : __('unavailable') }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </CardShell>
+</template>
+
+<script setup lang="ts">
+import { CardShell } from '@ccs/ui-vue';
+import { formatBytes } from '@ccs/shared';
+import { useOfflinePhotoStore } from '../stores/offline-photo';
+import { createCardTranslator } from '../lib/card-i18n';
+
+const msgs = {
+  'zh-CN': {
+    offlinePhoto: '离线拍照',
+    offlineFirst: '离线优先',
+    total: '共',
+    photos: '张',
+    usedSpace: '已用空间',
+    photoCount: '照片数量',
+    offlineStorage: '离线存储',
+    available: '可用',
+    unavailable: '不可用'
+  },
+  'en-US': {
+    offlinePhoto: 'Offline Photo',
+    offlineFirst: 'Offline First',
+    total: '',
+    photos: 'photos',
+    usedSpace: 'Used Space',
+    photoCount: 'Photos',
+    offlineStorage: 'Storage',
+    available: 'Available',
+    unavailable: 'Unavailable'
+  }
+} as const;
+const __ = createCardTranslator(msgs);
+
+const store = useOfflinePhotoStore();
+</script>
+
+<style scoped>
+.op-title-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.op-title-card__main-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.op-title-card__title-area {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.op-title-card__heading {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ccs-text, #0f172a);
+}
+
+.op-title-card__status {
+  font-size: 12px;
+  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
+}
+
+.op-title-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.op-title-card__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
+  color: var(--ccs-primary, #2563eb);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.op-title-card__metrics div:not(.op-title-card__pill) {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ccs-bg, #f8fafc) 92%, transparent);
+}
+
+.op-title-card__metrics span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
+}
+
+.op-title-card__metrics strong {
+  font-size: 15px;
+  color: var(--ccs-text, #0f172a);
+}
+
+@media (max-width: 640px) {
+  .op-title-card__title-area {
+    flex: 1 1 100%;
+  }
+  .op-title-card__metrics {
+    margin-left: 0;
+    flex: 1 1 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

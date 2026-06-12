@@ -17,5 +17,6 @@
 
 .card-shell__body {
   min-width: 0;
+  height: 100%;
 }
 </style>
