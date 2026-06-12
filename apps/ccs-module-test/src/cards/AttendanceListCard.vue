@@ -11,12 +11,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
 import { useRuntimeOptions } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 
-const runtimeOptions = useRuntimeOptions();
 const store = useAttendanceStore();
+const _opts = useRuntimeOptions();
+const runtimeOptions = computed(() => _opts.value);
 </script>
 
 <style scoped>
