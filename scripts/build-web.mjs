@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -72,5 +72,25 @@ for (const build of builds) {
     if (cardsResult.status !== 0) process.exit(cardsResult.status ?? 1);
   }
 }
+
+import { injectManifest, copyWorkboxLibraries } from 'workbox-build';
+console.log(`\n[ccs] generating service worker for offline support...`);
+
+const workboxDirName = await copyWorkboxLibraries(distWebDir);
+
+await injectManifest({
+  swSrc: join(root, 'apps', 'ccs-framework', 'src', 'sw.js'),
+  swDest: join(distWebDir, 'sw.js'),
+  globDirectory: distWebDir,
+  globPatterns: ['**/*.{html,js,css,woff2,png,svg,jpg,jpeg,json,ico,webmanifest}'],
+  globIgnores: ['workbox-*/**/*'],
+  maximumFileSizeToCacheInBytes: 10 * 1024 * 1024
+});
+
+const swDestPath = join(distWebDir, 'sw.js');
+let swContent = readFileSync(swDestPath, 'utf8');
+swContent = swContent.replace(/importScripts\(['"]https:\/\/storage\.googleapis\.com\/workbox-cdn\/releases\/[^/]+\/workbox-sw\.js['"]\);/, `importScripts('${workboxDirName}/workbox-sw.js');`);
+swContent = swContent.replace(/workbox\.setConfig\(\{ debug: false \}\);/, `workbox.setConfig({ debug: false, modulePathPrefix: '${workboxDirName}/' });`);
+writeFileSync(swDestPath, swContent);
 
 console.log(`\n[ccs] web build output: ${distWebDir}`);

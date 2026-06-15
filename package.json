@@ -27,6 +27,7 @@
     "tsx": "latest",
     "turbo": "latest",
     "typescript": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "workbox-build": "^7.4.1"
   }
 }
