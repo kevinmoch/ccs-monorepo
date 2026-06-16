@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">CCS Framework</string>
-    <string name="title_activity_main">CCS Framework</string>
-    <string name="package_name">com.ccs.framework</string>
-    <string name="custom_url_scheme">com.ccs.framework</string>
+    <string name="app_name">基建-云解决方案</string>
+    <string name="title_activity_main">基建-云解决方案</string>
+    <string name="package_name">com.huawei.ccps</string>
+    <string name="custom_url_scheme">com.huawei.ccps</string>
 </resources>

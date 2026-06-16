@@ -1,4 +1,4 @@
-package com.ccs.framework;
+package com.huawei.ccps;
 
 import android.os.Bundle;
 import android.webkit.WebSettings;

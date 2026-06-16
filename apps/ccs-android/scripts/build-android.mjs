@@ -41,8 +41,8 @@ if (missingPrereqs.length > 0) {
   console.warn('');
 }
 
-const appId = getFirstEnv('CCS_ANDROID_APPLICATION_ID', 'ANDROID_APPLICATION_ID') ?? 'com.ccs.framework';
-const appName = getFirstEnv('CCS_ANDROID_APP_NAME', 'ANDROID_APP_NAME') ?? 'CCS Framework';
+const appId = getFirstEnv('CCS_ANDROID_APPLICATION_ID', 'ANDROID_APPLICATION_ID') ?? 'com.huawei.ccps';
+const appName = getFirstEnv('CCS_ANDROID_APP_NAME', 'ANDROID_APP_NAME') ?? '基建-云解决方案';
 
 // 4. Generate capacitor.config.json from environment
 const capConfig = {
@@ -53,8 +53,8 @@ const capConfig = {
     androidScheme: 'https',
     hostname: 'localhost',
     allowNavigation: ['localhost'],
-    cleartext: true,
-  },
+    cleartext: true
+  }
 };
 writeFileSync(join(pkgDir, 'capacitor.config.json'), JSON.stringify(capConfig, null, 2));
 
@@ -65,17 +65,14 @@ if (!existsSync(androidDir)) {
   const initResult = spawnSync('npx', ['cap', 'add', 'android'], {
     cwd: pkgDir,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32'
   });
   if (initResult.status !== 0) process.exit(initResult.status ?? 1);
 }
 
 // 6. Write local.properties
 if (androidSdk) {
-  writeFileSync(
-    join(androidDir, 'local.properties'),
-    `sdk.dir=${androidSdk.replace(/\\/g, '\\\\')}\n`
-  );
+  writeFileSync(join(androidDir, 'local.properties'), `sdk.dir=${androidSdk.replace(/\\/g, '\\\\')}\n`);
 }
 
 // 7. Handle signing configuration
@@ -86,14 +83,14 @@ console.log('Copying web assets to Android project...');
 const copyResult = spawnSync('npx', ['cap', 'copy', 'android'], {
   cwd: pkgDir,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: process.platform === 'win32'
 });
 if (copyResult.status !== 0) process.exit(copyResult.status ?? 1);
 
 const syncResult = spawnSync('npx', ['cap', 'sync', 'android'], {
   cwd: pkgDir,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
+  shell: process.platform === 'win32'
 });
 if (syncResult.status !== 0) process.exit(syncResult.status ?? 1);
 
@@ -116,17 +113,15 @@ const buildType = hasKeystore ? 'assembleRelease' : 'assembleDebug';
 const buildVariant = hasKeystore ? 'release' : 'debug';
 
 console.log(`Building Android APK (${buildVariant})...`);
-const gradleCmd = process.platform === 'win32'
-  ? join(androidDir, 'gradlew.bat')
-  : join(androidDir, 'gradlew');
+const gradleCmd = process.platform === 'win32' ? join(androidDir, 'gradlew.bat') : join(androidDir, 'gradlew');
 
 if (process.platform === 'win32') {
   // On Windows, use cmd.exe inline set to ensure JAVA_HOME propagates to gradlew
-  const gradleResult = spawnSync(
-    `set "JAVA_HOME=${javaHome}" && set "ANDROID_HOME=${androidSdk}" && set "ANDROID_SDK_ROOT=${androidSdk}" && "${gradleCmd}" clean ${buildType}`,
-    [],
-    { cwd: androidDir, stdio: 'inherit', shell: true }
-  );
+  const gradleResult = spawnSync(`set "JAVA_HOME=${javaHome}" && set "ANDROID_HOME=${androidSdk}" && set "ANDROID_SDK_ROOT=${androidSdk}" && "${gradleCmd}" clean ${buildType}`, [], {
+    cwd: androidDir,
+    stdio: 'inherit',
+    shell: true
+  });
   if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
 } else {
   const gradleResult = spawnSync(gradleCmd, ['clean', buildType], {
@@ -136,8 +131,8 @@ if (process.platform === 'win32') {
       ...process.env,
       ANDROID_HOME: androidSdk,
       ANDROID_SDK_ROOT: androidSdk,
-      JAVA_HOME: javaHome,
-    },
+      JAVA_HOME: javaHome
+    }
   });
   if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
 }
@@ -161,16 +156,23 @@ if (apkFiles.length === 0) {
 }
 
 for (const apk of apkFiles) {
-  const outName = hasKeystore ? 'ccs-framework-release.apk' : 'ccs-framework-debug.apk';
+  const outName = hasKeystore ? 'ccps-release.apk' : 'ccps-debug.apk';
   copyFileSync(apk, join(outDir, outName));
 }
 
-writeFileSync(join(outDir, 'manifest.json'), JSON.stringify({
-  name: 'ccs-android',
-  target: 'android',
-  buildVariant,
-  generatedAt: new Date().toISOString(),
-}, null, 2));
+writeFileSync(
+  join(outDir, 'manifest.json'),
+  JSON.stringify(
+    {
+      name: 'ccs-android',
+      target: 'android',
+      buildVariant,
+      generatedAt: new Date().toISOString()
+    },
+    null,
+    2
+  )
+);
 
 if (!hasKeystore) {
   console.log('');
@@ -191,13 +193,7 @@ function detectAndroidSdk() {
 
   // 2. Check common Windows locations
   const home = homedir();
-  const candidates = [
-    join(home, 'AppData', 'Local', 'Android', 'Sdk'),
-    join(home, 'AppData', 'Local', 'Android', 'android-sdk'),
-    'C:\\Android\\Sdk',
-    'D:\\Android\\Sdk',
-    join(home, 'Android', 'Sdk'),
-  ];
+  const candidates = [join(home, 'AppData', 'Local', 'Android', 'Sdk'), join(home, 'AppData', 'Local', 'Android', 'android-sdk'), 'C:\\Android\\Sdk', 'D:\\Android\\Sdk', join(home, 'Android', 'Sdk')];
 
   for (const candidate of candidates) {
     if (isRealAndroidSdk(candidate)) return resolve(candidate);
@@ -206,7 +202,7 @@ function detectAndroidSdk() {
   // 3. Try to find via adb (if on PATH)
   const whichResult = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['adb'], {
     stdio: 'pipe',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32'
   });
   if (whichResult.status === 0 && whichResult.stdout) {
     const adbPath = whichResult.stdout.toString().trim().split(/\r?\n/)[0];
@@ -220,9 +216,7 @@ function detectAndroidSdk() {
 function isRealAndroidSdk(dir) {
   if (!existsSync(dir)) return false;
   // A real Google Android SDK must have at least one of these directories
-  return existsSync(join(dir, 'platform-tools'))
-    || existsSync(join(dir, 'build-tools'))
-    || existsSync(join(dir, 'platforms'));
+  return existsSync(join(dir, 'platform-tools')) || existsSync(join(dir, 'build-tools')) || existsSync(join(dir, 'platforms'));
 }
 
 function detectJavaHome() {
@@ -248,7 +242,7 @@ function detectJavaHome() {
     'C:\\Program Files\\BellSoft',
     'C:\\Program Files\\Zulu',
     'C:\\Program Files\\Microsoft\\jdk-*',
-    join(home, '.jdks'),
+    join(home, '.jdks')
   ];
 
   for (const candidate of candidates) {
@@ -263,7 +257,7 @@ function detectJavaHome() {
   // 3. Try to find via java command (if on PATH)
   const whichResult = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['java'], {
     stdio: 'pipe',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32'
   });
   if (whichResult.status === 0 && whichResult.stdout) {
     const javaPath = whichResult.stdout.toString().trim().split(/\r?\n/)[0];
@@ -315,12 +309,7 @@ function writeSigningConfig(androidDir) {
     process.exit(1);
   }
 
-  const signingProps = [
-    `storeFile=${resolve(keystoreFile).replace(/\\/g, '/')}`,
-    `storePassword=${keystorePassword}`,
-    `keyAlias=${keystoreAlias}`,
-    `keyPassword=${keyPassword}`,
-  ].join('\n') + '\n';
+  const signingProps = [`storeFile=${resolve(keystoreFile).replace(/\\/g, '/')}`, `storePassword=${keystorePassword}`, `keyAlias=${keystoreAlias}`, `keyPassword=${keyPassword}`].join('\n') + '\n';
 
   writeFileSync(join(androidDir, 'keystore.properties'), signingProps);
 
@@ -381,7 +370,10 @@ function loadEnvFile(path) {
     const eq = trimmed.indexOf('=');
     if (eq < 0) continue;
     const key = trimmed.slice(0, eq).trim();
-    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+    const val = trimmed
+      .slice(eq + 1)
+      .trim()
+      .replace(/^["']|["']$/g, '');
     if (!process.env[key]) process.env[key] = val;
   }
 }

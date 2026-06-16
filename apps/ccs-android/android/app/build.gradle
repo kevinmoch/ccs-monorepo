@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.ccs.framework"
+    namespace "com.huawei.ccps"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.ccs.framework"
+        applicationId "com.huawei.ccps"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
