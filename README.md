@@ -230,9 +230,6 @@ pnpm install
 ```bash
 # 在 ccs-module-demo 下创建 user 页面
 pnpm ccs create page user --module ccs-module-demo
-
-# 指定页面标题
-pnpm ccs create page user --module ccs-module-demo --title "用户管理"
 ```
 
 **生成的文件：**
@@ -258,9 +255,6 @@ CLI 会自动在 `src/router/index.ts` 的 `// ccs-cli:route` 标记前插入路
 ```bash
 # 在 ccs-module-demo 下创建 user-stat 卡片
 pnpm ccs create card user-stat --module ccs-module-demo
-
-# 指定卡片标题
-pnpm ccs create card user-stat --module ccs-module-demo --title "用户统计"
 ```
 
 **生成的文件：**
@@ -274,6 +268,67 @@ CLI 会自动在 `src/cards/index.ts` 中插入：
 
 - `// ccs-cli:card-import` 前 → 插入 `import` 语句
 - `// ccs-cli:card-register` 前 → 插入注册条目
+
+#### 大型工程实践：目录分层组织
+
+当模块中的页面和卡片数量较多时，建议按**业务子领域**对 `pages/` 和 `cards/` 目录进行分层组织，避免所有页面/卡片平铺在同一级目录下，提升可维护性和可发现性。
+
+**pages 目录分层：**
+
+```
+src/pages/
+├── home/
+│   └── HomePage.vue          # 默认首页
+├── attendance/               # 考勤子领域
+│   ├── AttendancePage.vue
+│   └── config.ts
+├── documents/                # 文档子领域
+│   ├── DocListPage.vue
+│   ├── DocDetailPage.vue
+│   └── config.ts
+└── settings/                 # 设置子领域
+    ├── ProfilePage.vue
+    ├── SecurityPage.vue
+    └── config.ts
+```
+
+**cards 目录分层（一级：按子领域）：**
+
+```
+src/cards/
+├── index.ts                  # 卡片注册表（汇总所有子领域的卡片）
+├── attendance/               # 考勤子领域卡片
+│   ├── ShiftCard.vue
+│   ├── CheckInCard.vue
+│   └── RecordListCard.vue
+├── documents/                # 文档子领域卡片
+│   ├── DocCacheCard.vue
+│   └── DocListCard.vue
+└── settings/                 # 设置子领域卡片
+    ├── ProfileCard.vue
+    └── SecurityCard.vue
+```
+
+**cards 目录分层（二级：子领域 + 子页面）：**
+
+当某个子领域的卡片数量非常多时，可在子领域目录下再按**子页面**细分：
+
+```
+src/cards/
+└── documents/                    # 文档子领域
+    ├── list/                     # 文档列表页相关卡片
+    │   ├── DocFilterCard.vue
+    │   ├── DocTableCard.vue
+    │   └── DocStatsCard.vue
+    ├── detail/                   # 文档详情页相关卡片
+    │   ├── DocPreviewCard.vue
+    │   └── DocMetadataCard.vue
+    └── cache/                    # 缓存管理页相关卡片
+        ├── CacheStatusCard.vue
+        └── CacheCleanCard.vue
+```
+
+> **注意**：无论 `cards/` 目录嵌套多深，`cards/index.ts` 中的 import 路径需要与实际文件位置保持一致。CLI 的 `pnpm ccs create` 命令默认在 `pages/<name>/` 和 `cards/` 根目录下生成文件，创建后需**手动移动**到对应的子领域目录中，并相应更新路由配置和卡片注册表的 import 路径。
 
 ### 4.4 页面配置卡片布局
 
@@ -746,7 +801,7 @@ const appendIframeRoute = (baseUrl: string, routePath?: string) => {
 
 ## 附录 A：documents 目录详解
 
-项目根目录下的 `documents/` 是离线文档和上传服务的资源目录，**不纳入 Git 版本管理**，每个开发者需根据实际情况自行准备内容。
+项目根目录下的 `documents/` 是离线文档和上传服务的资源目录，**不建议纳入 Git 版本管理**，每个开发者需根据实际情况自行准备内容。
 
 ### A.1 目录结构
 
@@ -773,31 +828,25 @@ documents/
     "id": "safety-handbook-image",
     "title": "安全文明施工图示",
     "mimeType": "image/png",
-    "url": "safety-handbook.png",
-    "size": 204800,
-    "description": "施工现场安全文明施工标准图示"
+    "url": "safety-handbook.png"
   },
   {
     "id": "contract-template-pdf",
     "title": "合同评审操作手册",
     "mimeType": "application/pdf",
-    "url": "contract-review.pdf",
-    "size": 1024000,
-    "description": "合同评审流程操作指南"
+    "url": "contract-review.pdf"
   },
   {
     "id": "docx-process-guide",
     "title": "流程制度说明 DOCX",
     "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "url": "process-guide.docx",
-    "size": 512000
+    "url": "process-guide.docx"
   },
   {
     "id": "xlsx-cost-ledger",
     "title": "成本台账 XLSX",
     "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "url": "cost-ledger.xlsx",
-    "size": 307200
+    "url": "cost-ledger.xlsx"
   }
 ]
 ```
@@ -932,14 +981,14 @@ CCPS 是一套代码自适应多端的应用，同一个代码库构建出的产
 - **方式一（推荐）**：通过华为应用市场的「**卓易通**」工具安装 Android APK（`ccps-debug.apk`），运行体验与 Android 一致
 - **方式二**：使用鸿蒙自带浏览器访问 Web 版本，同 iOS 可添加到桌面
 
-### 6.3 平板 / 折叠屏自适应
+### 6.3 平板电脑 / 折叠屏手机自适应
 
 系统的响应式布局根据屏幕宽度自动切换：
 
 - **屏幕宽度 < 768px**（手机竖屏）：使用 `base` 断点，卡片堆叠显示（`colSpan.base = 12` 全宽）
-- **屏幕宽度 ≥ 768px**（平板横屏、折叠屏展开、桌面显示器）：使用 `md` 断点，卡片可并排显示（如 `colSpan.md = 6` 半宽）
+- **屏幕宽度 ≥ 768px**（平板电脑、折叠屏手机、桌面显示器）：使用 `md` 断点，卡片可并排显示（如 `colSpan.md = 6` 半宽）
 
-平板和折叠屏由于屏幕较宽，会自动展示与桌面端相似的宽屏布局，无需额外开发。底部导航栏在大屏上自动切换为顶部导航+侧边菜单的桌面布局。
+平板电脑和折叠屏手机由于屏幕较宽，会自动展示与桌面端相似的宽屏布局，无需额外开发。底部导航栏在大屏上自动切换为顶部导航+侧边菜单的桌面布局。
 
 ---
 
