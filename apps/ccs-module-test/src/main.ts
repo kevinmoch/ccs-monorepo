@@ -73,6 +73,13 @@ function navigateToRoute(routePath?: string) {
       router.replace(target);
       return;
     }
-    router.replace('/');
+
+    try {
+      if (window.top !== window.self) {
+        router.replace('/');
+      }
+    } catch {
+      router.replace('/');
+    }
   }
 }

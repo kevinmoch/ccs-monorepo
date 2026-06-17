@@ -9,15 +9,7 @@ function isIframe(): boolean {
   }
 }
 
-function detectBasePath(): string {
-  const pathname = window.location.pathname;
-  if (pathname === '/') return '/';
-
-  const parts = pathname.split('/').filter(Boolean);
-  return parts.length > 0 ? `/${parts[0]}` : '/';
-}
-
-const BASE = detectBasePath();
+const BASE = import.meta.env.BASE_URL;
 const iframeMode = isIframe();
 
 const router = createRouter({
