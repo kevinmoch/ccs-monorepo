@@ -132,7 +132,4 @@ const todayStatus = computed(() => {
   background: transparent;
   cursor: pointer;
 }
-.refresh-btn:hover {
-  background: #f0f0f0;
-}
 </style>

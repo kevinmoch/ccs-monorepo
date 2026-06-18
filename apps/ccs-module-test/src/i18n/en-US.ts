@@ -28,7 +28,7 @@ export default {
     statusDone: 'Completed today',
     statusIn: 'Checked in, pending check-out',
     statusPending: 'Pending check-in',
-    refreshProject: 'Refresh Project',
+    refreshProject: 'Refresh',
 
     // AttendanceListCard
     locationMethod: 'Location Method',

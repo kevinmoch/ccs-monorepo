@@ -28,7 +28,7 @@ export default {
     statusDone: '今日已完成',
     statusIn: '已上班，待下班打卡',
     statusPending: '待上班打卡',
-    refreshProject: '刷新项目',
+    refreshProject: '刷新',
 
     // AttendanceListCard
     locationMethod: '定位方式',
