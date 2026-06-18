@@ -936,6 +936,13 @@ export default {
 - **开发模式**：框架 Vite dev server 将 `/ccs-module-demo` 代理到子模块 dev server
 - **生产模式**：直接请求同源路径 `dist/web/ccs-module-demo/`
 
+#### 独立访问子页面路由（Deep Linking）
+
+除了在框架内通过菜单加载外，也支持通过浏览器地址栏**直接访问子模块的深层路由**（例如直接打开 `https://localhost:3000/ccs-module-test/attendance` 或 `http://localhost:5174/ccs-module-test/attendance`）：
+
+- **开发态（`pnpm dev` / `pnpm dev:ssl`）**：Vite Dev Server 能够正常处理并正确解析指向子模块的页面前端路由。
+- **运行态（`pnpm build:web` 后的 `pnpm preview`）**：预览服务器内置了多页应用（Multiple SPAs）的 fallback 中间件。在直接访问深层子路由时，服务会自动将请求重定向至对应子模块的 `index.html`，由子应用的 Vue Router 顺利接管。
+
 ### 5.3 图标
 
 菜单图标使用 [Lucide React](https://lucide.dev/icons/) 图标库，在 `menu1~7.ts` 中 import 需要的图标即可。
