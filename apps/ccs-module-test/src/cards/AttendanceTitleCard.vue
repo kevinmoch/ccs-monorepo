@@ -3,7 +3,10 @@
     <div class="title-card">
       <div class="title-card__main">
         <div class="title-card__text">
-          <h2 class="title-card__heading">{{ t('attendance') }}</h2>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <h2 class="title-card__heading">{{ t('attendance') }} {{ localProject ? ` - ${localProject.name}` : '' }}</h2>
+            <button class="refresh-btn" @click="handleRefreshProject">{{ t('refreshProject') }}</button>
+          </div>
           <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
         </div>
         <div class="title-card__pill">{{ runtimeLabel }}</div>
@@ -13,11 +16,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { CardShell } from '@ccs/ui-vue';
-import { useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
+import { useRuntimeOptions, type RuntimeInfo, globalStore } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 import { useScopedT } from '@ccs/shared';
+
+const props = defineProps<{
+  project?: any;
+}>();
+
+const localProject = ref(props.project);
+
+watch(
+  () => props.project,
+  (newVal) => {
+    localProject.value = newVal;
+  },
+  { deep: true }
+);
+
+const handleRefreshProject = async () => {
+  try {
+    const p = await globalStore.get('project');
+    localProject.value = p;
+  } catch (err) {
+    console.error('Failed to refresh project', err);
+  }
+};
 
 const t = useScopedT('attendance');
 
@@ -96,5 +122,17 @@ const todayStatus = computed(() => {
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.refresh-btn {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.refresh-btn:hover {
+  background: #f0f0f0;
 }
 </style>

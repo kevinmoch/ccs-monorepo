@@ -7,4 +7,5 @@ export * from './storage';
 export * from './attendance';
 export * from './offline-docs';
 export * from './offline-photos';
+export * from './store';
 export * from './composables/useRuntimeOptions';
