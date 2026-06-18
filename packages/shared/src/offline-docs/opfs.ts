@@ -243,9 +243,30 @@ export async function openCachedDocument(document: OfflineDocument): Promise<voi
 
   if (isAndroidNative()) return openAndroidCachedDocument(document);
 
-  const source = await createCachedObjectUrl(document);
-  if (!source.url) throw new Error(source.message ?? i18next.t('offlineDocs.noCacheAvailableViewer'));
-  openExternalLink(source.url);
+  // 解决 Safari 和移动端浏览器异步打开新窗口被拦截的问题：
+  // 在异步操作 (await) 之前同步打开一个空白的新窗口
+  let newWindow: Window | null = null;
+  // 非 Electron 或 Android Native，且支持 window.open 时，我们先同步打开
+  if (typeof window !== 'undefined') {
+    newWindow = window.open('about:blank', '_blank');
+  }
+
+  try {
+    const source = await createCachedObjectUrl(document);
+    if (!source.url) throw new Error(source.message ?? i18next.t('offlineDocs.noCacheAvailableViewer'));
+
+    if (newWindow) {
+      newWindow.location.href = source.url;
+    } else {
+      openExternalLink(source.url);
+    }
+  } catch (err) {
+    // 如果出错，关闭刚刚打开的空白窗口
+    if (newWindow) {
+      newWindow.close();
+    }
+    throw err;
+  }
 }
 
 export async function touchDocument(id: string) {
