@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["CCS_DEV_SSL"],
+  "globalPassThroughEnv": ["CCS_DEV_SSL", "CCS_DEV_SSL_MODULES"],
   "tasks": {
     "dev": { "cache": false, "persistent": true },
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".output/**", "release/**"] },

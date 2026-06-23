@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:ssl": "node scripts/dev.mjs --ssl",
+    "dev:ssl-all": "node scripts/dev.mjs --ssl-all",
     "build": "turbo run build",
     "build:web": "node scripts/build-web.mjs",
     "build:electron": "node scripts/build-electron.mjs",

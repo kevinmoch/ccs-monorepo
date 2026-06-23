@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port __MODULE_DEV_PORT__",
+    "dev:ssl": "cross-env CCS_DEV_SSL_MODULES=true vite --host 0.0.0.0 --port __MODULE_DEV_PORT__",
     "build": "vue-tsc -p tsconfig.json --noEmit && vite build",
     "build:cards": "node scripts/build-cards.mjs",
     "preview": "vite preview",
@@ -16,6 +17,7 @@
     "@ccs/shared": "workspace:*",
     "@ccs/ui-vue": "workspace:*",
     "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "latest",
     "i18next": "latest",
     "pinia": "latest",
@@ -25,6 +27,7 @@
     "vue-router": "latest"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "tailwindcss": "^4.1.14",
     "typescript": "latest",
     "vue-tsc": "latest"
