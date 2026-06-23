@@ -204,7 +204,8 @@ pnpm install
 | 命令                  | 说明                                                                 |
 | --------------------- | -------------------------------------------------------------------- |
 | `pnpm dev`            | 同时启动框架（端口 3000）和所有 `ccs-module-*` 子模块的 dev server   |
-| `pnpm dev:ssl`        | 同上，但框架启用 HTTPS（用于测试需要 SSL 的功能如 OPFS）             |
+| `pnpm dev:ssl`        | 同上，但框架启用 HTTPS（子模块仍为 HTTP）                            |
+| `pnpm dev:ssl-all`    | 同上，但框架和所有子模块均启用 HTTPS                                 |
 | `pnpm build`          | 通过 Turbo 并行构建所有包（`turbo run build`）                       |
 | `pnpm build:web`      | 构建 Web 产物到 `dist/web/`（含框架 + 所有子模块 + Service Worker）  |
 | `pnpm build:electron` | 构建 Electron 桌面应用到 `dist/electron/`（依赖 `build:web` 先执行） |
@@ -940,7 +941,7 @@ export default {
 
 除了在框架内通过菜单加载外，也支持通过浏览器地址栏**直接访问子模块的深层路由**（例如直接打开 `https://localhost:3000/ccs-module-test/attendance` 或 `http://localhost:5174/ccs-module-test/attendance`）：
 
-- **开发态（`pnpm dev` / `pnpm dev:ssl`）**：Vite Dev Server 能够正常处理并正确解析指向子模块的页面前端路由。
+- **开发态（`pnpm dev` / `pnpm dev:ssl` / `pnpm dev:ssl-all`）**：Vite Dev Server 能够正常处理并正确解析指向子模块的页面前端路由。
 - **运行态（`pnpm build:web` 后的 `pnpm preview`）**：预览服务器内置了多页应用（Multiple SPAs）的 fallback 中间件。在直接访问深层子路由时，服务会自动将请求重定向至对应子模块的 `index.html`，由子应用的 Vue Router 顺利接管。
 
 ### 5.3 图标
@@ -1186,20 +1187,21 @@ sequenceDiagram
 
 #### A.4.1 用途
 
-| 服务              | 使用场景                            |
-| ----------------- | ----------------------------------- |
-| `pnpm dev:ssl`    | 框架开发服务器（端口 3000）的 HTTPS |
-| `pnpm doc:ssl`    | 离线文档服务器（端口 8080）的 HTTPS |
-| `pnpm upload:ssl` | 上传服务器（端口 8083）的 HTTPS     |
-| `pnpm preview`    | 构建预览服务器（端口 3000）的 HTTPS |
+| 服务               | 使用场景                            |
+| ------------------ | ----------------------------------- |
+| `pnpm dev:ssl`     | 框架开发服务器（端口 3000）的 HTTPS |
+| `pnpm dev:ssl-all` | 框架 + 所有子模块开发服务器的 HTTPS |
+| `pnpm doc:ssl`     | 离线文档服务器（端口 8080）的 HTTPS |
+| `pnpm upload:ssl`  | 上传服务器（端口 8083）的 HTTPS     |
+| `pnpm preview`     | 构建预览服务器（端口 3000）的 HTTPS |
 
 #### A.4.2 各平台对自签名证书的处理
 
-| 平台                | 行为         | 用户操作                                         |
-| ------------------- | ------------ | ------------------------------------------------ |
-| **浏览器**          | 显示安全警告 | 点击「高级」→「继续访问」，手动信任              |
-| **Electron**        | 自动接受     | 主进程 `rejectUnauthorized: false`，无需用户干预 |
-| **Android WebView** | 拒绝连接 ❌  | 自签名证书不被信任，**Android 环境请使用 HTTP**  |
+| 平台                | 行为         | 用户操作                                                                                      |
+| ------------------- | ------------ | --------------------------------------------------------------------------------------------- |
+| **浏览器**          | 显示安全警告 | 点击「高级」→「继续访问」，手动信任。<br/>使用 `dev:ssl-all` 时，框架和所有子模块均需分别信任 |
+| **Electron**        | 自动接受     | 主进程 `rejectUnauthorized: false`，无需用户干预                                              |
+| **Android WebView** | 拒绝连接 ❌  | 自签名证书不被信任，**Android 环境请使用 HTTP**                                               |
 
 #### A.4.3 重新生成证书
 
@@ -1299,12 +1301,21 @@ CCPS 是一套代码自适应多端的应用，同一个代码库构建出的产
 # 标准 HTTP 模式（考勤打卡可用）
 pnpm dev
 
-# HTTPS 模式（考勤打卡/离线文档/离线拍照 OPFS 可用）
+# 框架 HTTPS + 子模块 HTTP 模式（考勤打卡/离线文档/离线拍照 OPFS 可用）
 pnpm dev:ssl
+
+# 全 HTTPS 模式（框架和所有子模块均启用 SSL）
+pnpm dev:ssl-all
 ```
 
+| 命令               | 框架 (3000) | 子模块 (5174) | OPFS 可用 |
+| ------------------ | :---------: | :-----------: | :-------: |
+| `pnpm dev`         |    HTTP     |     HTTP      |    ❌     |
+| `pnpm dev:ssl`     |    HTTPS    |     HTTP      |    ✅     |
+| `pnpm dev:ssl-all` |    HTTPS    |     HTTPS     |    ✅     |
+
 - 框架主应用：`https://localhost:3000`（SSL 模式）或 `http://localhost:3000`
-- 子模块 `ccs-module-test`：`http://localhost:5174`
+- 子模块 `ccs-module-test`：`http://localhost:5174`（HTTP）或 `https://localhost:5174`（带 `dev:ssl-all` 时）
 
 ### 8.2 启动文档和上传服务
 
@@ -1326,7 +1337,7 @@ pnpm upload:ssl
 
 ### 8.3 测试离线文档页面
 
-1. 启动框架 + 模块：`pnpm dev:ssl`
+1. 启动框架 + 模块：`pnpm dev:ssl`（或 `pnpm dev:ssl-all`）
 2. 启动文档服务器：`pnpm doc:ssl`
 3. 在浏览器中打开 `https://localhost:3000`
 4. 首页点击 EHS 管理，再点击任意项目，随后在右边菜单展开子模块示例，点击离线文档
@@ -1334,11 +1345,11 @@ pnpm upload:ssl
 6. 点击文档列表中的「下载」按钮
 7. 下载完成后，断开文档服务器，验证离线打开功能
 
-> **为什么需要 SSL？** OPFS（Origin Private File System）是浏览器提供的本地文件存储 API，仅在安全上下文（HTTPS 或 localhost）中可用。`pnpm dev` 使用 HTTP，离线文档的 OPFS 功能将不可用，需使用 `pnpm dev:ssl`。
+> **为什么需要 SSL？** OPFS（Origin Private File System）是浏览器提供的本地文件存储 API，仅在安全上下文（HTTPS 或 localhost）中可用。`pnpm dev` 使用 HTTP，离线文档的 OPFS 功能将不可用，需使用 `pnpm dev:ssl` 或 `pnpm dev:ssl-all`。
 
 ### 8.4 测试离线拍照页面
 
-1. 启动框架 + 模块：`pnpm dev:ssl`
+1. 启动框架 + 模块：`pnpm dev:ssl`（或 `pnpm dev:ssl-all`）
 2. 启动上传服务：`pnpm upload:ssl`
 3. 在浏览器中打开 `https://localhost:3000`
 4. 首页点击 EHS 管理，再点击任意项目，随后在右边菜单展开子模块示例，点击离线拍照
@@ -1699,16 +1710,16 @@ pnpm --filter ccs-module-test clean
 
 ### 12.9 故障排除速查表
 
-| 问题                       | 解决方案                                             |
-| -------------------------- | ---------------------------------------------------- |
-| `pnpm dev` 启动失败        | 检查端口 3000 是否被占用；运行 `pnpm install`        |
-| 离线文档 OPFS 不可用       | 使用 `pnpm dev:ssl` 启动 HTTPS 模式                  |
-| PWA 不显示安装按钮         | 确保使用 `pnpm preview`（HTTPS）访问                 |
-| Electron 构建失败          | 以管理员身份运行；检查磁盘空间                       |
-| Android 构建失败           | 检查 `ANDROID_HOME` 和 `JAVA_HOME`；以管理员身份运行 |
-| Android 中无法访问文档服务 | 使用 HTTP 而非 HTTPS；确认手机与电脑同一网络         |
-| 子模块页面 404             | 确认已运行 `pnpm install`；确认菜单 URL 正确         |
-| Service Worker 未激活      | 确保 HTTPS 环境；检查 DevTools Application 面板      |
+| 问题                       | 解决方案                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `pnpm dev` 启动失败        | 检查端口 3000 是否被占用；运行 `pnpm install`                                                  |
+| 离线文档 OPFS 不可用       | 使用 `pnpm dev:ssl` 启动 HTTPS 模式（框架 SSL 即可）；如需子模块也 SSL 则用 `pnpm dev:ssl-all` |
+| PWA 不显示安装按钮         | 确保使用 `pnpm preview`（HTTPS）访问                                                           |
+| Electron 构建失败          | 以管理员身份运行；检查磁盘空间                                                                 |
+| Android 构建失败           | 检查 `ANDROID_HOME` 和 `JAVA_HOME`；以管理员身份运行                                           |
+| Android 中无法访问文档服务 | 使用 HTTP 而非 HTTPS；确认手机与电脑同一网络                                                   |
+| 子模块页面 404             | 确认已运行 `pnpm install`；确认菜单 URL 正确                                                   |
+| Service Worker 未激活      | 确保 HTTPS 环境；检查 DevTools Application 面板                                                |
 
 ---
 
