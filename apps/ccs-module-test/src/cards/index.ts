@@ -1,4 +1,4 @@
-import { createCardRegistry } from '@ccs/ui-vue';
+import { createCardRegistry } from '@ccs/card';
 import AttendanceShiftCard from './AttendanceShiftCard.vue';
 import AttendanceTitleCard from './AttendanceTitleCard.vue';
 import AttendanceListCard from './AttendanceListCard.vue';

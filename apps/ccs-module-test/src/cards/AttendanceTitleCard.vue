@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { useRuntimeOptions, type RuntimeInfo, globalStore } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 import { useScopedT } from '@ccs/shared';

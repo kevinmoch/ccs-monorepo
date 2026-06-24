@@ -1,12 +1,13 @@
 {
-  "name": "@ccs/ui-vue",
+  "name": "@ccs/card",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./CardGrid.vue": "./src/components/CardGrid.vue",
-    "./CardShell.vue": "./src/components/CardShell.vue"
+    "./CardShell.vue": "./src/components/CardShell.vue",
+    "./card.css": "./src/card.css"
   },
   "scripts": {
     "build": "vue-tsc -p tsconfig.json --noEmit",

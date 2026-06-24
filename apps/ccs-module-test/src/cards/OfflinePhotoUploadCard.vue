@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';
 

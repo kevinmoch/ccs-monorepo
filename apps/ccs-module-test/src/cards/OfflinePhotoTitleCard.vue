@@ -25,7 +25,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { formatBytes, useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';

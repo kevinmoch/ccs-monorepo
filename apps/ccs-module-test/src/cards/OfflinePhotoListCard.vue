@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { formatBytes } from '@ccs/shared';
 import type { OfflinePhoto } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';

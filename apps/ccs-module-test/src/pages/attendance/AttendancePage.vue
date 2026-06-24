@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { CardGrid, type CardDefinition } from '@ccs/ui-vue';
+import { CardGrid, type CardDefinition } from '@ccs/card';
 import { cardRegistry } from '../../cards';
 import pageConfig from './config';
 import { globalStore } from '@ccs/shared';

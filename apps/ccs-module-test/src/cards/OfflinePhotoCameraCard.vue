@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { useRuntimeOptions, type RuntimeInfo } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';

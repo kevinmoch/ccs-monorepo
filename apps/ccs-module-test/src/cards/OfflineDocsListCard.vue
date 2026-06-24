@@ -83,7 +83,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { formatBytes, deriveFileType, isDocumentsSiteDocument } from '@ccs/shared';
 import type { DocumentStatus } from '@ccs/shared/offline-docs';
 import { useOfflineDocsStore } from '../stores/offline-docs';

@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { useAttendanceStore } from '../stores/attendance';
 import { useScopedT } from '@ccs/shared';
 

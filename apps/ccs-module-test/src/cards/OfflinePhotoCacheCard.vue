@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { formatBytes } from '@ccs/shared';
 import { useOfflinePhotoStore } from '../stores/offline-photo';
 import { useScopedT } from '@ccs/shared';

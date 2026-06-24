@@ -8,8 +8,7 @@
     "./attendance": "./src/attendance/index.ts",
     "./offline-docs": "./src/offline-docs/index.ts",
     "./offline-photos": "./src/offline-photos/index.ts",
-    "./storage": "./src/storage/index.ts",
-    "./card.css": "./src/card.css"
+    "./storage": "./src/storage/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

@@ -15,7 +15,7 @@
   "dependencies": {
     "@ccs/runtime": "workspace:*",
     "@ccs/shared": "workspace:*",
-    "@ccs/ui-vue": "workspace:*",
+    "@ccs/card": "workspace:*",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-vue": "latest",

@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 import { useRuntimeOptions } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
 

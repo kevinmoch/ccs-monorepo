@@ -4,5 +4,5 @@
 </template>
 
 <script setup lang="ts">
-import { CardShell } from '@ccs/ui-vue';
+import { CardShell } from '@ccs/card';
 </script>

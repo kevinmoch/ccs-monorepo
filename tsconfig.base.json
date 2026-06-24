@@ -19,8 +19,8 @@
       "@ccs/shared": ["packages/shared/src/index.ts"],
       "@ccs/runtime": ["packages/runtime/src/index.ts"],
       "@ccs/runtime/vue": ["packages/runtime/src/vue.ts"],
-      "@ccs/ui-vue": ["packages/ui-vue/src/index.ts"],
-      "@ccs/ui-vue/*": ["packages/ui-vue/src/*"]
+      "@ccs/card": ["packages/card/src/index.ts"],
+      "@ccs/card/*": ["packages/card/src/*"]
     }
   }
 }

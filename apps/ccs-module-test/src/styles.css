@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import '@ccs/shared/card.css';
+@import '@ccs/card/card.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
