@@ -10,7 +10,7 @@ export interface CardGridLayout {
   rowSpan?: number;
 }
 export interface CardDefinition {
-  type: string;
+  id: string;
   title?: LocalizedText;
   layout?: CardGridLayout;
   colSpan?: CardGridSpan;

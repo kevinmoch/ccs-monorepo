@@ -15,7 +15,7 @@ onMounted(async () => {
   try {
     const project = await globalStore.get('project');
     const updatedCards = pageConfig.cards.map((c: CardDefinition) => {
-      if (c.type === 'attendance-title') {
+      if (c.id === 'attendance-title') {
         return {
           ...c,
           props: { ...c.props, project }

@@ -1,8 +1,8 @@
 <template>
   <div class="ccs-card-grid">
-    <div v-for="(card, index) in resolvedCards" :key="`${card.type}-${index}`" class="ccs-card-grid__item" :style="layoutStyle(card)">
-      <component v-if="registry[card.type]" :is="registry[card.type]" :title="card.title" v-bind="card.props" />
-      <div v-else class="ccs-card-grid__missing">{{ card.type }}</div>
+    <div v-for="(card, index) in resolvedCards" :key="`${card.id}-${index}`" class="ccs-card-grid__item" :style="layoutStyle(card)">
+      <component v-if="registry[card.id]" :is="registry[card.id]" :title="card.title" v-bind="card.props" />
+      <div v-else class="ccs-card-grid__missing">{{ card.id }}</div>
     </div>
   </div>
 </template>
@@ -31,11 +31,13 @@ function resolveValue(value: unknown): unknown {
   return value;
 }
 
-const resolvedCards = computed(() => props.cards.map((card) => ({
-  ...card,
-  title: resolveValue(card.title) as string | undefined,
-  props: resolveValue(card.props ?? {}) as Record<string, unknown>
-})));
+const resolvedCards = computed(() =>
+  props.cards.map((card) => ({
+    ...card,
+    title: resolveValue(card.title) as string | undefined,
+    props: resolveValue(card.props ?? {}) as Record<string, unknown>
+  }))
+);
 
 function clampSpan(value: number | undefined, fallback: number) {
   if (!value || !Number.isFinite(value)) return fallback;

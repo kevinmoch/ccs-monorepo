@@ -407,14 +407,14 @@ import type { CardDefinition } from '@ccs/ui-vue';
 export default {
   cards: [
     {
-      type: 'user-stat', // 对应卡片注册表中的 KEY
+      id: 'user-stat', // 对应卡片注册表中的 KEY
       layout: {
         colSpan: { base: 12, md: 6 }, // 列跨度
         rowSpan: 2 // 行跨度（可选，默认 1）
       }
     },
     {
-      type: 'user-table',
+      id: 'user-table',
       layout: {
         colSpan: { base: 12, md: 6 },
         rowSpan: 4
@@ -424,9 +424,9 @@ export default {
 } satisfies CardDefinition[];
 ```
 
-#### 4.4.2 `type` —— 卡片类型标识
+#### 4.4.2 `id` —— 卡片标识
 
-`type` 的值必须与 **卡片注册表** 中的 KEY 完全一致。卡片注册表定义在模块的 `src/cards/index.ts` 中：
+`id` 的值必须与 **卡片注册表** 中的 KEY 完全一致。卡片注册表定义在模块的 `src/cards/index.ts` 中：
 
 ```typescript
 // src/cards/index.ts
@@ -440,7 +440,7 @@ export const cardRegistry = createCardRegistry({
 });
 ```
 
-`CardGrid` 组件会根据 `config.ts` 中的 `type` 值，从 `cardRegistry` 中查找对应的 Vue 组件并渲染。
+`CardGrid` 组件会根据 `config.ts` 中的 `id` 值，从 `cardRegistry` 中查找对应的 Vue 组件并渲染。
 
 #### 4.4.3 `colSpan` —— 响应式列跨度（核心）
 
@@ -474,15 +474,15 @@ export const cardRegistry = createCardRegistry({
 ```typescript
 // 示例：一个大卡片搭配两个小卡片
 {
-  type: 'chart',
+  id: 'chart',
   layout: { colSpan: { base: 12, md: 8 }, rowSpan: 3 }  // 占据 2/3 宽，3 行高
 },
 {
-  type: 'stat-1',
+  id: 'stat-1',
   layout: { colSpan: { base: 6, md: 4 }, rowSpan: 1 }   // 右侧上半
 },
 {
-  type: 'stat-2',
+  id: 'stat-2',
   layout: { colSpan: { base: 6, md: 4 }, rowSpan: 2 }   // 右侧下半
 }
 ```
@@ -800,7 +800,7 @@ const cards = ref<CardDefinition[]>([...pageConfig.cards]);
 onMounted(async () => {
   const project = await globalStore.get('project');
   const updatedCards = pageConfig.cards.map((c: CardDefinition) => {
-    if (c.type === 'attendance-title') {
+    if (c.id === 'attendance-title') {
       return { ...c, props: { ...c.props, project } };
     }
     return c;
@@ -849,7 +849,7 @@ const handleRefreshProject = async () => {
 export default {
   cards: [
     {
-      type: 'attendance-title',
+      id: 'attendance-title',
       layout: { colSpan: { base: 12, md: 12 }, rowSpan: 1 },
       props: { project: /* 由 AttendancePage.vue 在挂载时注入 */ }
     }
