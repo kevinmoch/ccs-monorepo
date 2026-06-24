@@ -1,11 +1,12 @@
 @theme {
+  --color-ccs-card-background: color-mix(in srgb, var(--ccs-bg, #fff) 92%, white);
   --color-ccs-card-border: color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
   --radius-ccs-card: 16px;
   --shadow-ccs-card: 0 12px 32px rgb(15 23 42 / 8%);
 }
 
 :root {
-  --ccs-card-background: #ffffff;
+  --ccs-card-background: var(--color-ccs-card-background);
   --ccs-card-border-color: var(--color-ccs-card-border);
   --ccs-card-border-width: 1px;
   --ccs-card-radius: var(--radius-ccs-card);
