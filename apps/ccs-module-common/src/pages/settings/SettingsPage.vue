@@ -1,5 +1,5 @@
 <template>
-	<CardGrid :cards="pageConfig.cards" :registry="cardRegistry" />
+  <CardGrid :cards="pageConfig.cards" :registry="cardRegistry" />
 </template>
 
 <script setup lang="ts">
