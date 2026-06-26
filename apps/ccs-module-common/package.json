@@ -1,0 +1,35 @@
+{
+  "name": "ccs-module-common",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "dev:ssl": "cross-env CCS_DEV_SSL_MODULES=true vite --host 0.0.0.0 --port 5173",
+    "build": "vue-tsc -p tsconfig.json --noEmit && vite build",
+    "build:cards": "node scripts/build-cards.mjs",
+    "preview": "vite preview",
+    "lint": "vue-tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist .ccs-card-build"
+  },
+  "dependencies": {
+    "@ccs/runtime": "workspace:*",
+    "@ccs/shared": "workspace:*",
+    "@ccs/card": "workspace:*",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-vue": "latest",
+    "i18next": "latest",
+    "pinia": "latest",
+    "vite": "latest",
+    "vue": "latest",
+    "vue-i18n": "latest",
+    "vue-router": "latest"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "tailwindcss": "^4.1.14",
+    "typescript": "latest",
+    "vue-tsc": "latest"
+  }
+}

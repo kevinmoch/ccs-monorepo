@@ -15,6 +15,7 @@ body {
     sans-serif;
 }
 
+/* Custom Scrollbar */
 ::-webkit-scrollbar,
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -26,7 +27,7 @@ body {
 }
 ::-webkit-scrollbar-thumb,
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #CBD5E1;
+  background-color: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-corner,
