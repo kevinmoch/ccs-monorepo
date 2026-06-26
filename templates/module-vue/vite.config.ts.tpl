@@ -21,6 +21,7 @@ export default defineConfig(({ command }) => {
       port: __MODULE_DEV_PORT__,
       host: '0.0.0.0',
       cors: true,
+      allowedHosts: ['ccs.module.com', 'localhost', '.localhost'],
       headers: { 'Access-Control-Allow-Origin': '*' },
       warmup: {
         clientFiles: [

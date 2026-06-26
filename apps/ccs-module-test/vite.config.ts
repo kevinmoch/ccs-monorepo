@@ -21,6 +21,7 @@ export default defineConfig(({ command }) => {
       port: 5174,
       host: '0.0.0.0',
       cors: true,
+      allowedHosts: ['ccs.module.com', 'localhost', '.localhost'],
       headers: { 'Access-Control-Allow-Origin': '*' },
       warmup: {
         clientFiles: ['./src/main.ts', './src/App.vue', './src/router/index.ts']

@@ -5,6 +5,7 @@ function startDev({ ssl = false, sslModules = false, args = [] } = {}) {
   const spawnArgs = ['exec', 'turbo', 'run', 'dev', '--filter=ccs-framework', '--filter=ccs-module-*', ...args];
 
   const env = { ...process.env };
+  env.CCS_MONOREPO = 'true';
   if (ssl) {
     env.CCS_DEV_SSL = 'true';
   }
