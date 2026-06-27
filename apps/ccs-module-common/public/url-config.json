@@ -1,3 +1,10 @@
 {
-  "settings": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=bos_templatetreelist&billFormId=hw_index_adminconfig&type=list"
+  "help-guide": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/eccui/ecc/index.html#/TemplateLibraryHomePage?templateLibClass=UserGuide",
+  "it-support": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=hw_portal_question_task",
+  "my-todos": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=por_mytasklist&gridTab=1",
+  "my-workspace": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/ecc/portal/#/",
+  "notifications": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=hw_preview_page_golive&category=golivebulletin",
+  "overdue": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=bos_list&billFormId=hw_process_eff_ledger&type=list&wfStatus=0&effStatus=1",
+  "settings": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=bos_templatetreelist&billFormId=hw_index_adminconfig&type=list",
+  "severely-overdue": "https://ccs.huaweicloud.com/CCS_Tenant_Gray/ierp/?formId=bos_list&billFormId=hw_process_eff_ledger&type=list&wfStatus=0&effStatus=2"
 }

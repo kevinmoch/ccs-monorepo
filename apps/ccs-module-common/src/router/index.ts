@@ -2,20 +2,20 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import HomePage from '../pages/home/HomePage.vue';
 
 function isIframe(): boolean {
-	try {
-		return window.top !== window.self;
-	} catch {
-		return false;
-	}
+  try {
+    return window.top !== window.self;
+  } catch {
+    return false;
+  }
 }
 
 const BASE = import.meta.env.BASE_URL;
 const iframeMode = isIframe();
 
 const router = createRouter({
-	history: iframeMode ? createWebHashHistory(BASE) : createWebHistory(BASE),
-	routes: [
-		{ path: '/', name: 'Home', component: HomePage },
+  history: iframeMode ? createWebHashHistory(BASE) : createWebHistory(BASE),
+  routes: [
+    { path: '/', name: 'Home', component: HomePage },
     {
       path: '/overview',
       name: 'Overview',
@@ -47,9 +47,9 @@ const router = createRouter({
       component: () => import('../pages/overdue/OverduePage.vue')
     },
     {
-      path: '/notification',
-      name: 'Notification',
-      component: () => import('../pages/notification/NotificationPage.vue')
+      path: '/notifications',
+      name: 'Notifications',
+      component: () => import('../pages/notifications/NotificationsPage.vue')
     },
     {
       path: '/settings',
@@ -65,8 +65,8 @@ const router = createRouter({
       path: '/help-guide',
       name: 'HelpGuide',
       component: () => import('../pages/help-guide/HelpGuidePage.vue')
-    },
-		// ccs-cli:route
-	]
+    }
+    // ccs-cli:route
+  ]
 });
 export default router;
