@@ -247,7 +247,7 @@ pnpm install
 ### 4.1 创建子模块
 
 ```bash
-# 创建一个名为 ccs-module-demo 的子模块（端口自动分配，从 5174 开始）
+# 创建一个名为 ccs-module-demo 的子模块（端口自动分配，从 5175 开始）
 pnpm ccs create module ccs-module-demo
 
 # 或指定端口
