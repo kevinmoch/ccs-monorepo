@@ -1,9 +1,11 @@
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
+const useSsl = process.env.CCS_PREVIEW_SSL !== 'false';
+
 /** @type {import('vite').UserConfig} */
 export default {
   plugins: [
-    basicSsl(),
+    ...(useSsl ? [basicSsl()] : []),
     {
       name: 'multi-spa-preview-fallback',
       configurePreviewServer(server) {
