@@ -11,6 +11,9 @@ import OfflinePhotoCameraCard from './OfflinePhotoCameraCard.vue';
 import OfflinePhotoListCard from './OfflinePhotoListCard.vue';
 import OfflinePhotoUploadCard from './OfflinePhotoUploadCard.vue';
 import OfflinePhotoCacheCard from './OfflinePhotoCacheCard.vue';
+import SampleHeaderCard from './SampleHeaderCard.vue';
+import SampleStatCard from './SampleStatCard.vue';
+import SampleDrawingCard from './SampleDrawingCard.vue';
 // ccs-cli:card-import
 export const cardRegistry = createCardRegistry({
   'attendance-shift': AttendanceShiftCard,
@@ -24,6 +27,13 @@ export const cardRegistry = createCardRegistry({
   'offline-photo-camera': OfflinePhotoCameraCard,
   'offline-photo-list': OfflinePhotoListCard,
   'offline-photo-upload': OfflinePhotoUploadCard,
-  'offline-photo-cache': OfflinePhotoCacheCard
+  'offline-photo-cache': OfflinePhotoCacheCard,
+  'sample-header': SampleHeaderCard,
+  'sample-stat-1': SampleStatCard,
+  'sample-stat-2': SampleStatCard,
+  'sample-stat-3': SampleStatCard,
+  'sample-stat-4': SampleStatCard,
+  'sample-drawing-1': SampleDrawingCard,
+  'sample-drawing-2': SampleDrawingCard
   // ccs-cli:card-register
 });

@@ -30,6 +30,11 @@ const router = createRouter({
       path: '/offline-photo',
       name: 'OfflinePhoto',
       component: () => import('../pages/offline-photo/OfflinePhotoPage.vue')
+    },
+    {
+      path: '/sample',
+      name: 'Sample',
+      component: () => import('../pages/sample/SamplePage.vue')
     }
     // ccs-cli:route
   ]
