@@ -25,9 +25,6 @@ export default {
     // AttendanceTitleCard
     attendance: 'Attendance',
     locale: 'en-US',
-    statusDone: 'Completed today',
-    statusIn: 'Checked in, pending check-out',
-    statusPending: 'Pending check-in',
     refreshProject: 'Refresh',
 
     // AttendanceListCard

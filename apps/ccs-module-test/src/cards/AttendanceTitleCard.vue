@@ -7,7 +7,7 @@
             <h2 class="title-card__heading">{{ t('attendance') }} {{ localProject ? ` - ${localProject.name}` : '' }}</h2>
             <button class="refresh-btn" @click="handleRefreshProject">{{ t('refreshProject') }}</button>
           </div>
-          <span class="title-card__sub">{{ formattedDate }} · {{ todayStatus }}</span>
+          <span class="title-card__sub">{{ formattedDate }} · {{ billCodeDisplay }}</span>
         </div>
         <div class="title-card__pill">{{ runtimeLabel }}</div>
       </div>
@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { CardShell } from '@ccs/card';
 import { useRuntimeOptions, type RuntimeInfo, globalStore } from '@ccs/shared';
 import { useAttendanceStore } from '../stores/attendance';
@@ -27,6 +27,7 @@ const props = defineProps<{
 }>();
 
 const localProject = ref(props.project);
+const localBillCode = ref<string | null>(null);
 
 watch(
   () => props.project,
@@ -44,6 +45,23 @@ const handleRefreshProject = async () => {
     console.error('Failed to refresh project', err);
   }
 };
+
+const fetchBillCode = async () => {
+  try {
+    const code = await globalStore.get('selectedBillCode');
+    localBillCode.value = code || null;
+  } catch (err) {
+    console.error('Failed to fetch bill code', err);
+  }
+};
+
+onMounted(() => {
+  fetchBillCode();
+});
+
+watch(localBillCode, (newVal) => {
+  // Re-fetch when needed (e.g., on visibility change)
+});
 
 const t = useScopedT('attendance');
 
@@ -66,10 +84,8 @@ const formattedDate = computed(() =>
   }).format(now.value)
 );
 
-const todayStatus = computed(() => {
-  if (store.attendance.checkIn && store.attendance.checkOut) return t('statusDone');
-  if (store.attendance.checkIn) return t('statusIn');
-  return t('statusPending');
+const billCodeDisplay = computed(() => {
+  return localBillCode.value || '所有单据';
 });
 </script>
 
