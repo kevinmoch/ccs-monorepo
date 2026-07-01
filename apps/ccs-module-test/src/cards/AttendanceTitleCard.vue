@@ -48,7 +48,7 @@ const handleRefreshProject = async () => {
 
 const fetchBillCode = async () => {
   try {
-    const code = await globalStore.get('selectedBillCode');
+    const code = await globalStore.get<string>('selectedBillCode');
     localBillCode.value = code || null;
   } catch (err) {
     console.error('Failed to fetch bill code', err);
