@@ -81,7 +81,7 @@ const allSections = computed(() => {
 <style src="../lib/shell-menu.css" scoped></style>
 <style scoped>
 .portal-section-title {
-  margin: 32px 0 0;
+  margin: 32px 0 20px;
   text-align: center;
   font-size: 22px;
   font-weight: 700;
@@ -89,14 +89,13 @@ const allSections = computed(() => {
 }
 
 .portal-section-title:first-of-type {
-  margin-top: 0;
+  margin-top: 5px;
 }
 
 .portal-section-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  margin-top: 24px;
   align-items: start;
 }
 
