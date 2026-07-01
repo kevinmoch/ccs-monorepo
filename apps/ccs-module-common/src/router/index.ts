@@ -75,6 +75,11 @@ const router = createRouter({
       path: '/portal-architecture',
       name: 'PortalArchitecture',
       component: () => import('../pages/portal-architecture/PortalArchitecturePage.vue')
+    },
+    {
+      path: '/portal-civil-engineering',
+      name: 'PortalCivilEngineering',
+      component: () => import('../pages/portal-civil-engineering/PortalCivilEngineeringPage.vue')
     }
     // ccs-cli:route
   ]
