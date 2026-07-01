@@ -65,6 +65,11 @@ const router = createRouter({
       path: '/help-guide',
       name: 'HelpGuide',
       component: () => import('../pages/help-guide/HelpGuidePage.vue')
+    },
+    {
+      path: '/portal-investment',
+      name: 'PortalInvestment',
+      component: () => import('../pages/portal-investment/PortalInvestmentPage.vue')
     }
     // ccs-cli:route
   ]
