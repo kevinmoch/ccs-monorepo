@@ -12,6 +12,7 @@ import PortalInteriorFitOutCard from './PortalInteriorFitOutCard.vue';
 import PortalSoftFurnishingCard from './PortalSoftFurnishingCard.vue';
 import PortalLandscapeCard from './PortalLandscapeCard.vue';
 import PortalProcessMechanicalCard from './PortalProcessMechanicalCard.vue';
+import PortalMenuCard from './PortalMenuCard.vue';
 // ccs-cli:card-import
 export const cardRegistry = createCardRegistry({
   iframe: IframeCard,
@@ -26,6 +27,11 @@ export const cardRegistry = createCardRegistry({
   'portal-interior-fit-out': PortalInteriorFitOutCard,
   'portal-soft-furnishing': PortalSoftFurnishingCard,
   'portal-landscape': PortalLandscapeCard,
-  'portal-process-mechanical': PortalProcessMechanicalCard
+  'portal-process-mechanical': PortalProcessMechanicalCard,
+  'portal-engineering': PortalMenuCard,
+  'portal-procurement': PortalMenuCard,
+  'portal-acceptance': PortalMenuCard,
+  'portal-ehs': PortalMenuCard,
+  'portal-cost': PortalMenuCard
   // ccs-cli:card-register
 });

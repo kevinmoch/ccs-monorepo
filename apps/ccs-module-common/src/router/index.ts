@@ -120,6 +120,31 @@ const router = createRouter({
       path: '/portal-process-mechanical',
       name: 'PortalProcessMechanical',
       component: () => import('../pages/portal-process-mechanical/PortalProcessMechanicalPage.vue')
+    },
+    {
+      path: '/portal-engineering',
+      name: 'PortalEngineering',
+      component: () => import('../pages/portal-engineering/PortalEngineeringPage.vue')
+    },
+    {
+      path: '/portal-procurement',
+      name: 'PortalProcurement',
+      component: () => import('../pages/portal-procurement/PortalProcurementPage.vue')
+    },
+    {
+      path: '/portal-acceptance',
+      name: 'PortalAcceptance',
+      component: () => import('../pages/portal-acceptance/PortalAcceptancePage.vue')
+    },
+    {
+      path: '/portal-ehs',
+      name: 'PortalEhs',
+      component: () => import('../pages/portal-ehs/PortalEhsPage.vue')
+    },
+    {
+      path: '/portal-cost',
+      name: 'PortalCost',
+      component: () => import('../pages/portal-cost/PortalCostPage.vue')
     }
     // ccs-cli:route
   ]
