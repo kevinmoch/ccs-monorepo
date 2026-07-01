@@ -80,6 +80,46 @@ const router = createRouter({
       path: '/portal-civil-engineering',
       name: 'PortalCivilEngineering',
       component: () => import('../pages/portal-civil-engineering/PortalCivilEngineeringPage.vue')
+    },
+    {
+      path: '/portal-curtain-wall',
+      name: 'PortalCurtainWall',
+      component: () => import('../pages/portal-curtain-wall/PortalCurtainWallPage.vue')
+    },
+    {
+      path: '/portal-hvac',
+      name: 'PortalHvac',
+      component: () => import('../pages/portal-hvac/PortalHvacPage.vue')
+    },
+    {
+      path: '/portal-power-electrical',
+      name: 'PortalPowerElectrical',
+      component: () => import('../pages/portal-power-electrical/PortalPowerElectricalPage.vue')
+    },
+    {
+      path: '/portal-weak-current',
+      name: 'PortalWeakCurrent',
+      component: () => import('../pages/portal-weak-current/PortalWeakCurrentPage.vue')
+    },
+    {
+      path: '/portal-interior-fit-out',
+      name: 'PortalInteriorFitOut',
+      component: () => import('../pages/portal-interior-fit-out/PortalInteriorFitOutPage.vue')
+    },
+    {
+      path: '/portal-soft-furnishing',
+      name: 'PortalSoftFurnishing',
+      component: () => import('../pages/portal-soft-furnishing/PortalSoftFurnishingPage.vue')
+    },
+    {
+      path: '/portal-landscape',
+      name: 'PortalLandscape',
+      component: () => import('../pages/portal-landscape/PortalLandscapePage.vue')
+    },
+    {
+      path: '/portal-process-mechanical',
+      name: 'PortalProcessMechanical',
+      component: () => import('../pages/portal-process-mechanical/PortalProcessMechanicalPage.vue')
     }
     // ccs-cli:route
   ]
