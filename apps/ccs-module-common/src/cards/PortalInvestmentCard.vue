@@ -45,10 +45,10 @@
             v-for="category in activeCategories"
             :key="category.id"
             class="portal-category-card ccs-card-surface"
-            :class="{ 'portal-category-card--wide': (category.children ?? []).length >= 7 }"
+            :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
           >
             <header class="portal-category-card__header">{{ pickTitle(category, language) }}</header>
-            <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length >= 7 }">
+            <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length >= MENU_ITEM_WRAP_COUNT }">
               <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="portal-category-link" @click.prevent="handleNavigate(leaf)">
                 {{ pickTitle(leaf, language) }}
               </a>
@@ -63,9 +63,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { CardShell } from '@ccs/card';
-import { requestShellMenuNavigate } from '@ccs/shared';
 import { useRuntimeStore } from '../stores/runtime';
-import { findMenuNode, pickTitle, splitBySeperateLine, type ShellMenuNode } from '../lib/shell-menu';
+import { findMenuNode, pickTitle, splitBySeperateLine, handleNavigate, type ShellMenuNode, MENU_ITEM_WRAP_COUNT } from '../lib/shell-menu';
 
 /**
  * menuData：由 pages/portal-investment/PortalInvestmentPage.vue 在挂载时通过
@@ -89,111 +88,10 @@ const toolGroups = computed(() => split.value.rightItems);
 const activeGroupId = ref<string | null>(null);
 const effectiveActiveGroupId = computed(() => activeGroupId.value ?? investmentGroups.value[0]?.id ?? null);
 const activeCategories = computed(() => investmentGroups.value.find((group) => group.id === effectiveActiveGroupId.value)?.children ?? []);
-
-/**
- * 点击菜单链接：请求宿主框架(ccs-framework)进行菜单级导航。
- * 效果等同于用户点击了左侧/右侧侧边栏中对应的菜单链接。
- */
-function handleNavigate(leaf: ShellMenuNode) {
-  if (!leaf.url) return;
-  requestShellMenuNavigate({ id: leaf.id, url: leaf.url });
-}
 </script>
 
+<style src="../lib/shell-menu.css" scoped></style>
 <style scoped>
-.card-shell.portal-shell {
-  padding: 0;
-  border-width: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.portal-root {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* ---------------- 顶部工具分组 ---------------- */
-.portal-tools-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.portal-tool-card {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.portal-tool-card__header {
-  padding: 14px 20px;
-  font-size: 16px;
-  font-weight: 700;
-  text-align: center;
-  color: #0f172a;
-  background-color: #f0f7ff;
-  border-bottom: 1px solid var(--ccs-card-border-color, rgba(15, 23, 42, 0.1));
-}
-
-.portal-tool-card__body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 16px;
-  padding: 12px 20px 16px;
-}
-
-.portal-tool-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 4px;
-  border-radius: 8px;
-  color: color-mix(in srgb, var(--ccs-text, #0f172a) 78%, transparent);
-  text-decoration: none;
-  font-size: 14px;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.portal-tool-link:hover {
-  color: var(--ccs-primary, #2563eb);
-  background-color: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-}
-
-.portal-tool-link__icon {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  color: var(--ccs-primary, #2563eb);
-}
-
-.portal-tool-link__icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.portal-tool-link__text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ---------------- 投资立项管理主区域 ---------------- */
-.portal-title {
-  margin: 0;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--ccs-text, #0f172a);
-}
-
 .portal-tabs {
   display: flex;
   justify-content: center;
@@ -224,105 +122,5 @@ function handleNavigate(leaf: ShellMenuNode) {
 .portal-tab--active {
   color: var(--ccs-primary, #2563eb);
   border-bottom-color: var(--ccs-primary, #2563eb);
-}
-
-.portal-empty {
-  margin: 24px 0 0;
-  text-align: center;
-  font-size: 14px;
-  color: color-mix(in srgb, var(--ccs-text, #0f172a) 45%, transparent);
-}
-
-.portal-category-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 20px;
-  margin-top: 24px;
-  align-items: start;
-}
-
-.portal-category-card {
-  grid-column: span 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.portal-category-card--wide {
-  grid-column: span 2;
-}
-
-.portal-category-card__header {
-  padding: 12px 16px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  background-color: #006fd6;
-  background-image: none;
-}
-
-.portal-category-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 16px 16px;
-}
-
-.portal-category-card__body--cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px 20px;
-}
-
-.portal-category-link {
-  display: block;
-  padding: 8px 6px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: color-mix(in srgb, var(--ccs-text, #0f172a) 78%, transparent);
-  text-decoration: none;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.portal-category-link:hover {
-  color: var(--ccs-primary, #2563eb);
-  background-color: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-}
-
-/* ---------------- 移动端自适应 ---------------- */
-@media (max-width: 767px) {
-  .portal-tools-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .portal-tool-card__body {
-    grid-template-columns: 1fr;
-  }
-
-  .portal-category-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .portal-category-card,
-  .portal-category-card--wide {
-    grid-column: span 1;
-  }
-
-  .portal-category-card__body--cols {
-    grid-template-columns: 1fr;
-  }
-
-  .portal-tabs {
-    gap: 24px;
-  }
 }
 </style>

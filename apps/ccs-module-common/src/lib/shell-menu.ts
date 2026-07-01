@@ -1,3 +1,4 @@
+import { requestShellMenuNavigate } from '@ccs/shared';
 import type { Language } from '@ccs/shared';
 
 /**
@@ -35,4 +36,15 @@ export function findMenuNode(nodes: ShellMenuNode[] = [], id: string): ShellMenu
     }
   }
   return undefined;
+}
+
+export const MENU_ITEM_WRAP_COUNT = 7; // 超过多少个子节点时，PortalArchitectureCard 的卡片布局会变为多列显示
+
+/**
+ * 点击菜单链接：请求宿主框架(ccs-framework)进行菜单级导航。
+ * 效果等同于用户点击了左侧/右侧侧边栏中对应的菜单链接。
+ */
+export function handleNavigate(leaf: ShellMenuNode) {
+  if (!leaf.url) return;
+  requestShellMenuNavigate({ id: leaf.id, url: leaf.url });
 }
