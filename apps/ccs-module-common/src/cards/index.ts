@@ -6,7 +6,6 @@ import PortalMenuCard from './PortalMenuCard.vue';
 // ccs-cli:card-import
 export const cardRegistry = createCardRegistry({
   iframe: IframeCard,
-  test: TestCard,
   'portal-investment': PortalInvestmentCard,
   'portal-architecture': PortalMenuCard,
   'portal-civil-engineering': PortalMenuCard,

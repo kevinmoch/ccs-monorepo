@@ -17,11 +17,6 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'Home', component: HomePage },
     {
-      path: '/overview',
-      name: 'Overview',
-      component: () => import('../pages/overview/OverviewPage.vue')
-    },
-    {
       path: '/my-workspace',
       name: 'MyWorkspace',
       component: () => import('../pages/my-workspace/MyWorkspacePage.vue')
