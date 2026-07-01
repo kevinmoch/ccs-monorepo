@@ -1,36 +1,36 @@
 <template>
-  <CardShell class="ip-shell">
-    <div class="ip-root">
+  <CardShell class="portal-shell">
+    <div class="portal-root">
       <!-- 顶部工具分组：工具库 / 运营看板 / 批复文档管理 -->
-      <div class="ip-tools-row">
-        <section v-for="group in toolGroups" :key="group.id" class="ip-tool-card ccs-card-surface">
-          <header class="ip-tool-card__header">{{ pickTitle(group, language) }}</header>
-          <div class="ip-tool-card__body">
-            <a v-for="leaf in group.children ?? []" :key="leaf.id" href="#" class="ip-tool-link" @click.prevent="handleNavigate(leaf)">
-              <span class="ip-tool-link__icon" aria-hidden="true">
+      <div class="portal-tools-row">
+        <section v-for="group in toolGroups" :key="group.id" class="portal-tool-card ccs-card-surface">
+          <header class="portal-tool-card__header">{{ pickTitle(group, language) }}</header>
+          <div class="portal-tool-card__body">
+            <a v-for="leaf in group.children ?? []" :key="leaf.id" href="#" class="portal-tool-link" @click.prevent="handleNavigate(leaf)">
+              <span class="portal-tool-link__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <path d="M14 2v6h6" />
                 </svg>
               </span>
-              <span class="ip-tool-link__text">{{ pickTitle(leaf, language) }}</span>
+              <span class="portal-tool-link__text">{{ pickTitle(leaf, language) }}</span>
             </a>
           </div>
         </section>
       </div>
 
       <!-- 投资立项管理主区域 -->
-      <div class="ip-main">
-        <h2 class="ip-title">投资立项管理</h2>
+      <div class="portal-main">
+        <h2 class="portal-title">{{ investmentRoot ? pickTitle(investmentRoot, language) : '' }}</h2>
 
-        <div class="ip-tabs" role="tablist">
+        <div class="portal-tabs" role="tablist">
           <button
             v-for="group in investmentGroups"
             :key="group.id"
             type="button"
             role="tab"
-            class="ip-tab"
-            :class="{ 'ip-tab--active': group.id === effectiveActiveGroupId }"
+            class="portal-tab"
+            :class="{ 'portal-tab--active': group.id === effectiveActiveGroupId }"
             :aria-selected="group.id === effectiveActiveGroupId"
             @click="activeGroupId = group.id"
           >
@@ -38,13 +38,18 @@
           </button>
         </div>
 
-        <p v-if="!loading && investmentGroups.length === 0" class="ip-empty">暂无菜单数据，请确认卡片已在宿主框架内嵌运行</p>
+        <p v-if="!loading && investmentGroups.length === 0" class="portal-empty">N/A</p>
 
-        <div class="ip-category-grid">
-          <section v-for="category in activeCategories" :key="category.id" class="ip-category-card ccs-card-surface" :class="{ 'ip-category-card--wide': (category.children ?? []).length >= 7 }">
-            <header class="ip-category-card__header">{{ pickTitle(category, language) }}</header>
-            <div class="ip-category-card__body" :class="{ 'ip-category-card__body--cols': (category.children ?? []).length >= 7 }">
-              <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="ip-category-link" @click.prevent="handleNavigate(leaf)">
+        <div class="portal-category-grid">
+          <section
+            v-for="category in activeCategories"
+            :key="category.id"
+            class="portal-category-card ccs-card-surface"
+            :class="{ 'portal-category-card--wide': (category.children ?? []).length >= 7 }"
+          >
+            <header class="portal-category-card__header">{{ pickTitle(category, language) }}</header>
+            <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length >= 7 }">
+              <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="portal-category-link" @click.prevent="handleNavigate(leaf)">
                 {{ pickTitle(leaf, language) }}
               </a>
             </div>
@@ -96,49 +101,50 @@ function handleNavigate(leaf: ShellMenuNode) {
 </script>
 
 <style scoped>
-.card-shell.ip-shell {
+.card-shell.portal-shell {
   padding: 0;
   border-width: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.ip-root {
+.portal-root {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
 /* ---------------- 顶部工具分组 ---------------- */
-.ip-tools-row {
+.portal-tools-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.ip-tool-card {
+.portal-tool-card {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.ip-tool-card__header {
+.portal-tool-card__header {
   padding: 14px 20px;
   font-size: 16px;
   font-weight: 700;
   text-align: center;
-  color: var(--ccs-text, #0f172a);
+  color: #0f172a;
+  background-color: #f0f7ff;
   border-bottom: 1px solid var(--ccs-card-border-color, rgba(15, 23, 42, 0.1));
 }
 
-.ip-tool-card__body {
+.portal-tool-card__body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px 16px;
   padding: 12px 20px 16px;
 }
 
-.ip-tool-link {
+.portal-tool-link {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -153,12 +159,12 @@ function handleNavigate(leaf: ShellMenuNode) {
     background-color 0.15s ease;
 }
 
-.ip-tool-link:hover {
+.portal-tool-link:hover {
   color: var(--ccs-primary, #2563eb);
   background-color: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
 }
 
-.ip-tool-link__icon {
+.portal-tool-link__icon {
   display: inline-flex;
   width: 16px;
   height: 16px;
@@ -166,12 +172,12 @@ function handleNavigate(leaf: ShellMenuNode) {
   color: var(--ccs-primary, #2563eb);
 }
 
-.ip-tool-link__icon svg {
+.portal-tool-link__icon svg {
   width: 100%;
   height: 100%;
 }
 
-.ip-tool-link__text {
+.portal-tool-link__text {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -180,7 +186,7 @@ function handleNavigate(leaf: ShellMenuNode) {
 }
 
 /* ---------------- 投资立项管理主区域 ---------------- */
-.ip-title {
+.portal-title {
   margin: 0;
   text-align: center;
   font-size: 22px;
@@ -188,7 +194,7 @@ function handleNavigate(leaf: ShellMenuNode) {
   color: var(--ccs-text, #0f172a);
 }
 
-.ip-tabs {
+.portal-tabs {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -196,7 +202,7 @@ function handleNavigate(leaf: ShellMenuNode) {
   margin-top: 16px;
 }
 
-.ip-tab {
+.portal-tab {
   appearance: none;
   border: none;
   background: none;
@@ -211,23 +217,23 @@ function handleNavigate(leaf: ShellMenuNode) {
     border-color 0.15s ease;
 }
 
-.ip-tab:hover {
+.portal-tab:hover {
   color: var(--ccs-primary, #2563eb);
 }
 
-.ip-tab--active {
+.portal-tab--active {
   color: var(--ccs-primary, #2563eb);
   border-bottom-color: var(--ccs-primary, #2563eb);
 }
 
-.ip-empty {
+.portal-empty {
   margin: 24px 0 0;
   text-align: center;
   font-size: 14px;
   color: color-mix(in srgb, var(--ccs-text, #0f172a) 45%, transparent);
 }
 
-.ip-category-grid {
+.portal-category-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 20px;
@@ -235,40 +241,41 @@ function handleNavigate(leaf: ShellMenuNode) {
   align-items: start;
 }
 
-.ip-category-card {
+.portal-category-card {
   grid-column: span 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.ip-category-card--wide {
+.portal-category-card--wide {
   grid-column: span 2;
 }
 
-.ip-category-card__header {
+.portal-category-card__header {
   padding: 12px 16px;
   text-align: center;
   font-size: 15px;
   font-weight: 700;
   color: #fff;
-  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 6px, transparent 6px 12px), linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+  background-color: #006fd6;
+  background-image: none;
 }
 
-.ip-category-card__body {
+.portal-category-card__body {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 12px 16px 16px;
 }
 
-.ip-category-card__body--cols {
+.portal-category-card__body--cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px 20px;
 }
 
-.ip-category-link {
+.portal-category-link {
   display: block;
   padding: 8px 6px;
   border-radius: 8px;
@@ -284,37 +291,37 @@ function handleNavigate(leaf: ShellMenuNode) {
     background-color 0.15s ease;
 }
 
-.ip-category-link:hover {
+.portal-category-link:hover {
   color: var(--ccs-primary, #2563eb);
   background-color: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
 }
 
 /* ---------------- 移动端自适应 ---------------- */
 @media (max-width: 767px) {
-  .ip-tools-row {
+  .portal-tools-row {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
-  .ip-tool-card__body {
+  .portal-tool-card__body {
     grid-template-columns: 1fr;
   }
 
-  .ip-category-grid {
+  .portal-category-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
-  .ip-category-card,
-  .ip-category-card--wide {
+  .portal-category-card,
+  .portal-category-card--wide {
     grid-column: span 1;
   }
 
-  .ip-category-card__body--cols {
+  .portal-category-card__body--cols {
     grid-template-columns: 1fr;
   }
 
-  .ip-tabs {
+  .portal-tabs {
     gap: 24px;
   }
 }
