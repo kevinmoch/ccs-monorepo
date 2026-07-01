@@ -11,6 +11,36 @@ import './styles.css';
 const initialIframeRoute = getIframeRoute();
 
 async function render() {
+	// 提前注册消息监听，确保在异步初始化完成前不会错过宿主的 SYNC_STATE 消息
+	// 用于缓存初始阶段收到的语言/主题设定，待 store 就绪后再应用
+	let pendingLanguage: Language | undefined;
+	let pendingTheme: ThemeMode | undefined;
+
+	bindIframeMessageHandlers({
+		onTheme(theme) {
+			pendingTheme = theme;
+			applyTheme(theme);
+			try {
+				const runtime = useRuntimeStore();
+				if (runtime) runtime.setTheme(theme);
+			} catch { /* store 尚未初始化 */ }
+		},
+		onLanguage(language) {
+			pendingLanguage = language;
+			try {
+				(i18n.global.locale as any).value = language;
+				initI18n(language);
+			} catch { /* i18n 尚未初始化 */ }
+			try {
+				const runtime = useRuntimeStore();
+				if (runtime) runtime.setLanguage(language);
+			} catch { /* store 尚未初始化 */ }
+		},
+		onNavigate(routePath) {
+			navigateToRoute(routePath);
+		}
+	});
+
 	// 确保 i18next 始终初始化（不受 query 参数影响）
 	await initI18n();
 	const props = readIframeProps();
@@ -28,27 +58,20 @@ async function render() {
 	app.mount('#app');
 
 	const runtime = useRuntimeStore();
-	if (props.theme) runtime.setTheme(props.theme as ThemeMode);
-	if (props.language) {
+	// 优先使用提前收到的 pending 状态，其次使用 URL 参数
+	const effectiveTheme = pendingTheme ?? props.theme;
+	const effectiveLanguage = pendingLanguage ?? (props.language as Language | undefined);
+
+	if (effectiveTheme) runtime.setTheme(effectiveTheme as ThemeMode);
+	if (effectiveLanguage) {
+		runtime.setLanguage(effectiveLanguage);
+		(i18n.global.locale as any).value = effectiveLanguage;
+		await initI18n(effectiveLanguage);
+	} else if (props.language) {
 		runtime.setLanguage(props.language as Language);
 		(i18n.global.locale as any).value = props.language;
 		await initI18n(props.language);
 	}
-
-	bindIframeMessageHandlers({
-		onTheme(theme) {
-			runtime.setTheme(theme);
-			applyTheme(theme);
-		},
-		onLanguage(language) {
-			runtime.setLanguage(language);
-			(i18n.global.locale as any).value = language;
-			initI18n(language);
-		},
-		onNavigate(routePath) {
-			navigateToRoute(routePath);
-		}
-	});
 
 	navigateToRoute(props.routePath);
 }
