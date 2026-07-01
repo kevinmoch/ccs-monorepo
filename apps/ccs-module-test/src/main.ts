@@ -14,6 +14,12 @@ async function render() {
   // 确保 i18next 始终初始化（不受 query 参数影响）
   await initI18n();
   const props = readIframeProps();
+  // Fallback: read theme from localStorage or system preference when not provided via URL param
+  if (!props.theme) {
+    const fallback = getFallbackTheme();
+    props.theme = fallback;
+    applyTheme(fallback);
+  }
   await applyRuntimeProps(props);
   const app = createApp(App);
   app.use(createPinia());
@@ -82,4 +88,15 @@ function navigateToRoute(routePath?: string) {
       router.replace('/');
     }
   }
+}
+
+function getFallbackTheme(): ThemeMode {
+  try {
+    const stored = localStorage.getItem('ccs-theme');
+    if (stored === 'dark') return 'dark';
+    if (stored === 'light') return 'light';
+  } catch {
+    /* ignore */
+  }
+  return 'light';
 }
