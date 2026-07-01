@@ -3,7 +3,8 @@ export default {
   cards: [
     {
       id: 'portal-curtain-wall',
-      colSpan: { base: 12, md: 12 }
+      colSpan: { base: 12, md: 12 },
+      props: { rootId: 'L2-8' }
     }
   ] satisfies CardDefinition[]
 };

@@ -3,7 +3,8 @@ export default {
   cards: [
     {
       id: 'portal-soft-furnishing',
-      colSpan: { base: 12, md: 12 }
+      colSpan: { base: 12, md: 12 },
+      props: { rootId: 'L2-13' }
     }
   ] satisfies CardDefinition[]
 };
