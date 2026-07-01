@@ -1,8 +1,8 @@
 import { createCardRegistry } from '@ccs/card';
 import IframeCard from './IframeCard.vue';
-import TestCard from './TestCard.vue';
 import PortalInvestmentCard from './PortalInvestmentCard.vue';
 import PortalMenuCard from './PortalMenuCard.vue';
+import PortalProcurementCard from './PortalProcurementCard.vue';
 // ccs-cli:card-import
 export const cardRegistry = createCardRegistry({
   iframe: IframeCard,
@@ -18,7 +18,7 @@ export const cardRegistry = createCardRegistry({
   'portal-landscape': PortalMenuCard,
   'portal-process-mechanical': PortalMenuCard,
   'portal-engineering': PortalMenuCard,
-  'portal-procurement': PortalMenuCard,
+  'portal-procurement': PortalProcurementCard,
   'portal-acceptance': PortalMenuCard,
   'portal-ehs': PortalMenuCard,
   'portal-cost': PortalMenuCard

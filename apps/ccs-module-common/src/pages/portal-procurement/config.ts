@@ -3,8 +3,7 @@ export default {
   cards: [
     {
       id: 'portal-procurement',
-      colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L1-4' }
+      colSpan: { base: 12, md: 12 }
     }
   ] satisfies CardDefinition[]
 };

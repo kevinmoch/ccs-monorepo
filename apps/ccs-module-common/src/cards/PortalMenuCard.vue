@@ -1,7 +1,7 @@
 <template>
   <CardShell class="portal-shell">
     <div class="portal-root">
-      <!-- 顶部工具分组（seperateLine 右侧项，与十个专业卡片一致） -->
+      <!-- 顶部工具分组（seperateLine 右侧项） -->
       <div class="portal-tools-row" v-if="toolGroups.length > 0">
         <section v-for="group in toolGroups" :key="group.id" class="portal-tool-card ccs-card-surface">
           <header class="portal-tool-card__header" :title="pickTitle(group, language)">{{ pickTitle(group, language) }}</header>
@@ -19,7 +19,7 @@
         </section>
       </div>
 
-      <!-- 主区域：L2 分组作为 category 卡片（参考建筑专业等十个专业的设计） -->
+      <!-- 主区域：L2 分组作为 category 卡片 -->
       <div class="portal-main">
         <h2 class="portal-title" :title="rootNode ? pickTitle(rootNode, language) : ''">{{ rootNode ? pickTitle(rootNode, language) : '' }}</h2>
 
