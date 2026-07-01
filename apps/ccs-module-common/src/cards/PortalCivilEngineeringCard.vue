@@ -4,7 +4,7 @@
       <!-- 顶部工具分组：标准文件 / 资料库 / 汇报决策 / 辅助设计 -->
       <div class="portal-tools-row">
         <section v-for="group in toolGroups" :key="group.id" class="portal-tool-card ccs-card-surface">
-          <header class="portal-tool-card__header">{{ pickTitle(group, language) }}</header>
+          <header class="portal-tool-card__header" :title="pickTitle(group, language)">{{ pickTitle(group, language) }}</header>
           <div class="portal-tool-card__body">
             <a v-for="leaf in group.children ?? []" :key="leaf.id" href="#" class="portal-tool-link" @click.prevent="handleNavigate(leaf)">
               <span class="portal-tool-link__icon" aria-hidden="true">
@@ -13,7 +13,7 @@
                   <path d="M14 2v6h6" />
                 </svg>
               </span>
-              <span class="portal-tool-link__text">{{ pickTitle(leaf, language) }}</span>
+              <span class="portal-tool-link__text" :title="pickTitle(leaf, language)">{{ pickTitle(leaf, language) }}</span>
             </a>
           </div>
         </section>
@@ -21,7 +21,7 @@
 
       <!-- 土建专业主区域 -->
       <div class="portal-main">
-        <h2 class="portal-title">{{ civilEngineeringRoot ? pickTitle(civilEngineeringRoot, language) : '' }}</h2>
+        <h2 class="portal-title" :title="civilEngineeringRoot ? pickTitle(civilEngineeringRoot, language) : ''">{{ civilEngineeringRoot ? pickTitle(civilEngineeringRoot, language) : '' }}</h2>
 
         <p v-if="!loading && categories.length === 0" class="portal-empty">N/A</p>
 
@@ -32,9 +32,9 @@
             class="portal-category-card ccs-card-surface"
             :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
           >
-            <header class="portal-category-card__header">{{ pickTitle(category, language) }}</header>
+            <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
             <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }">
-              <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="portal-category-link" @click.prevent="handleNavigate(leaf)">
+              <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="portal-category-link" :title="pickTitle(leaf, language)" @click.prevent="handleNavigate(leaf)">
                 {{ pickTitle(leaf, language) }}
               </a>
             </div>
