@@ -27,7 +27,7 @@
 
 .portal-tool-card__header {
   padding: 14px 20px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   text-align: center;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
@@ -124,7 +124,7 @@
 .portal-category-card__header {
   padding: 12px 16px;
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #fff;
   background: var(--ccs-primary, #006fd6);

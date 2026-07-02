@@ -105,7 +105,7 @@ const activeCategories = computed(() => investmentGroups.value.find((group) => g
   border: none;
   background: none;
   padding: 4px 2px 10px;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent);
   cursor: pointer;
