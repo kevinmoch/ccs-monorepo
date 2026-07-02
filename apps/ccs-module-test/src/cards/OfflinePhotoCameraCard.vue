@@ -167,7 +167,7 @@ function stopCamera() {
   padding: 0 20px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0f766e, var(--ccs-primary, #2563eb));
+  background: linear-gradient(135deg, #0f766e, var(--ccs-primary, #006fd6));
   color: #fff;
   font-size: 15px;
   font-weight: 900;

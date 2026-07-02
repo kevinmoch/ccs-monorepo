@@ -177,10 +177,10 @@ onUnmounted(() => {
 .od-list-card__update-btn {
   height: 34px;
   padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+  color: var(--ccs-primary, #006fd6);
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
@@ -220,8 +220,8 @@ onUnmounted(() => {
 }
 
 .od-list-card__row.active {
-  border-color: color-mix(in srgb, var(--ccs-primary, #2563eb) 40%, transparent);
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 4%, transparent);
+  border-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 40%, transparent);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 4%, transparent);
 }
 
 .od-list-card__row.status-update-available {
@@ -266,8 +266,8 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 12px;
   font-weight: 900;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 12%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 12%, transparent);
+  color: var(--ccs-primary, #006fd6);
 }
 
 .od-list-card__status-badge {
@@ -296,8 +296,8 @@ onUnmounted(() => {
 }
 
 .status-downloading .od-list-card__status-badge {
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 14%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 14%, transparent);
+  color: var(--ccs-primary, #006fd6);
 }
 
 .status-failed .od-list-card__status-badge {
@@ -342,7 +342,7 @@ onUnmounted(() => {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #0f766e, var(--ccs-primary, #2563eb));
+  background: linear-gradient(90deg, #0f766e, var(--ccs-primary, #006fd6));
 }
 
 .od-list-card__progress small {
@@ -365,7 +365,7 @@ onUnmounted(() => {
   padding: 0 12px;
   border: 0;
   border-radius: 6px;
-  background: var(--ccs-primary, #2563eb);
+  background: var(--ccs-primary, #006fd6);
   color: #fff;
   font-size: 13px;
   font-weight: 800;

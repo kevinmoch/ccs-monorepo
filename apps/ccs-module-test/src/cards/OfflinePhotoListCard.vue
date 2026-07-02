@@ -256,7 +256,7 @@ onMounted(async () => {
 }
 
 .op-list-card__loc {
-  color: var(--ccs-primary, #2563eb);
+  color: var(--ccs-primary, #006fd6);
   font-weight: 600;
 }
 
@@ -290,7 +290,7 @@ onMounted(async () => {
   padding: 0 8px;
   border: 0;
   border-radius: 6px;
-  background: var(--ccs-primary, #2563eb);
+  background: var(--ccs-primary, #006fd6);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -349,8 +349,8 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 8px 10px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 10%, transparent);
+  color: var(--ccs-primary, #006fd6);
   font-weight: 700;
   font-size: 13px;
 }

@@ -91,7 +91,7 @@ const store = useOfflineDocsStore();
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #0f766e, var(--ccs-primary, #2563eb));
+  background: linear-gradient(90deg, #0f766e, var(--ccs-primary, #006fd6));
   transition: width 0.3s ease;
 }
 
@@ -149,7 +149,7 @@ const store = useOfflineDocsStore();
   font-weight: 800;
   font-family: inherit;
   color: #fff;
-  background: var(--ccs-primary, #2563eb);
+  background: var(--ccs-primary, #006fd6);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -160,9 +160,9 @@ const store = useOfflineDocsStore();
 }
 
 .od-cache-card__btn.secondary {
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+  color: var(--ccs-primary, #006fd6);
 }
 
 .od-cache-card__btn.danger {

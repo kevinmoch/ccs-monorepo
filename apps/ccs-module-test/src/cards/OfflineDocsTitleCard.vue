@@ -99,7 +99,7 @@ const store = useOfflineDocsStore();
 }
 
 .od-title-card__url-input:focus {
-  border-color: var(--ccs-primary, #2563eb);
+  border-color: var(--ccs-primary, #006fd6);
 }
 
 .od-title-card__metrics {

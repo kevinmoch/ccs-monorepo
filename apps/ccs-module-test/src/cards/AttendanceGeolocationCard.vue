@@ -165,7 +165,7 @@ function handlePrimaryAction() {
   gap: 8px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--ccs-primary, #2563eb), color-mix(in srgb, var(--ccs-primary, #2563eb) 60%, #0f766e));
+  background: linear-gradient(135deg, var(--ccs-primary, #006fd6), color-mix(in srgb, var(--ccs-primary, #006fd6) 60%, #0f766e));
   color: #fff;
   font-size: 15px;
   font-weight: 900;
@@ -225,8 +225,8 @@ function handlePrimaryAction() {
   padding: 5px 10px;
   border: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 10%, transparent);
+  color: var(--ccs-primary, #006fd6);
   font-size: 12px;
   font-weight: 800;
   font-family: inherit;
@@ -236,7 +236,7 @@ function handlePrimaryAction() {
 }
 
 .geo-card__map-link:hover {
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 18%, transparent);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 18%, transparent);
 }
 
 @media (max-width: 640px) {

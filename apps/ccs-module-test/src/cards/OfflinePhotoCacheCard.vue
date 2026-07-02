@@ -113,7 +113,7 @@ const store = useOfflinePhotoStore();
   font-weight: 800;
   font-family: inherit;
   color: #fff;
-  background: var(--ccs-primary, #2563eb);
+  background: var(--ccs-primary, #006fd6);
   cursor: pointer;
 }
 
@@ -122,9 +122,9 @@ const store = useOfflinePhotoStore();
   opacity: 0.5;
 }
 .op-cache-card__btn.secondary {
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+  color: var(--ccs-primary, #006fd6);
 }
 .op-cache-card__btn.danger {
   background: #dc2626;

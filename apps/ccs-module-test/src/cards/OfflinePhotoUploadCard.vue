@@ -97,7 +97,7 @@ const uploadButtonText = computed(() => {
 
 .op-upload-card__field input:focus,
 .op-upload-card__field select:focus {
-  border-color: var(--ccs-primary, #2563eb);
+  border-color: var(--ccs-primary, #006fd6);
 }
 
 .op-upload-card__btn {
@@ -105,7 +105,7 @@ const uploadButtonText = computed(() => {
   padding: 0 14px;
   border: 0;
   border-radius: 8px;
-  background: var(--ccs-primary, #2563eb);
+  background: var(--ccs-primary, #006fd6);
   color: #fff;
   font-size: 13px;
   font-weight: 800;

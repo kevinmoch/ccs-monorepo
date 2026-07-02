@@ -111,7 +111,7 @@ const submitterInitials = computed(() => {
 }
 
 .drawing-card:hover .drawing-card__title {
-  color: #2563eb;
+  color: #006fd6;
 }
 
 .drawing-card__discipline {
@@ -154,7 +154,7 @@ const submitterInitials = computed(() => {
   justify-content: center;
   font-size: 8px;
   font-weight: 900;
-  color: #2563eb;
+  color: #006fd6;
   border: 1px solid #bfdbfe;
   flex-shrink: 0;
 }

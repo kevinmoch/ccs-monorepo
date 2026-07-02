@@ -64,10 +64,10 @@ defineProps<{
 
 /* Color variants */
 .stat-card--blue .stat-card__value {
-  color: #2563eb;
+  color: #006fd6;
 }
 .stat-card--blue .stat-card__bar {
-  background: #2563eb;
+  background: #006fd6;
 }
 
 .stat-card--red .stat-card__value {

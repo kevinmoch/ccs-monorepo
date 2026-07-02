@@ -76,10 +76,10 @@ const runtimeLabel = computed(() => {
 .op-title-card__pill {
   flex: 0 0 auto;
   padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 30%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 10%, transparent);
+  color: var(--ccs-primary, #006fd6);
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
@@ -104,10 +104,10 @@ const runtimeLabel = computed(() => {
   align-items: center;
   justify-content: center;
   padding: 6px 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #2563eb) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ccs-primary, #2563eb) 8%, transparent);
-  color: var(--ccs-primary, #2563eb);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+  color: var(--ccs-primary, #006fd6);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
