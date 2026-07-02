@@ -127,12 +127,10 @@ const timelineItems = computed(() => [
   margin-top: 5px;
   border-radius: 999px;
   background: var(--ccs-text-muted, #cbd5e1);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ccs-text, #0f172a) 6%, transparent);
 }
 
 .shift-card__tli.done .shift-card__tli-dot {
   background: #14b8a6;
-  box-shadow: 0 0 0 4px color-mix(in srgb, #14b8a6 16%, transparent);
 }
 
 .shift-card__tli div:last-child {

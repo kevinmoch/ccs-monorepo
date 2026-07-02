@@ -98,7 +98,6 @@ const uploadButtonText = computed(() => {
 .op-upload-card__field input:focus,
 .op-upload-card__field select:focus {
   border-color: var(--ccs-primary, #2563eb);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ccs-primary, #2563eb) 15%, transparent);
 }
 
 .op-upload-card__btn {

@@ -170,16 +170,13 @@ function handlePrimaryAction() {
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--ccs-primary, #2563eb) 32%, transparent);
   transition:
     transform 160ms ease,
-    box-shadow 160ms ease,
     opacity 160ms ease;
 }
 
 .geo-card__btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--ccs-primary, #2563eb) 38%, transparent);
 }
 
 .geo-card__btn:disabled {

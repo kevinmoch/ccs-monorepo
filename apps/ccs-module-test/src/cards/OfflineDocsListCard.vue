@@ -395,7 +395,6 @@ onUnmounted(() => {
   color: var(--ccs-card-background, #f1f5f9);
   font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   position: fixed;
   inset: auto;
   top: 16px;

@@ -100,7 +100,6 @@ const store = useOfflineDocsStore();
 
 .od-title-card__url-input:focus {
   border-color: var(--ccs-primary, #2563eb);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ccs-primary, #2563eb) 15%, transparent);
 }
 
 .od-title-card__metrics {

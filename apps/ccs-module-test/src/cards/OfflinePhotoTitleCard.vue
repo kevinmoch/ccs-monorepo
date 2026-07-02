@@ -111,7 +111,6 @@ const runtimeLabel = computed(() => {
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ccs-primary, #2563eb) 10%, transparent);
 }
 
 .op-title-card__metrics div:not(.op-title-card__pill) {

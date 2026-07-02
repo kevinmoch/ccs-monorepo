@@ -313,7 +313,6 @@ onMounted(async () => {
   border-radius: 12px;
   background: var(--ccs-card-background, #fff);
   color: var(--ccs-text, #0f172a);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
 }
 .op-list-card__viewer::backdrop {
   background: rgba(2, 6, 23, 0.62);
@@ -370,7 +369,6 @@ onMounted(async () => {
   color: var(--ccs-card-background, #f1f5f9);
   font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   position: fixed;
   inset: auto;
   top: 16px;

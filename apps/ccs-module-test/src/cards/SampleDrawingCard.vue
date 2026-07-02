@@ -68,7 +68,6 @@ const submitterInitials = computed(() => {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   border-bottom-left-radius: 12px;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
 }
 
 .drawing-card__top {

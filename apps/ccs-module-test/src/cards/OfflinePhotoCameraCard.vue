@@ -173,7 +173,6 @@ function stopCamera() {
   font-weight: 900;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--ccs-primary, #2563eb) 32%, transparent);
   transition: transform 160ms ease;
   white-space: nowrap;
 }
@@ -205,7 +204,6 @@ function stopCamera() {
   border-radius: 12px;
   background: var(--ccs-text, #0f172a);
   color: var(--ccs-card-background, #f8fafc);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
 }
 .op-camera-card__dialog::backdrop {
   background: rgba(2, 6, 23, 0.62);
