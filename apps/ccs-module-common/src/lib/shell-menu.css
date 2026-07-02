@@ -30,9 +30,9 @@
   font-size: 16px;
   font-weight: 700;
   text-align: center;
-  color: #0f172a;
-  background-color: #f0f7ff;
-  border-bottom: 1px solid var(--ccs-card-border-color, rgba(15, 23, 42, 0.1));
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+  color: var(--ccs-text, #0f172a);
+  border: 1px solid color-mix(in srgb, var(--ccs-card-border-color, #006fd6) 22%, transparent);
 }
 
 .portal-tool-card__body {
@@ -127,8 +127,7 @@
   font-size: 16px;
   font-weight: 700;
   color: #fff;
-  background-color: #006fd6;
-  background-image: none;
+  background: var(--ccs-primary, #006fd6);
 }
 
 .portal-category-card__body {
