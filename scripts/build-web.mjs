@@ -56,27 +56,35 @@ for (const build of builds) {
     }
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
-
-  if (build.scripts['build:cards']) {
-    console.log(`\n[ccs] build ${build.name} cards -> ${join(build.outDir, 'cards')}`);
-    const cardsResult = spawnSync('pnpm', ['--filter', build.name, 'build:cards'], {
-      cwd: root,
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-      env: {
-        ...process.env,
-        ...rootEnv,
-        CCS_CARD_OUT_DIR: join(build.outDir, 'cards')
-      }
-    });
-    if (cardsResult.status !== 0) process.exit(cardsResult.status ?? 1);
-  }
 }
 
 import { injectManifest, copyWorkboxLibraries } from 'workbox-build';
 console.log(`\n[ccs] generating service worker for offline support...`);
 
 const workboxDirName = await copyWorkboxLibraries(distWebDir);
+
+// 清理 workbox 目录：仅保留 SW 实际使用的模块（core, precaching, routing, strategies, expiration, cacheable-response）
+// 移除所有 .map、.dev.* 及未使用的 .prod.js，从 68 个文件精简到 7 个
+{
+  const workboxDir = join(distWebDir, workboxDirName);
+  const keep = new Set([
+    'workbox-core.prod.js',
+    'workbox-precaching.prod.js',
+    'workbox-routing.prod.js',
+    'workbox-strategies.prod.js',
+    'workbox-expiration.prod.js',
+    'workbox-cacheable-response.prod.js',
+    'workbox-sw.js'
+  ]);
+  let removed = 0;
+  for (const f of readdirSync(workboxDir)) {
+    if (!keep.has(f)) {
+      rmSync(join(workboxDir, f));
+      removed++;
+    }
+  }
+  console.log(`[ccs] workbox pruned: ${keep.size} kept, ${removed} removed`);
+}
 
 await injectManifest({
   swSrc: join(root, 'apps', 'ccs-framework', 'src', 'sw.js'),

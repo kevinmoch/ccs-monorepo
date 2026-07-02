@@ -9,6 +9,7 @@
     "dev:ssl-all": "node scripts/dev.mjs --ssl-all",
     "build": "turbo run build",
     "build:web": "node scripts/build-web.mjs",
+    "build:card": "node scripts/build-card.mjs",
     "build:electron": "node scripts/build-electron.mjs",
     "build:android": "node scripts/build-android.mjs",
     "doc": "cd documents && npx http-server -p 8081 --gzip --cors",

@@ -27,6 +27,16 @@ export default defineConfig(({ command }) => {
       }
     },
     optimizeDeps: { include: ['vue', 'vue-router', 'pinia', 'vue-i18n'] },
-    build: { outDir: process.env.CCS_WEB_OUT_DIR ?? 'dist', sourcemap: true, emptyOutDir: !process.env.CCS_WEB_OUT_DIR }
+    build: {
+      outDir: process.env.CCS_WEB_OUT_DIR ?? 'dist',
+      emptyOutDir: !process.env.CCS_WEB_OUT_DIR,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) return 'vendor';
+          }
+        }
+      }
+    }
   };
 });
