@@ -1,0 +1,13 @@
+{
+  "name": "ccs-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.3",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "build:card": "node scripts/build-card.mjs"
+  },
+  "devDependencies": {
+    "workbox-build": "^7.4.1"
+  }
+}
