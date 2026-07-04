@@ -1,5 +1,5 @@
 @theme {
-  --color-ccs-card-background: color-mix(in srgb, var(--ccs-bg, #fff) 92%, white);
+  --color-ccs-card-background: color-mix(in srgb, var(--ccs-bg, #fff) 90%, white);
   --color-ccs-card-border: color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
   --radius-ccs-card: 16px;
   --shadow-ccs-card: 0 12px 32px rgb(15 23 42 / 8%);
