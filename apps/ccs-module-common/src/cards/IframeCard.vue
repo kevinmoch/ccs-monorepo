@@ -1,13 +1,20 @@
 <template>
-  <div class="iframe-fullscreen-wrapper">
-    <iframe :src="url" class="iframe-fullscreen" frameborder="0" />
+  <div class="iframe-fullscreen-wrapper" :class="{ 'iframe-fullscreen-wrapper--clip': hideTop > 0 }">
+    <iframe :src="url" class="iframe-fullscreen" frameborder="0" :style="hideTop > 0 ? { position: 'relative', top: `-${hideTop}px`, height: `calc(100% + ${hideTop}px)` } : {}" />
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  url: string;
-}>();
+withDefaults(
+  defineProps<{
+    url: string;
+    /** 隐藏 iframe 内容顶部的像素高度 */
+    hideTop?: number;
+  }>(),
+  {
+    hideTop: 0
+  }
+);
 </script>
 
 <style scoped>
@@ -17,6 +24,10 @@ defineProps<{
   width: calc(100% + 36px);
   min-height: calc(100dvh);
   height: calc(100% + 36px);
+}
+
+.iframe-fullscreen-wrapper--clip {
+  overflow: hidden;
 }
 
 .iframe-fullscreen {

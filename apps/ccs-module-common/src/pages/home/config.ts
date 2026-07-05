@@ -8,7 +8,8 @@ export default {
       rowSpan: 12,
       colSpan: { base: 12, md: 12 },
       props: {
-        url: getIframeUrl('ccs-module-common/project-initiation')
+        url: getIframeUrl('ccs-module-common/project-initiation'),
+        hideTop: 100
       }
     }
   ] satisfies CardDefinition[]
