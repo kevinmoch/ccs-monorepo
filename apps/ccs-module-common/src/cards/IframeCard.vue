@@ -15,7 +15,7 @@ defineProps<{
 .iframe-fullscreen-wrapper {
   margin: -18px;
   width: calc(100% + 36px);
-  min-height: calc(100dvh - 5rem); /* 4rem = module-shell 上下 padding */
+  min-height: calc(100dvh);
   height: calc(100% + 36px);
 }
 
