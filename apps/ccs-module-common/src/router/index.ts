@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
-import HomePage from '../pages/home/HomePage.vue';
 
 function isIframe(): boolean {
   try {
@@ -15,7 +14,11 @@ const iframeMode = isIframe();
 const router = createRouter({
   history: iframeMode ? createWebHashHistory(BASE) : createWebHistory(BASE),
   routes: [
-    { path: '/', name: 'Home', component: HomePage },
+    {
+      path: '/project-initiation',
+      name: 'Home',
+      component: () => import('../pages/home/HomePage.vue')
+    },
     {
       path: '/my-workspace',
       name: 'MyWorkspace',
