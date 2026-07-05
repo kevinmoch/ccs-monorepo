@@ -34,8 +34,16 @@ export function getUrlConfig(): UrlConfig {
 
 /**
  * 获取指定页面的 iframe URL（同步，需先调用 initUrlConfig）
- * @param page - 页面标识，对应页面所在文件夹名，如 'settings'
+ *
+ * 拼接规则：CCS_BASE_URL（环境变量） + url-config.json 中配置的相对路径。
+ * 例如 CCS_BASE_URL=https://ccs.huaweicloud.com/CCS_Tenant_Gray，
+ * 配置值为 /ierp/?formId=xxx，最终返回完整 URL。
+ *
+ * @param page - 页面标识，如 'ccs-module-common/settings'
  */
 export function getIframeUrl(page: string): string {
-  return _config?.[page] ?? '';
+  const path = _config?.[page] ?? '';
+  if (!path) return '';
+  const baseUrl = import.meta.env.CCS_BASE_URL || '';
+  return `${baseUrl}${path}`;
 }

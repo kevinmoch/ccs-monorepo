@@ -8,7 +8,7 @@ export default {
       rowSpan: 12,
       colSpan: { base: 12, md: 12 },
       props: {
-        url: getIframeUrl('my-workspace')
+        url: getIframeUrl('ccs-module-common/my-workspace')
       }
     }
   ] satisfies CardDefinition[]
