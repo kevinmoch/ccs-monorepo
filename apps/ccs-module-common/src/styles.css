@@ -42,7 +42,7 @@ body {
 
 .module-shell {
   min-height: 100%;
-  padding: 1rem;
+  padding: 1rem 1rem 4rem 1rem;
   color: var(--ccs-text, #0f172a);
 }
 .module-home {
