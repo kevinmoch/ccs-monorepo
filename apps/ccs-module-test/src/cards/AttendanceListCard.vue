@@ -52,7 +52,6 @@ const runtimeOptions = computed(() => _opts.value);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
 }
 
 .list-card__strategy {

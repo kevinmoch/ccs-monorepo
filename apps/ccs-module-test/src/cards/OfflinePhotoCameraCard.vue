@@ -1,16 +1,21 @@
 <template>
   <CardShell>
     <div class="op-camera-card">
-      <div class="op-camera-card__copy">
+      <div class="op-camera-card__head">
         <span class="op-camera-card__label">{{ t('photoCapture') }}</span>
-        <strong>{{ t('allPhotosOffline') }}</strong>
-        <small>{{ runtimeStrategy }}</small>
       </div>
 
-      <button class="op-camera-card__btn" type="button" :disabled="!store.storageAvailable || store.isCapturing" @click="handleCapture">
-        <span class="op-camera-card__btn-icon">◎</span>
-        {{ captureLabel }}
-      </button>
+      <div class="op-camera-card__body">
+        <div class="op-camera-card__copy">
+          <strong>{{ t('allPhotosOffline') }}</strong>
+          <small>{{ runtimeStrategy }}</small>
+        </div>
+
+        <button class="op-camera-card__btn" type="button" :disabled="!store.storageAvailable || store.isCapturing" @click="handleCapture">
+          <span class="op-camera-card__btn-icon">◎</span>
+          {{ captureLabel }}
+        </button>
+      </div>
 
       <!-- Web camera dialog -->
       <dialog ref="cameraDialog" class="op-camera-card__dialog" @close="stopCamera">
@@ -132,6 +137,25 @@ function stopCamera() {
 .op-camera-card {
   height: 100%;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.op-camera-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.op-camera-card__label {
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.op-camera-card__body {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -140,13 +164,6 @@ function stopCamera() {
 .op-camera-card__copy {
   display: grid;
   gap: 4px;
-}
-
-.op-camera-card__label {
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
 }
 
 .op-camera-card__copy strong {
@@ -234,7 +251,7 @@ function stopCamera() {
 }
 
 @media (max-width: 480px) {
-  .op-camera-card {
+  .op-camera-card__body {
     flex-direction: column;
     justify-content: center;
     align-items: center;

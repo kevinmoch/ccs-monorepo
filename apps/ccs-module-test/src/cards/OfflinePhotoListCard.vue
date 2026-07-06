@@ -156,7 +156,6 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
 }
 
 .op-list-card__empty {

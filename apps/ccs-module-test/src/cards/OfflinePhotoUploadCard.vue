@@ -60,7 +60,6 @@ const uploadButtonText = computed(() => {
   font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
 }
 
 .op-upload-card__form {
@@ -79,7 +78,6 @@ const uploadButtonText = computed(() => {
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 50%, transparent));
 }
 
 .op-upload-card__field input,
