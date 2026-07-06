@@ -59,7 +59,7 @@
 }
 
 .portal-tool-link:hover {
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   background-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
 }
 
@@ -68,7 +68,7 @@
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .portal-tool-link__icon svg {
@@ -159,7 +159,7 @@
 }
 
 .portal-category-link:hover {
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   background-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
 }
 

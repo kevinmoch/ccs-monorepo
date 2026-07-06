@@ -180,7 +180,7 @@ onUnmounted(() => {
   border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
   border-radius: 6px;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
@@ -267,7 +267,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 900;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 12%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .od-list-card__status-badge {
@@ -297,7 +297,7 @@ onUnmounted(() => {
 
 .status-downloading .od-list-card__status-badge {
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 14%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .status-failed .od-list-card__status-badge {

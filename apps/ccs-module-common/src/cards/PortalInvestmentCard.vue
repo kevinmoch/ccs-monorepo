@@ -116,11 +116,11 @@ const activeCategories = computed(() => investmentGroups.value.find((group) => g
 }
 
 .portal-tab:hover {
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .portal-tab--active {
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   border-bottom-color: var(--ccs-primary, #006fd6);
 }
 </style>

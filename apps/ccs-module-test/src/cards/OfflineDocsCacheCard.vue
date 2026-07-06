@@ -162,7 +162,7 @@ const store = useOfflineDocsStore();
 .od-cache-card__btn.secondary {
   border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .od-cache-card__btn.danger {

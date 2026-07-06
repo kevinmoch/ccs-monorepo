@@ -256,7 +256,7 @@ onMounted(async () => {
 }
 
 .op-list-card__loc {
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   font-weight: 600;
 }
 
@@ -350,7 +350,7 @@ onMounted(async () => {
   padding: 8px 10px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 10%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
   font-weight: 700;
   font-size: 13px;
 }
