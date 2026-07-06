@@ -2,7 +2,6 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { applyRuntimeProps, bindIframeMessageHandlers, readIframeProps } from '@ccs/runtime/vue';
 import { applyTheme, initI18n, type Language, type ThemeMode } from '@ccs/shared';
-import { initUrlConfig } from './utils/url-config';
 import App from './App.vue';
 import router from './router';
 import { useRuntimeStore } from './stores/runtime';
@@ -52,8 +51,6 @@ async function render() {
 
   // 确保 i18next 始终初始化（不受 query 参数影响）
   await initI18n();
-  // 加载 URL 配置（需在路由懒加载之前完成，确保各页面 config.ts 能同步读取）
-  await initUrlConfig();
   const props = readIframeProps();
   // Fallback: read theme from localStorage or system preference when not provided via URL param
   if (!props.theme) {

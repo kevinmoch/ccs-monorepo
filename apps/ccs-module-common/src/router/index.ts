@@ -20,51 +20,6 @@ const router = createRouter({
       component: () => import('../pages/iframe/IframePage.vue')
     },
     {
-      path: '/my-workspace',
-      name: 'MyWorkspace',
-      component: () => import('../pages/my-workspace/MyWorkspacePage.vue')
-    },
-    {
-      path: '/my-projects',
-      name: 'MyProjects',
-      component: () => import('../pages/my-projects/MyProjectsPage.vue')
-    },
-    {
-      path: '/my-todos',
-      name: 'MyTodos',
-      component: () => import('../pages/my-todos/MyTodosPage.vue')
-    },
-    {
-      path: '/severely-overdue',
-      name: 'SeverelyOverdue',
-      component: () => import('../pages/severely-overdue/SeverelyOverduePage.vue')
-    },
-    {
-      path: '/overdue',
-      name: 'Overdue',
-      component: () => import('../pages/overdue/OverduePage.vue')
-    },
-    {
-      path: '/notifications',
-      name: 'Notifications',
-      component: () => import('../pages/notifications/NotificationsPage.vue')
-    },
-    {
-      path: '/settings',
-      name: 'Settings',
-      component: () => import('../pages/settings/SettingsPage.vue')
-    },
-    {
-      path: '/it-support',
-      name: 'ItSupport',
-      component: () => import('../pages/it-support/ItSupportPage.vue')
-    },
-    {
-      path: '/help-guide',
-      name: 'HelpGuide',
-      component: () => import('../pages/help-guide/HelpGuidePage.vue')
-    },
-    {
       path: '/portal-investment',
       name: 'PortalInvestment',
       component: () => import('../pages/portal-investment/PortalInvestmentPage.vue')

@@ -1372,7 +1372,7 @@ CCPS 是一套代码自适应多端的应用，同一个代码库构建出的产
 
 #### A. iframe 嵌入页（9 个系统通用页）
 
-通过 `IframeCard` 嵌入外部 CCS ERP 系统页面，URL 通过 `public/url-config.json` 外部化配置，部署后可修改无需重新构建。
+通过 `IframeCard` 嵌入外部 CCS ERP 系统页面，URL 通过菜单数据中的查询参数动态传递。
 
 | 页面       | 路由                | 说明                   |
 | ---------- | ------------------- | ---------------------- |
@@ -1421,7 +1421,6 @@ CCPS 是一套代码自适应多端的应用，同一个代码库构建出的产
 ```
 main.ts 启动
   ├── initI18n() → i18n 初始化
-  ├── initUrlConfig() → 加载 url-config.json（iframe URL 配置）
   ├── readIframeProps() → 从宿主读取 theme/language/routePath
   ├── bindIframeMessageHandlers() → 监听宿主的主题/语言/导航消息
   └── mount Vue App
@@ -1435,7 +1434,7 @@ main.ts 启动
 
 ### 8.4 关键技术特点
 
-- **URL 外部化配置**：`public/url-config.json` 可在部署后修改 iframe 目标 URL，无需重新构建
+- **菜单驱动 URL 配置**：iframe 页面 URL 通过菜单数据（`menu_data.ts`）中的查询参数动态传递，无需额外配置文件
 - **菜单导航委托**：门户卡片中的链接点击通过 `requestShellMenuNavigate()` 委托给宿主框架处理
 - **seperateLine 机制**：菜单树中通过 `seperateLine` 字段将子节点切分为"主内容区"和"工具区"
 - **菜单数据延迟加载**：门户页面在 `onMounted` 中通过 `globalStore.get('menuData')` 从宿主异步拉取
