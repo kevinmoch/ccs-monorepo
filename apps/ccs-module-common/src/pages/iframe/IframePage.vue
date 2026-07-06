@@ -13,7 +13,10 @@ const route = useRoute();
 const computedCards = computed(() => {
   const queryUrl = (route.query.url as string) || '';
   const hideTop = parseInt((route.query.top as string) || '0', 10);
-  const baseUrl = import.meta.env.CCS_BASE_URL || '';
+  // CCS_BASE_URL may be overridden at runtime with a tenant-qualified prefix
+  // (e.g. `/CCS_Tenant_Gray`) once ccs-framework resolves it after login,
+  // since it's shared via same-origin localStorage — no rebuild needed.
+  const baseUrl = localStorage.getItem('ccs-base-url-override') || import.meta.env.CCS_BASE_URL || '';
   const url = /^https?:\/\//i.test(queryUrl) ? queryUrl : `${baseUrl}${queryUrl}`;
 
   return [
