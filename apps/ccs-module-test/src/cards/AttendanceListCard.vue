@@ -44,7 +44,7 @@ const runtimeOptions = computed(() => _opts.value);
 }
 
 .list-card__item.active {
-  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 6%, transparent);
+  background: color-mix(in srgb, gray 6%, transparent);
 }
 
 .list-card__label {

@@ -161,7 +161,7 @@ export default {
     allPhotosOffline: '照片先离线保存，再按需上传',
     capturing: '处理中...',
     nativeCapture: '调用相机拍照',
-    webCapture: '打开相机拍照',
+    webCapture: '打开相机',
     cancel: '取消',
     saving: '保存中...',
     takePhoto: '拍照',

@@ -167,7 +167,7 @@ function stopCamera() {
   padding: 0 20px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0f766e, var(--ccs-primary, #006fd6));
+  background: var(--ccs-primary, #006fd6);
   color: #fff;
   font-size: 15px;
   font-weight: 900;
@@ -177,18 +177,15 @@ function stopCamera() {
   white-space: nowrap;
 }
 
-.op-camera-card__btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
 .op-camera-card__btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
 .op-camera-card__btn.ghost {
-  background: transparent;
-  color: var(--ccs-text, #0f172a);
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 12%, transparent);
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  background: color-mix(in srgb, var(--ccs-primary, #006fd6) 2%, transparent);
+  color: var(--ccs-link-color, #2563eb);
 }
 
 .op-camera-card__btn-icon {

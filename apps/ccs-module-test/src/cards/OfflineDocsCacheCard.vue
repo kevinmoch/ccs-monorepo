@@ -106,7 +106,7 @@ const store = useOfflineDocsStore();
   gap: 4px;
   padding: 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ccs-bg, #f8fafc) 92%, transparent);
+  background: color-mix(in srgb, gray 6%, transparent);
 }
 
 .od-cache-card__stats span {

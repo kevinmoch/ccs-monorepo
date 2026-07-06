@@ -165,7 +165,7 @@ function handlePrimaryAction() {
   gap: 8px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--ccs-primary, #006fd6), color-mix(in srgb, var(--ccs-primary, #006fd6) 60%, #0f766e));
+  background: var(--ccs-primary, #006fd6);
   color: #fff;
   font-size: 15px;
   font-weight: 900;
@@ -195,7 +195,7 @@ function handlePrimaryAction() {
   padding: 12px;
   margin-top: 20px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ccs-bg, #f8fafc) 92%, transparent);
+  background: color-mix(in srgb, gray 6%, transparent);
   font-size: 12px;
   color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
 }

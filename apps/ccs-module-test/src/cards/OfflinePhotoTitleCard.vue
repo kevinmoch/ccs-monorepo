@@ -118,7 +118,7 @@ const runtimeLabel = computed(() => {
   gap: 4px;
   padding: 8px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ccs-bg, #f8fafc) 92%, transparent);
+  background: color-mix(in srgb, gray 6%, transparent);
 }
 
 .op-title-card__metrics span {
