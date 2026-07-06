@@ -83,6 +83,7 @@ async function openWebCamera() {
     store.pageMessage = t('cannotOpenCamera');
     return;
   }
+  document.body.style.overflow = 'hidden';
   cameraDialog.value?.showModal();
   await nextTick();
   if (cameraVideo.value) {
@@ -125,6 +126,7 @@ async function takeWebPhoto() {
 function closeCamera() {
   stopCamera();
   cameraDialog.value?.close();
+  document.body.style.overflow = '';
 }
 function stopCamera() {
   if (cameraVideo.value) cameraVideo.value.srcObject = null;
@@ -212,22 +214,28 @@ function stopCamera() {
 
 .op-camera-card__dialog {
   width: min(480px, 90vw);
+  max-height: 90vh;
   margin: auto;
   padding: 0;
   border: 0;
   border-radius: 12px;
   background: var(--ccs-text, #0f172a);
   color: var(--ccs-card-background, #f8fafc);
+  overscroll-behavior: contain;
 }
 .op-camera-card__dialog::backdrop {
   background: rgba(2, 6, 23, 0.62);
   backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
 }
 
 .op-camera-card__dialog-body {
   display: grid;
   gap: 12px;
   padding: 16px;
+  max-height: calc(90vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .op-camera-card__dialog-body video {

@@ -53,7 +53,6 @@
           <img v-if="viewerSrc" :src="viewerSrc" :alt="viewerPhoto?.name ?? ''" />
           <div v-if="viewerPhoto && store.locationLabel(viewerPhoto)" class="op-list-card__viewer-loc">
             <span>📍 {{ store.locationLabel(viewerPhoto) }}</span>
-            <small v-if="viewerPhoto.locationProvider">{{ viewerPhoto.locationProvider }}</small>
           </div>
         </div>
       </dialog>
@@ -89,6 +88,7 @@ async function openViewer(photo: OfflinePhoto) {
     viewerSrc.value = source.url;
     viewerObjectUrl = source.blob ? source.url : '';
     viewerPhoto.value = photo;
+    document.body.style.overflow = 'hidden';
     viewerDialog.value?.showModal();
   } catch {
     /* error handled by store */
@@ -100,6 +100,7 @@ function closeViewer() {
   releaseViewerUrl();
   viewerSrc.value = '';
   viewerPhoto.value = null;
+  document.body.style.overflow = '';
 }
 
 function releaseViewerUrl() {
@@ -312,16 +313,22 @@ onMounted(async () => {
   border-radius: 12px;
   background: var(--ccs-card-background, #fff);
   color: var(--ccs-text, #0f172a);
+  overscroll-behavior: contain;
+  max-height: 90vh;
 }
 .op-list-card__viewer::backdrop {
   background: rgba(2, 6, 23, 0.62);
   backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
 }
 
 .op-list-card__viewer-body {
   display: grid;
   gap: 10px;
   padding: 14px;
+  max-height: calc(90vh - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .op-list-card__viewer-head {
   display: flex;
