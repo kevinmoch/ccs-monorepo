@@ -15,9 +15,9 @@ const router = createRouter({
   history: iframeMode ? createWebHashHistory(BASE) : createWebHistory(BASE),
   routes: [
     {
-      path: '/project-initiation',
-      name: 'Home',
-      component: () => import('../pages/home/HomePage.vue')
+      path: '/iframe',
+      name: 'Iframe',
+      component: () => import('../pages/iframe/IframePage.vue')
     },
     {
       path: '/my-workspace',
