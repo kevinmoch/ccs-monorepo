@@ -176,7 +176,7 @@ onUnmounted(() => {
 .od-list-card__update-btn {
   height: 34px;
   padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  border: 1px solid var(--ccs-primary, #006fd6);
   border-radius: 6px;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
   color: var(--ccs-link-color, #2563eb);
@@ -213,18 +213,18 @@ onUnmounted(() => {
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   border-radius: 8px;
   background: var(--ccs-card-background, #fff);
 }
 
 .od-list-card__row.active {
-  border-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 40%, transparent);
+  border-color: var(--ccs-primary, #006fd6);
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 4%, transparent);
 }
 
 .od-list-card__row.status-update-available {
-  border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .od-list-card__row-top {
@@ -379,7 +379,7 @@ onUnmounted(() => {
 }
 
 .od-list-card__actions button.ghost {
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 12%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   background: transparent;
   color: var(--ccs-text-muted, #475569);
 }

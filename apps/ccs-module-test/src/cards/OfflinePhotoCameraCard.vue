@@ -200,7 +200,7 @@ function stopCamera() {
 }
 
 .op-camera-card__btn.ghost {
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  border: 1px solid var(--ccs-primary, #006fd6);
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 2%, transparent);
   color: var(--ccs-link-color, #2563eb);
 }

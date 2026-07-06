@@ -181,16 +181,16 @@ onMounted(async () => {
   display: grid;
   gap: 8px;
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   border-radius: 8px;
   background: var(--ccs-card-background, #fff);
 }
 
 .op-list-card__item.upload-uploaded {
-  border-color: color-mix(in srgb, #16a34a 40%, transparent);
+  border-color: rgba(22, 163, 74, 0.4);
 }
 .op-list-card__item.upload-failed {
-  border-color: color-mix(in srgb, #dc2626 40%, transparent);
+  border-color: rgba(220, 38, 38, 0.4);
 }
 
 .op-list-card__checkbox {
@@ -298,7 +298,7 @@ onMounted(async () => {
 }
 
 .op-list-card__actions button.ghost {
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 12%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   background: transparent;
   color: var(--ccs-text-muted, #475569);
 }

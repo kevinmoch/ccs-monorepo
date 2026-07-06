@@ -36,7 +36,7 @@ const runtimeOptions = computed(() => _opts.value);
   min-height: 100px;
   padding: 14px;
   background: transparent;
-  border-right: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 6%, transparent);
+  border-right: 1px solid var(--ccs-border-color, #cbd5e1);
 }
 
 .list-card__item:last-child {
@@ -71,7 +71,7 @@ const runtimeOptions = computed(() => _opts.value);
   }
   .list-card__item {
     border-right: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 6%, transparent);
+    border-bottom: 1px solid var(--ccs-border-color, #cbd5e1);
   }
   .list-card__item:last-child {
     border-bottom: 0;

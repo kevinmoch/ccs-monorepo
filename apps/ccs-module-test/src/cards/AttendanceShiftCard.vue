@@ -117,7 +117,7 @@ const timelineItems = computed(() => [
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 10px;
   padding: 12px 0;
-  border-top: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
+  border-top: 1px solid var(--ccs-border-color, #cbd5e1);
 }
 
 .shift-card__tli-dot {

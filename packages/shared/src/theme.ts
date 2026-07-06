@@ -19,6 +19,11 @@ const linkColor: Record<ThemeMode, string> = {
   light: '#2563eb',
   dark: '#46A3FF'
 };
+/** 边框颜色，与首页 (ccs-framework) 保持统一，作为 color-mix 不兼容浏览器的回退 */
+const borderColor: Record<ThemeMode, string> = {
+  light: '#e2e8f0',
+  dark: '#2e2e2e'
+};
 export function applyTheme(mode: ThemeMode, root: HTMLElement = document.documentElement) {
   const tokens = themeTokens[mode];
   root.dataset.theme = mode;
@@ -29,4 +34,5 @@ export function applyTheme(mode: ThemeMode, root: HTMLElement = document.documen
   root.style.setProperty('--ccs-card-background', cardBackground[mode]);
   root.style.setProperty('--ccs-link-color', linkColor[mode]);
   root.style.setProperty('--ccs-link-hover-color', linkColor[mode]);
+  root.style.setProperty('--ccs-border-color', borderColor[mode]);
 }

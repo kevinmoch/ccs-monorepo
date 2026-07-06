@@ -121,7 +121,7 @@ const store = useOfflinePhotoStore();
   opacity: 0.5;
 }
 .op-cache-card__btn.secondary {
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 22%, transparent);
+  border: 1px solid var(--ccs-primary, #006fd6);
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
   color: var(--ccs-link-color, #2563eb);
 }

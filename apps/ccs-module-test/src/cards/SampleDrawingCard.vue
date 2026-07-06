@@ -131,7 +131,7 @@ const submitterInitials = computed(() => {
 .drawing-card__footer {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 8%, transparent);
+  border-top: 1px solid var(--ccs-border-color, #cbd5e1);
   display: flex;
   align-items: center;
   justify-content: space-between;

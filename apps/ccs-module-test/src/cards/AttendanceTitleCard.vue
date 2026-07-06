@@ -130,7 +130,7 @@ const billCodeDisplay = computed(() => {
 .title-card__pill {
   flex: 0 0 auto;
   padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, var(--ccs-primary, #006fd6) 30%, transparent);
+  border: 1px solid var(--ccs-primary, #006fd6);
   border-radius: 999px;
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 10%, transparent);
   color: var(--ccs-link-color, #2563eb);

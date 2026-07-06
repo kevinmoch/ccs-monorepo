@@ -89,7 +89,7 @@ const store = useOfflineDocsStore();
   width: 200px;
   height: 28px;
   padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 15%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   border-radius: 6px;
   font-size: 12px;
   color: var(--ccs-text, #0f172a);

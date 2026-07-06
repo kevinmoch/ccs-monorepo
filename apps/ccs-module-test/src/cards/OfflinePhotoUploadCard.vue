@@ -84,7 +84,7 @@ const uploadButtonText = computed(() => {
 .op-upload-card__field select {
   height: 36px;
   padding: 0 8px;
-  border: 1px solid color-mix(in srgb, var(--ccs-text, #0f172a) 15%, transparent);
+  border: 1px solid var(--ccs-border-color, #cbd5e1);
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
