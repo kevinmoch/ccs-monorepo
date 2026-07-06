@@ -1,16 +1,13 @@
 @theme {
-  --color-ccs-card-background: color-mix(in srgb, var(--ccs-bg, #fff) 90%, white);
-  --color-ccs-card-border: color-mix(in srgb, var(--ccs-text, #0f172a) 10%, transparent);
+  --color-ccs-card-background: var(--ccs-card-background);
+  --color-ccs-card-border: var(--ccs-card-border-color);
   --radius-ccs-card: 16px;
-  --shadow-ccs-card: 0 12px 32px rgb(15 23 42 / 8%);
+  --shadow-ccs-card: var(--ccs-card-shadow);
 }
 
 :root {
-  --ccs-card-background: var(--color-ccs-card-background);
-  --ccs-card-border-color: var(--color-ccs-card-border);
   --ccs-card-border-width: 1px;
   --ccs-card-radius: var(--radius-ccs-card);
-  --ccs-card-shadow: var(--shadow-ccs-card);
 }
 
 .ccs-card-surface {
