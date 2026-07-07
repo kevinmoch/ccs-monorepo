@@ -208,7 +208,7 @@ export function detectRuntime(): RuntimeInfo {
 // ---------------------------------------------------------------------------
 
 /** Windows / Android 环境下固定的服务端 IP */
-const DEFAULT_SERVER_HOST = '192.168.43.232';
+const DEFAULT_SERVER_HOST = '10.25.179.57';
 
 /**
  * 根据当前运行时环境构建服务 URL。
