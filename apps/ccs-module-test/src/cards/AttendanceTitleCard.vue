@@ -7,7 +7,7 @@
             <h2 class="title-card__heading">{{ t('attendance') }} {{ localProject ? ` - ${localProject.name}` : '' }}</h2>
             <button class="refresh-btn" @click="handleRefreshProject">{{ t('refreshProject') }}</button>
           </div>
-          <span class="title-card__sub">{{ formattedDate }} · {{ billCodeDisplay }}</span>
+          <span class="title-card__sub">{{ formattedDate }} {{ billCodeDisplay }}</span>
         </div>
         <div class="title-card__pill">{{ runtimeLabel }}</div>
       </div>
@@ -44,6 +44,7 @@ const handleRefreshProject = async () => {
   } catch (err) {
     console.error('Failed to refresh project', err);
   }
+  await fetchBillCode();
 };
 
 const fetchBillCode = async () => {
@@ -85,7 +86,7 @@ const formattedDate = computed(() =>
 );
 
 const billCodeDisplay = computed(() => {
-  return localBillCode.value || '所有单据';
+  return localBillCode.value || '';
 });
 </script>
 
