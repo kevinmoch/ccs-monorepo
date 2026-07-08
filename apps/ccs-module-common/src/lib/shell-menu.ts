@@ -9,6 +9,7 @@ export interface ShellMenuNode {
   id: string;
   title: { zh: string; en: string };
   url?: string;
+  disabled?: boolean;
   seperateLine?: string[];
   children?: ShellMenuNode[];
 }
@@ -45,6 +46,6 @@ export const MENU_ITEM_WRAP_COUNT = 7; // 超过多少个子节点时，PortalAr
  * 效果等同于用户点击了左侧/右侧侧边栏中对应的菜单链接。
  */
 export function handleNavigate(leaf: ShellMenuNode) {
-  if (!leaf.url) return;
+  if (!leaf.url || leaf.disabled) return;
   requestShellMenuNavigate({ id: leaf.id, url: leaf.url });
 }

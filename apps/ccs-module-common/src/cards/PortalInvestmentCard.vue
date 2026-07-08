@@ -6,7 +6,14 @@
         <section v-for="group in toolGroups" :key="group.id" class="portal-tool-card ccs-card-surface">
           <header class="portal-tool-card__header" :title="pickTitle(group, language)">{{ pickTitle(group, language) }}</header>
           <div class="portal-tool-card__body">
-            <a v-for="leaf in group.children ?? []" :key="leaf.id" href="#" class="portal-tool-link" @click.prevent="handleNavigate(leaf)">
+            <a
+              v-for="leaf in group.children ?? []"
+              :key="leaf.id"
+              href="#"
+              class="portal-tool-link"
+              :class="{ 'portal-tool-link--disabled': leaf.disabled }"
+              @click.prevent="!leaf.disabled && handleNavigate(leaf)"
+            >
               <span class="portal-tool-link__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -49,7 +56,15 @@
           >
             <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
             <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length >= MENU_ITEM_WRAP_COUNT }">
-              <a v-for="leaf in category.children ?? []" :key="leaf.id" href="#" class="portal-category-link" :title="pickTitle(leaf, language)" @click.prevent="handleNavigate(leaf)">
+              <a
+                v-for="leaf in category.children ?? []"
+                :key="leaf.id"
+                href="#"
+                class="portal-category-link"
+                :class="{ 'portal-category-link--disabled': leaf.disabled }"
+                :title="pickTitle(leaf, language)"
+                @click.prevent="!leaf.disabled && handleNavigate(leaf)"
+              >
                 {{ pickTitle(leaf, language) }}
               </a>
             </div>

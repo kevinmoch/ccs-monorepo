@@ -63,6 +63,17 @@
   background-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
 }
 
+.portal-tool-link--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.portal-tool-link--disabled:hover {
+  color: color-mix(in srgb, var(--ccs-text, #0f172a) 78%, transparent);
+  background-color: transparent;
+}
+
 .portal-tool-link__icon {
   display: inline-flex;
   width: 16px;
@@ -161,6 +172,17 @@
 .portal-category-link:hover {
   color: var(--ccs-link-color, #2563eb);
   background-color: color-mix(in srgb, var(--ccs-primary, #006fd6) 8%, transparent);
+}
+
+.portal-category-link--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.portal-category-link--disabled:hover {
+  color: color-mix(in srgb, var(--ccs-text, #0f172a) 78%, transparent);
+  background-color: transparent;
 }
 
 /* ---------------- 移动端自适应 ---------------- */
