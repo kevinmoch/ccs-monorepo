@@ -40,7 +40,7 @@
             :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
           >
             <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
-            <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }">
+            <div class="portal-category-card__body">
               <a
                 v-for="leaf in category.children ?? []"
                 :key="leaf.id"

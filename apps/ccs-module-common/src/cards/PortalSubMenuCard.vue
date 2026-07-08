@@ -5,8 +5,8 @@
         <p v-if="!loading && allSections.length === 0" class="portal-empty">N/A</p>
 
         <template v-for="(section, idx) in allSections" :key="section.id">
-          <!-- 第一个分区「采购能力平台」使用 tool-card 样式 -->
-          <template v-if="idx === 0">
+          <!-- seperateLine 右侧项使用 tool-card 样式 -->
+          <template v-if="idx < toolCardCount">
             <h2 class="portal-section-title" :title="pickTitle(section.title, language)">{{ pickTitle(section.title, language) }}</h2>
             <div class="portal-tools-row" v-if="section.items.length > 0">
               <section v-for="item in section.items" :key="item.id" class="portal-tool-card ccs-card-surface">
@@ -33,13 +33,18 @@
             </div>
           </template>
 
-          <!-- 其余分区「采购作业平台」「采购运营平台」使用 category-card 样式 -->
+          <!-- 其余分区（左侧项或无 seperateLine 时全部）使用 category-card 自适应网格 -->
           <template v-else>
             <h2 class="portal-section-title" :title="pickTitle(section.title, language)">{{ pickTitle(section.title, language) }}</h2>
-            <div class="portal-section-grid" v-if="section.items.length > 0">
-              <section v-for="category in section.items" :key="category.id" class="portal-category-card ccs-card-surface">
+            <div class="portal-category-grid" v-if="section.items.length > 0">
+              <section
+                v-for="category in section.items"
+                :key="category.id"
+                class="portal-category-card ccs-card-surface"
+                :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
+              >
                 <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
-                <div class="portal-category-card__body" :class="{ 'portal-category-card__body--cols': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }">
+                <div class="portal-category-card__body">
                   <a
                     v-for="leaf in category.children ?? []"
                     :key="leaf.id"
@@ -67,29 +72,37 @@ import { CardShell } from '@ccs/card';
 import { useRuntimeStore } from '../stores/runtime';
 import { findMenuNode, pickTitle, splitBySeperateLine, handleNavigate, type ShellMenuNode, MENU_ITEM_WRAP_COUNT } from '../lib/shell-menu';
 
-const props = defineProps<{ menuData?: ShellMenuNode[] | null }>();
+const props = defineProps<{
+  menuData?: ShellMenuNode[] | null;
+  rootId: string;
+}>();
 
 const runtime = useRuntimeStore();
 const language = computed(() => runtime.language);
 const loading = computed(() => props.menuData === undefined);
 
-const rootNode = computed(() => findMenuNode(props.menuData ?? [], 'L1-4'));
+const rootNode = computed(() => findMenuNode(props.menuData ?? [], props.rootId));
 
-/** 三个分区：采购能力平台(右侧) + 采购作业平台(左侧第一个) + 采购运营平台(左侧第二个) */
 const allSections = computed(() => {
   const node = rootNode.value;
   if (!node) return [];
   const { leftItems, rightItems } = splitBySeperateLine(node.children ?? [], node.seperateLine);
   const result: { id: string; title: ShellMenuNode; items: ShellMenuNode[] }[] = [];
-  // 采购能力平台：右侧项（L2-34）下的 L3 子节点
   for (const group of rightItems) {
     result.push({ id: group.id, title: group, items: group.children ?? [] });
   }
-  // 采购作业平台、采购运营平台：左侧 L2 项下的 L3 子节点
   for (const group of leftItems) {
     result.push({ id: group.id, title: group, items: group.children ?? [] });
   }
   return result;
+});
+
+/** seperateLine 右侧项数量 → 前 N 个分区使用 tool-card，其余使用 category-card */
+const toolCardCount = computed(() => {
+  const node = rootNode.value;
+  if (!node) return 0;
+  const { rightItems } = splitBySeperateLine(node.children ?? [], node.seperateLine);
+  return rightItems.length;
 });
 </script>
 
@@ -105,24 +118,5 @@ const allSections = computed(() => {
 
 .portal-section-title:first-of-type {
   margin-top: 5px;
-}
-
-.portal-section-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  align-items: start;
-}
-
-@media (max-width: 1023px) {
-  .portal-section-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 767px) {
-  .portal-section-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

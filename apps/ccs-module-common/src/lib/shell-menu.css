@@ -23,6 +23,8 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  container-type: inline-size;
+  container-name: tool-card;
 }
 
 .portal-tool-card__header {
@@ -125,6 +127,8 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  container-type: inline-size;
+  container-name: category-card;
 }
 
 .portal-category-card--wide {
@@ -141,16 +145,10 @@
 }
 
 .portal-category-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 16px 16px;
-}
-
-.portal-category-card__body--cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px 20px;
+  padding: 12px 16px 16px;
 }
 
 .portal-category-link {
@@ -185,6 +183,31 @@
   background-color: transparent;
 }
 
+/* ---------------- 容器查询：根据卡片宽度自适应 1/2/3 列 ---------------- */
+/* 窄卡片 → 单列 */
+@container tool-card (max-width: 279px) {
+  .portal-tool-card__body {
+    grid-template-columns: 1fr;
+  }
+}
+@container category-card (max-width: 279px) {
+  .portal-category-card__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 宽卡片 → 三列 */
+@container tool-card (min-width: 480px) {
+  .portal-tool-card__body {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+@container category-card (min-width: 480px) {
+  .portal-category-card__body {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
 /* ---------------- 移动端自适应 ---------------- */
 @media (max-width: 767px) {
   .portal-tools-row {
@@ -206,7 +229,7 @@
     grid-column: span 1;
   }
 
-  .portal-category-card__body--cols {
+  .portal-category-card__body {
     grid-template-columns: 1fr;
   }
 }

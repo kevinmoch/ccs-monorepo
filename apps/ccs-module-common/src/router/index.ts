@@ -98,6 +98,16 @@ const router = createRouter({
       path: '/portal-cost',
       name: 'PortalCost',
       component: () => import('../pages/portal-cost/PortalCostPage.vue')
+    },
+    {
+      path: '/portal-asset-library',
+      name: 'PortalAssetLibrary',
+      component: () => import('../pages/portal-asset-library/PortalAssetLibraryPage.vue')
+    },
+    {
+      path: '/portal-operations-center',
+      name: 'PortalOperationsCenter',
+      component: () => import('../pages/portal-operations-center/PortalOperationsCenterPage.vue')
     }
     // ccs-cli:route
   ]
