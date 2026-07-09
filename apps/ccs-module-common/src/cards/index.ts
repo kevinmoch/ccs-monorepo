@@ -23,6 +23,7 @@ export const cardRegistry = createCardRegistry({
   'portal-ehs': PortalMenuCard,
   'portal-cost': PortalMenuCard,
   'portal-asset-library': PortalSubMenuCard,
-  'portal-operations-center': PortalSubMenuCard
+  'portal-operations-center': PortalSubMenuCard,
+  'portal-planning-design': PortalMenuCard
   // ccs-cli:card-register
 });

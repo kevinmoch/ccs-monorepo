@@ -108,6 +108,11 @@ const router = createRouter({
       path: '/portal-operations-center',
       name: 'PortalOperationsCenter',
       component: () => import('../pages/portal-operations-center/PortalOperationsCenterPage.vue')
+    },
+    {
+      path: '/portal-planning-design',
+      name: 'PortalPlanningDesign',
+      component: () => import('../pages/portal-planning-design/PortalPlanningDesignPage.vue')
     }
     // ccs-cli:route
   ]
