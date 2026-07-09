@@ -12,6 +12,7 @@ export interface ShellMenuNode {
   disabled?: boolean;
   seperateLine?: string[];
   children?: ShellMenuNode[];
+  submenu?: ShellMenuNode[];
 }
 
 /** 按 seperateLine 中出现的 id，将 items 切分为左右两段（复刻宿主 menu-utils.ts 的 getSplitItems）。 */
@@ -33,6 +34,10 @@ export function findMenuNode(nodes: ShellMenuNode[] = [], id: string): ShellMenu
     if (node.id === id) return node;
     if (node.children) {
       const found = findMenuNode(node.children, id);
+      if (found) return found;
+    }
+    if (node.submenu) {
+      const found = findMenuNode(node.submenu, id);
       if (found) return found;
     }
   }
