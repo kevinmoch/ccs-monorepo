@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-planning-design',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L1-14' }
+      props: { rootId: 'L1-2' }
     }
   ] satisfies CardDefinition[]
 };
