@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-landscape',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-14' }
+      props: { rootId: 'L2-15' }
     }
   ] satisfies CardDefinition[]
 };

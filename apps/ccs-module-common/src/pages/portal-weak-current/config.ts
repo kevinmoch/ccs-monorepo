@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-weak-current',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-11' }
+      props: { rootId: 'L2-12' }
     }
   ] satisfies CardDefinition[]
 };

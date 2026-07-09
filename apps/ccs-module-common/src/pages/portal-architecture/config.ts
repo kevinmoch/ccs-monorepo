@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-architecture',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-6' }
+      props: { rootId: 'L2-7' }
     }
   ] satisfies CardDefinition[]
 };

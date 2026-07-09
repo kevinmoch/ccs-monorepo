@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-civil-engineering',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-7' }
+      props: { rootId: 'L2-8' }
     }
   ] satisfies CardDefinition[]
 };

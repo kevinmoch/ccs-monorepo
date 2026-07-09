@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-interior-fit-out',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-12' }
+      props: { rootId: 'L2-13' }
     }
   ] satisfies CardDefinition[]
 };

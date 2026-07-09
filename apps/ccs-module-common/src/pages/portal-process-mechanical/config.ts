@@ -4,7 +4,7 @@ export default {
     {
       id: 'portal-process-mechanical',
       colSpan: { base: 12, md: 12 },
-      props: { rootId: 'L2-15' }
+      props: { rootId: 'L2-16' }
     }
   ] satisfies CardDefinition[]
 };
