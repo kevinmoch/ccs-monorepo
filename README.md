@@ -1539,16 +1539,16 @@ CCPS 是一套代码自适应多端的应用，同一个代码库构建出的产
 
 | 门户     | 路由                         | 菜单 rootId |
 | -------- | ---------------------------- | ----------- |
-| 建筑设计 | `/portal-architecture`       | `L2-6`      |
-| 土建工程 | `/portal-civil-engineering`  | `L2-7`      |
-| 幕墙工程 | `/portal-curtain-wall`       | `L2-8`      |
-| 暖通工程 | `/portal-hvac`               | `L2-9`      |
-| 强电工程 | `/portal-power-electrical`   | `L2-10`     |
-| 弱电工程 | `/portal-weak-current`       | `L2-11`     |
-| 精装工程 | `/portal-interior-fit-out`   | `L2-12`     |
-| 软装工程 | `/portal-soft-furnishing`    | `L2-13`     |
-| 景观工程 | `/portal-landscape`          | `L2-14`     |
-| 工艺工程 | `/portal-process-mechanical` | `L2-15`     |
+| 建筑设计 | `/portal-architecture`       | `L2-7`      |
+| 土建工程 | `/portal-civil-engineering`  | `L2-8`      |
+| 幕墙工程 | `/portal-curtain-wall`       | `L2-9`      |
+| 暖通工程 | `/portal-hvac`               | `L2-10`     |
+| 强电工程 | `/portal-power-electrical`   | `L2-11`     |
+| 弱电工程 | `/portal-weak-current`       | `L2-12`     |
+| 精装工程 | `/portal-interior-fit-out`   | `L2-13`     |
+| 软装工程 | `/portal-soft-furnishing`    | `L2-14`     |
+| 景观工程 | `/portal-landscape`          | `L2-15`     |
+| 工艺工程 | `/portal-process-mechanical` | `L2-16`     |
 
 ### 8.3 核心架构
 
