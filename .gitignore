@@ -20,4 +20,5 @@ apps/ccs-android/android/build/
 apps/ccs-android/android/app/build/
 apps/ccs-android/android/keystore.properties
 apps/ccs-android/capacitor.config.json
-documents/
+documents/*
+!documents/offline-documents.json

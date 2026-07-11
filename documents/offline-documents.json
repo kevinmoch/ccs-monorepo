@@ -1,0 +1,26 @@
+[
+  {
+    "id": "safety-handbook-image",
+    "title": "安全文明施工图示",
+    "mimeType": "image/png",
+    "url": "safety-handbook.png"
+  },
+  {
+    "id": "contract-template-pdf",
+    "title": "合同评审操作手册",
+    "mimeType": "application/pdf",
+    "url": "contract-review.pdf"
+  },
+  {
+    "id": "docx-process-guide",
+    "title": "流程制度说明 DOCX",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "url": "process-guide.docx"
+  },
+  {
+    "id": "xlsx-cost-ledger",
+    "title": "成本台账 XLSX",
+    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "url": "cost-ledger.xlsx"
+  }
+]
