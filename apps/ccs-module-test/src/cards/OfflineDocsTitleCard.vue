@@ -97,6 +97,11 @@ const store = useOfflineDocsStore();
   outline: none;
 }
 
+.od-title-card__url-input::placeholder {
+  opacity: 1;
+  color: var(--ccs-text-muted, color-mix(in srgb, var(--ccs-text, #0f172a) 55%, transparent));
+}
+
 .od-title-card__url-input:focus {
   border-color: var(--ccs-primary, #006fd6);
 }
