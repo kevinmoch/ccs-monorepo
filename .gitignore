@@ -10,6 +10,7 @@ coverage
 apps/*/.ccs-card-build
 apps/*/dist
 *-lock.*
+!pnpm-lock.yaml
 out
 apps/ccs-framework/
 
