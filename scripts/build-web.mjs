@@ -67,15 +67,7 @@ const workboxDirName = await copyWorkboxLibraries(distWebDir);
 // 移除所有 .map、.dev.* 及未使用的 .prod.js，从 68 个文件精简到 7 个
 {
   const workboxDir = join(distWebDir, workboxDirName);
-  const keep = new Set([
-    'workbox-core.prod.js',
-    'workbox-precaching.prod.js',
-    'workbox-routing.prod.js',
-    'workbox-strategies.prod.js',
-    'workbox-expiration.prod.js',
-    'workbox-cacheable-response.prod.js',
-    'workbox-sw.js'
-  ]);
+  const keep = new Set(['workbox-core.prod.js', 'workbox-precaching.prod.js', 'workbox-routing.prod.js', 'workbox-strategies.prod.js', 'workbox-expiration.prod.js', 'workbox-cacheable-response.prod.js', 'workbox-sw.js']);
   let removed = 0;
   for (const f of readdirSync(workboxDir)) {
     if (!keep.has(f)) {
