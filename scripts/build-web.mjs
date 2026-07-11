@@ -24,7 +24,7 @@ function loadRootEnv() {
 const rootEnv = loadRootEnv();
 const appsDir = join(root, 'apps');
 const distWebDir = join(root, 'dist', 'web');
-const builds = [{ name: 'ccs-framework', outDir: distWebDir, base: '/', scripts: {} }];
+const builds = [{ name: 'ccs-framework', outDir: distWebDir, base: './', scripts: {} }];
 
 for (const dir of readdirSync(appsDir)) {
   if (!dir.startsWith('ccs-module-')) continue;
@@ -34,7 +34,7 @@ for (const dir of readdirSync(appsDir)) {
   builds.push({
     name: pkg.name ?? dir,
     outDir: join(distWebDir, dir),
-    base: `/${dir}/`,
+    base: './',
     scripts: pkg.scripts ?? {}
   });
 }
