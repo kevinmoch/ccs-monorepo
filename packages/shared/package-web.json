@@ -1,0 +1,27 @@
+{
+  "name": "@ccs/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./attendance": "./src/attendance/index.ts",
+    "./offline-docs": "./src/offline-docs/index.ts",
+    "./offline-photos": "./src/offline-photos/index.ts",
+    "./storage": "./src/storage/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "i18next": "latest",
+    "vue-i18n": "^11.0.0"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vitest": "latest",
+    "vue": "^3.0.0"
+  }
+}

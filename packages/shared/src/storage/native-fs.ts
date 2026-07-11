@@ -50,6 +50,21 @@ export type DirectoryWithEntries = FileSystemDirectoryHandle & {
 };
 
 // ---------------------------------------------------------------------------
+// Capacitor 常量导出（供其他模块间接引用，避免直接 import @capacitor/filesystem）
+// ---------------------------------------------------------------------------
+
+/**
+ * `Directory.Data` 的重导出。其他模块（如 offline-docs/opfs.ts）应通过此常量
+ * 使用 Android Data 目录，而不是直接 `import { Directory } from '@capacitor/filesystem'`。
+ * 这样可以把整个仓库对 Capacitor 包的静态依赖收敛到 native-fs.ts 这一个文件里，
+ * 便于 Web-only 构建时用 native-fs.web.ts 整体替换掉 Capacitor 依赖。
+ */
+export const ANDROID_DIRECTORY_DATA = Directory.Data;
+
+/** `Encoding.UTF8` 的重导出，用途同上。 */
+export const ANDROID_ENCODING_UTF8 = Encoding.UTF8;
+
+// ---------------------------------------------------------------------------
 // Base64 / Blob 互转
 // ---------------------------------------------------------------------------
 

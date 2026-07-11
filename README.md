@@ -1316,10 +1316,7 @@ const serverLastModified = response.headers.get('last-modified');
 const serverSize = response.headers.get('content-length');
 
 // 满足任一条件即判定为有更新：
-const changed =
-  (serverEtag && localEtag && serverEtag !== localEtag) ||
-  (serverLastModified && localLastModified && serverLastModified !== localLastModified) ||
-  (serverSize && localSize && serverSize !== localSize);
+const changed = (serverEtag && localEtag && serverEtag !== localEtag) || (serverLastModified && localLastModified && serverLastModified !== localLastModified) || (serverSize && localSize && serverSize !== localSize);
 ```
 
 #### A.3.2 更新流程
@@ -1749,9 +1746,11 @@ pnpm upload:ssl
 # 1. 替换为 web-only 配置（移除 Electron/Capacitor 等重型依赖）
 cp package-web.json package.json
 cp apps/ccs-framework/package-web.json apps/ccs-framework/package.json
+cp packages/shared/package-web.json packages/shared/package.json
 
-# 2. 替换 Android bridge 为 web 桩文件（不含 Capacitor 依赖）
+# 2. 替换各处的 Android 桩文件（不含 Capacitor 依赖）
 cp apps/ccs-framework/src/lib/android-bridge.web.ts apps/ccs-framework/src/lib/android-bridge.ts
+cp packages/shared/src/storage/native-fs.web.ts packages/shared/src/storage/native-fs.ts
 
 # 3. 安装依赖（排除 android 包，避免下载 Capacitor 原生 SDK）
 pnpm install --filter '!ccs-android'
@@ -1763,10 +1762,23 @@ pnpm build:card
 
 **`package-web.json` 做了什么：**
 
-| 文件                             | 移除了                                                            | 效果                                    |
-| -------------------------------- | ----------------------------------------------------------------- | --------------------------------------- |
-| 根 `package-web.json`            | `turbo`, `typescript`, `vitest`, `tsx`, `cross-env` 等            | 仅保留 `workbox-build`（SW 生成需要）   |
-| `ccs-framework/package-web.json` | `electron`, `electron-builder`, `electron-vite`, Capacitor 全家桶 | 仅保留 React + Tailwind + Vite 核心依赖 |
+| 文件                               | 移除了                                                                                                                   | 效果                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| 根 `package-web.json`              | `turbo`, `typescript`, `vitest`, `tsx`, `cross-env` 等                                                                   | 仅保留 `workbox-build`（SW 生成需要）                                                                             |
+| `ccs-framework/package-web.json`   | `electron`, `electron-builder`, `electron-vite`, Capacitor 全家桶                                                        | 仅保留 React + Tailwind + Vite 核心依赖                                                                           |
+| `packages/shared/package-web.json` | `@capacitor-community/file-opener`、`@capacitor/core`、`@capacitor/filesystem`（`devDependencies` + `peerDependencies`） | 子模块（`ccs-module-*`）仍可正常使用 `@ccs/shared` 的离线文档 / 离线照片 API（Web OPFS 分支），无需安装 Capacitor |
+
+**`native-fs.web.ts` 做了什么（解决子模块间接引入 Capacitor 的问题）：**
+
+`ccs-module-test` 的「离线文档」「离线拍照」页面通过 `@ccs/shared/offline-docs` 和 `@ccs/shared/offline-photos` 引入了 `packages/shared/src/storage/native-fs.ts`——该文件统一封装了 Android 端（Capacitor Filesystem / FileOpener）与 Web 端（OPFS）两套存储原语。`ccs-framework` 的 `apps.ts` 中通过菜单 URL 字符串（如 `ccs-module-test/offline-docs`）引用这些页面**仅用于 iframe 路由跳转，不产生任何 JS 静态 import**，因此 `ccs-framework` 本身不会被拖入 Capacitor 依赖；真正引入 Capacitor 依赖链的是**构建 `ccs-module-test` / `ccs-module-common` 本身**——它们的 `vue-tsc` 类型检查和 Vite 构建会顺着 `offline-docs` / `offline-photos` 一路解析到 `native-fs.ts` 里的 `@capacitor/core`、`@capacitor/filesystem`、`@capacitor-community/file-opener` 三个 import，若未安装则类型检查和打包均会失败。
+
+为此，仓库对 `packages/shared` 做了以下调整：
+
+- 把**全仓库唯一**直接 `import` Capacitor 包的位置收敛到 `native-fs.ts` 一个文件（此前 `offline-docs/opfs.ts` 也重复实现了一套 Android 文件操作并直接 `import` Capacitor，现已重构为统一调用 `native-fs.ts` 导出的封装函数）
+- 新增 `native-fs.web.ts`：与 `native-fs.ts` 导出完全相同的函数签名，但不 `import` 任何 Capacitor 包——Web OPFS 相关函数保留真实实现，Android 专用函数替换为抛错桩实现（这些函数只会在 `isAndroidNative()` 为 `true` 时被调用，Web-only 构建中恒为 `false`，因此桩实现永远不会在运行时被触发）
+- Web-only 构建流程中，用 `native-fs.web.ts` 整体覆盖 `native-fs.ts`（沿用 `android-bridge.ts` / `android-bridge.web.ts` 的既有替换约定），使 `ccs-module-test` / `ccs-module-common` 在类型检查和打包时都不再需要解析 Capacitor 包
+
+> **不影响 Electron / Android 构建**：`pnpm build:electron` 和 `pnpm build:android` 走的是完整 `pnpm install`（不做上述文件替换），`native-fs.ts` 保持原始内容，Capacitor 真实实现完整可用。
 
 **构建产物优化：**
 

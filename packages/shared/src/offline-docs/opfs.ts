@@ -16,11 +16,24 @@
  * ```
  */
 
-import { Capacitor } from '@capacitor/core';
-import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import i18next from 'i18next';
 import { getElectronOfflineDocs, isAndroidNative, isElectronRuntime, resolveOfflineDocsUrl } from '../runtime';
-import { androidFilesystem, androidOpenFile, bytesToBase64, persistOpfsStorage } from '../storage/native-fs';
+import {
+  ANDROID_DIRECTORY_DATA,
+  androidConvertFileSrc,
+  androidFilesystem,
+  androidOpenFile,
+  bytesToBase64,
+  deleteAndroidFile,
+  ensureAndroidDir,
+  getAndroidDirectoryBytes,
+  getAndroidFileSize,
+  getAndroidFileUri,
+  listAndroidFileNames,
+  persistOpfsStorage,
+  readAndroidText,
+  writeAndroidText
+} from '../storage/native-fs';
 import { deriveFileType, getFileExtension, normalizeError, openExternalLink, parseNumber, sanitizeFileName } from '../utils';
 import type { CachedDocumentMeta, DownloadProgress, OfflineDocument, OfflineStorageKind, StorageStats, ViewerSource } from './types';
 
@@ -310,11 +323,7 @@ export async function checkDocumentUpdate(document: OfflineDocument): Promise<Ca
     const nextEtag = response.headers.get('etag') ?? document.etag;
     const nextLastModified = response.headers.get('last-modified') ?? document.lastModified;
     const nextSize = parseNumber(response.headers.get('content-length')) ?? document.size;
-    const changed = Boolean(
-      (nextEtag && meta.etag && nextEtag !== meta.etag) ||
-      (nextLastModified && meta.lastModified && nextLastModified !== meta.lastModified) ||
-      (typeof nextSize === 'number' && meta.serverSize && nextSize !== meta.serverSize)
-    );
+    const changed = Boolean((nextEtag && meta.etag && nextEtag !== meta.etag) || (nextLastModified && meta.lastModified && nextLastModified !== meta.lastModified) || (typeof nextSize === 'number' && meta.serverSize && nextSize !== meta.serverSize));
 
     if (!changed) return meta;
     const updated: CachedDocumentMeta = {
@@ -332,11 +341,7 @@ export async function checkDocumentUpdate(document: OfflineDocument): Promise<Ca
   }
 }
 
-export async function downloadDocumentToOpfs(
-  document: OfflineDocument,
-  onProgress: (progress: DownloadProgress) => void,
-  options: { force?: boolean; signal?: AbortSignal } = {}
-): Promise<CachedDocumentMeta> {
+export async function downloadDocumentToOpfs(document: OfflineDocument, onProgress: (progress: DownloadProgress) => void, options: { force?: boolean; signal?: AbortSignal } = {}): Promise<CachedDocumentMeta> {
   const electron = getElectronOfflineDocs<ElectronOfflineDocsBridge>();
   if (electron) {
     try {
@@ -481,12 +486,7 @@ function getNativeStorageKind(): OfflineStorageKind {
 // 内部 —— Electron 下载
 // ---------------------------------------------------------------------------
 
-async function downloadDocumentWithElectron(
-  electron: ElectronOfflineDocsBridge,
-  document: OfflineDocument,
-  onProgress: (progress: DownloadProgress) => void,
-  options: { force?: boolean; signal?: AbortSignal } = {}
-): Promise<CachedDocumentMeta> {
+async function downloadDocumentWithElectron(electron: ElectronOfflineDocsBridge, document: OfflineDocument, onProgress: (progress: DownloadProgress) => void, options: { force?: boolean; signal?: AbortSignal } = {}): Promise<CachedDocumentMeta> {
   const downloadId = `${document.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const unsubscribe = electron.onDownloadProgress((payload) => {
     if (payload.downloadId === downloadId) onProgress(payload.progress);
@@ -511,17 +511,7 @@ async function downloadDocumentWithElectron(
 
 async function getAllAndroidMetadata(): Promise<CachedDocumentMeta[]> {
   await ensureAndroidDirectories();
-  let result: Awaited<ReturnType<typeof Filesystem.readdir>>;
-  try {
-    result = await androidFilesystem('readdir', {
-      path: getAndroidMetaDir(),
-      directory: Directory.Data
-    });
-  } catch {
-    return [];
-  }
-
-  const files = result.files.map((file) => (typeof file === 'string' ? file : file.name)).filter((name) => name.endsWith('.json'));
+  const files = (await listAndroidFileNames(getAndroidMetaDir())).filter((name) => name.endsWith('.json'));
   const metadata: CachedDocumentMeta[] = [];
   for (const file of files) {
     try {
@@ -567,23 +557,17 @@ async function createAndroidCachedUrl(document: OfflineDocument): Promise<Viewer
     return { kind: 'unavailable', message: i18next.t('offlineDocs.noCacheAvailableViewer') };
   }
 
-  const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.getUri>>>('getUri', {
-    path: getAndroidDocPath(meta.localName),
-    directory: Directory.Data
-  });
+  const uri = await getAndroidFileUri(getAndroidDocPath(meta.localName));
   await touchDocument(document.id);
-  return { kind: 'cache', url: Capacitor.convertFileSrc(result.uri) };
+  return { kind: 'cache', url: androidConvertFileSrc(uri) };
 }
 
 async function openAndroidCachedDocument(document: OfflineDocument) {
   const meta = await getAndroidDocumentMeta(document.id);
   if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) throw new Error(i18next.t('offlineDocs.noCacheAvailableViewer'));
-  const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.getUri>>>('getUri', {
-    path: getAndroidDocPath(meta.localName),
-    directory: Directory.Data
-  });
+  const uri = await getAndroidFileUri(getAndroidDocPath(meta.localName));
   await touchDocument(document.id);
-  await androidOpenFile(result.uri, document.mimeType);
+  await androidOpenFile(uri, document.mimeType);
 }
 
 async function removeAndroidDocumentCache(id: string) {
@@ -606,11 +590,7 @@ async function checkNativeDocumentUpdate(document: OfflineDocument): Promise<Cac
     const nextEtag = response.headers.get('etag') ?? document.etag;
     const nextLastModified = response.headers.get('last-modified') ?? document.lastModified;
     const nextSize = parseNumber(response.headers.get('content-length')) ?? document.size;
-    const changed = Boolean(
-      (nextEtag && meta.etag && nextEtag !== meta.etag) ||
-      (nextLastModified && meta.lastModified && nextLastModified !== meta.lastModified) ||
-      (typeof nextSize === 'number' && meta.serverSize && nextSize !== meta.serverSize)
-    );
+    const changed = Boolean((nextEtag && meta.etag && nextEtag !== meta.etag) || (nextLastModified && meta.lastModified && nextLastModified !== meta.lastModified) || (typeof nextSize === 'number' && meta.serverSize && nextSize !== meta.serverSize));
 
     if (!changed) return meta;
     const updated: CachedDocumentMeta = {
@@ -628,11 +608,7 @@ async function checkNativeDocumentUpdate(document: OfflineDocument): Promise<Cac
   }
 }
 
-async function downloadDocumentWithAndroid(
-  document: OfflineDocument,
-  onProgress: (progress: DownloadProgress) => void,
-  options: { force?: boolean; signal?: AbortSignal } = {}
-): Promise<CachedDocumentMeta> {
+async function downloadDocumentWithAndroid(document: OfflineDocument, onProgress: (progress: DownloadProgress) => void, options: { force?: boolean; signal?: AbortSignal } = {}): Promise<CachedDocumentMeta> {
   if (document.allowOffline === false) throw new Error(i18next.t('offlineDocs.errorOfflineNotAllowed'));
 
   await ensureAndroidDirectories();
@@ -691,13 +667,13 @@ async function downloadDocumentWithAndroid(
         await androidFilesystem('appendFile', {
           path: localPath,
           data,
-          directory: Directory.Data
+          directory: ANDROID_DIRECTORY_DATA
         });
       } else {
         await androidFilesystem('writeFile', {
           path: localPath,
           data,
-          directory: Directory.Data,
+          directory: ANDROID_DIRECTORY_DATA,
           recursive: true
         });
         hasWrittenChunk = true;
@@ -767,73 +743,9 @@ async function downloadDocumentWithAndroid(
 }
 
 async function ensureAndroidDirectories() {
-  await mkdirAndroid(ROOT_DIR);
-  await mkdirAndroid(getAndroidDocsDir());
-  await mkdirAndroid(getAndroidMetaDir());
-}
-
-async function mkdirAndroid(path: string) {
-  try {
-    await androidFilesystem('mkdir', {
-      path,
-      directory: Directory.Data,
-      recursive: true
-    });
-  } catch {
-    // 目录已存在则忽略
-  }
-}
-
-async function readAndroidText(path: string) {
-  const result = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.readFile>>>('readFile', {
-    path,
-    directory: Directory.Data,
-    encoding: Encoding.UTF8
-  });
-  return String(result.data);
-}
-
-async function writeAndroidText(path: string, text: string) {
-  await androidFilesystem('writeFile', {
-    path,
-    data: text,
-    directory: Directory.Data,
-    encoding: Encoding.UTF8,
-    recursive: true
-  });
-}
-
-async function deleteAndroidFile(path: string) {
-  try {
-    await androidFilesystem('deleteFile', { path, directory: Directory.Data });
-  } catch {
-    // 已清除
-  }
-}
-
-async function getAndroidFileSize(path: string) {
-  try {
-    return (await androidFilesystem<Awaited<ReturnType<typeof Filesystem.stat>>>('stat', { path, directory: Directory.Data })).size ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function getAndroidDirectoryBytes(path: string): Promise<number> {
-  try {
-    const entries = await androidFilesystem<Awaited<ReturnType<typeof Filesystem.readdir>>>('readdir', { path, directory: Directory.Data });
-    let total = 0;
-    for (const entry of entries.files) {
-      const name = typeof entry === 'string' ? entry : entry.name;
-      const type = typeof entry === 'string' ? undefined : entry.type;
-      const childPath = `${path}/${name}`;
-      if (type === 'directory') total += await getAndroidDirectoryBytes(childPath);
-      else total += await getAndroidFileSize(childPath);
-    }
-    return total;
-  } catch {
-    return 0;
-  }
+  await ensureAndroidDir(ROOT_DIR);
+  await ensureAndroidDir(getAndroidDocsDir());
+  await ensureAndroidDir(getAndroidMetaDir());
 }
 
 function getAndroidDocsDir() {
