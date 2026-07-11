@@ -21,7 +21,7 @@ jobs:
 
       - name: Clone ccs-framework
         run: |
-          git clone --depth 1 https://github.com/kevinmoch/ccs-framework.git apps/ccs-framework
+          git clone --depth 1 https://x-access-token:${{ secrets.CCS_FRAMEWORK_PAT }}@github.com/kevinmoch/ccs-framework.git apps/ccs-framework
           rm -rf apps/ccs-framework/.git
 
       - name: Setup pnpm
