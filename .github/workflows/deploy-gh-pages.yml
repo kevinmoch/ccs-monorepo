@@ -36,6 +36,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        env:
+          CCS_BASE_URL: ${{ secrets.CCS_BASE_URL }}
+          CCS_LOGIN_URL: ${{ secrets.CCS_LOGIN_URL }}
+          CCS_TENANT_URL: ${{ secrets.CCS_TENANT_URL }}
+          CCS_TENANT_LOGIN: ${{ secrets.CCS_TENANT_LOGIN }}
         run: pnpm build:web
 
       - name: Deploy to GitHub Pages
