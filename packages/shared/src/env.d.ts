@@ -4,11 +4,11 @@
  */
 
 interface ImportMetaEnv {
-	readonly VITE_CCS_DOCS_BASE_URL?: string;
-	readonly VITE_CCS_OFFLINE_DOCS_MANIFEST?: string;
-	[key: string]: string | undefined;
+  readonly VITE_CCS_DOCS_BASE_URL?: string;
+  readonly VITE_CCS_OFFLINE_DOCS_MANIFEST?: string;
+  [key: string]: string | undefined;
 }
 
 interface ImportMeta {
-	readonly env: ImportMetaEnv;
+  readonly env: ImportMetaEnv;
 }

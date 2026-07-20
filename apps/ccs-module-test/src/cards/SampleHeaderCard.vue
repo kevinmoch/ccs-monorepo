@@ -7,7 +7,7 @@
           <span v-if="index < breadcrumb.length - 1" class="header-card__breadcrumb-sep">›</span>
         </template>
       </nav>
-      <h1 class="header-card__title">{{ title }}</h1>
+      <h1 class="header-card__title" @click="getProxyUser">{{ title }}</h1>
       <p class="header-card__desc">{{ description }}</p>
     </div>
   </CardShell>
@@ -26,6 +26,14 @@ const props = withDefaults(
     breadcrumb: () => []
   }
 );
+
+const getProxyUser = async () => {
+  const res = await window.top?.fetchProxy?.('/kapi');
+  if (res) {
+    const user = await res.json();
+    alert(user.username);
+  }
+};
 </script>
 
 <style scoped>

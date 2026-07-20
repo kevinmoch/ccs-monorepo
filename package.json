@@ -20,7 +20,8 @@
     "preview:ssl": "node scripts/preview-ssl.mjs",
     "lint": "turbo run lint",
     "test": "vitest run",
-    "ccs": "pnpm --filter @ccs/cli ccs"
+    "ccs": "pnpm --filter @ccs/cli ccs",
+    "ccs:ssl": "node scripts/ssl-server.mjs"
   },
   "devDependencies": {
     "@types/node": "latest",
