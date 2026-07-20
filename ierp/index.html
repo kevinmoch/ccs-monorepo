@@ -22,7 +22,7 @@
         background: #fff;
         border-radius: 12px;
         padding: 40px;
-        width: 380px;
+        width: 400px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
       }
       .login-card h2 {
@@ -70,6 +70,98 @@
       .login-btn:active {
         opacity: 0.8;
       }
+      .status-bar {
+        margin-top: 16px;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 14px;
+        text-align: center;
+        display: none;
+      }
+      .status-bar.success {
+        display: block;
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status-bar.error {
+        display: block;
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .kapi-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        display: none;
+      }
+      .kapi-section.visible {
+        display: block;
+      }
+      .kapi-section h3 {
+        font-size: 16px;
+        margin-bottom: 12px;
+        color: #333;
+      }
+      .test-btn {
+        width: 100%;
+        padding: 10px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        margin-bottom: 8px;
+        transition: opacity 0.2s;
+      }
+      .test-btn:hover {
+        opacity: 0.9;
+      }
+      .test-btn.credentials-false {
+        background: #dc3545;
+      }
+      .kapi-result {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .logout-btn {
+        width: 100%;
+        padding: 10px;
+        background: #dc3545;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: opacity 0.2s;
+      }
+      .logout-btn:hover {
+        opacity: 0.9;
+      }
+      .session-info {
+        margin-top: 16px;
+        padding: 10px;
+        background: #d4edda;
+        border-radius: 6px;
+        border: 1px solid #c3e6cb;
+        font-size: 14px;
+        text-align: center;
+        color: #155724;
+        display: none;
+      }
+      .session-info.visible {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -84,33 +176,148 @@
         <input type="password" id="password" value="123456" placeholder="请输入密码" />
       </div>
       <button class="login-btn" id="loginBtn">登 录</button>
+      <div class="status-bar" id="statusBar"></div>
+
+      <div class="session-info" id="sessionInfo">
+        已登录：<strong id="sessionUser"></strong>
+        <button class="logout-btn" id="logoutBtn">退出登录</button>
+      </div>
+
+      <div class="kapi-section" id="kapiSection">
+        <h3>KAPI 接口测试</h3>
+        <button class="test-btn" id="testKapiBtn">测试 /kapi（credentials: include）</button>
+        <button class="test-btn credentials-false" id="testKapiNoCredBtn">测试 /kapi（不带 credentials）</button>
+        <div class="kapi-result" id="kapiResult">点击按钮测试...</div>
+      </div>
     </div>
 
     <script>
-      document.getElementById('loginBtn').addEventListener('click', function () {
+      var statusBar = document.getElementById('statusBar');
+      var sessionInfo = document.getElementById('sessionInfo');
+      var sessionUser = document.getElementById('sessionUser');
+      var kapiSection = document.getElementById('kapiSection');
+      var kapiResult = document.getElementById('kapiResult');
+      var loginForm = document.querySelector('.form-group');
+
+      function showStatus(msg, type) {
+        statusBar.textContent = msg;
+        statusBar.className = 'status-bar ' + type;
+      }
+
+      // ===== 页面加载时检查登录态 =====
+      async function checkSession() {
+        try {
+          var res = await fetch('/ierp/session', { credentials: 'include' });
+          var data = await res.json();
+          if (data.loggedIn) {
+            sessionUser.textContent = data.username;
+            sessionInfo.classList.add('visible');
+            kapiSection.classList.add('visible');
+            showStatus('检测到已有登录会话：' + data.username, 'success');
+          }
+        } catch (err) {
+          // 忽略错误
+        }
+      }
+
+      // ===== 退出登录 =====
+      document.getElementById('logoutBtn').addEventListener('click', async function () {
+        try {
+          var res = await fetch('/ierp/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          var data = await res.json();
+          if (data.success) {
+            sessionInfo.classList.remove('visible');
+            kapiSection.classList.remove('visible');
+            showStatus('已退出登录', 'success');
+          }
+        } catch (err) {
+          showStatus('退出失败：' + err.message, 'error');
+        }
+      });
+
+      // ===== 登录逻辑 =====
+      document.getElementById('loginBtn').addEventListener('click', async function () {
         var username = document.getElementById('username').value;
         var password = document.getElementById('password').value;
 
-        console.log('登录信息：', { username: username, password: password });
+        if (!username || !password) {
+          showStatus('请输入用户名和密码', 'error');
+          return;
+        }
 
-        // 获取 URL 中的 redirect 参数
-        var params = new URLSearchParams(window.location.search);
-        var redirect = params.get('redirect');
+        try {
+          var res = await fetch('/ierp/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+          });
 
-        if (redirect) {
-          var targetUrl = redirect;
+          var data = await res.json();
 
-          // 仅当当前页面域名包含 huaweicloud 时，追加 tenant 参数
-          if (window.location.hostname.indexOf('huaweicloud') !== -1) {
-            var separator = redirect.indexOf('?') === -1 ? '?' : '&';
-            targetUrl = redirect + separator + 'tenant=CCS_Tenant_Gray';
+          if (res.ok && data.success) {
+            showStatus('登录成功！当前用户：' + data.username, 'success');
+            sessionUser.textContent = data.username;
+            sessionInfo.classList.add('visible');
+            kapiSection.classList.add('visible');
+
+            // 检查是否有 redirect 参数
+            var params = new URLSearchParams(window.location.search);
+            var redirect = params.get('redirect');
+            if (redirect) {
+              var targetUrl = redirect;
+              if (window.location.hostname.indexOf('huaweicloud') !== -1) {
+                var separator = redirect.indexOf('?') === -1 ? '?' : '&';
+                targetUrl = redirect + separator + 'tenant=CCS_Tenant_Gray';
+              }
+              window.location.href = targetUrl;
+            } else {
+              window.location.href = '/ierp/monorepo/proxy.html';
+            }
+          } else {
+            showStatus('登录失败：' + (data.error || '未知错误'), 'error');
           }
-
-          window.location.href = targetUrl;
-        } else {
-          alert('登录成功！未指定重定向地址。');
+        } catch (err) {
+          showStatus('请求失败：' + err.message, 'error');
         }
       });
+
+      // ===== 测试 /kapi（带 credentials: include） =====
+      document.getElementById('testKapiBtn').addEventListener('click', async function () {
+        kapiResult.textContent = '请求中...';
+        try {
+          var res = await fetch('/kapi', {
+            method: 'GET',
+            credentials: 'include'
+          });
+          var data = await res.json();
+          kapiResult.textContent = '状态码: ' + res.status + '\n响应内容:\n' + JSON.stringify(data, null, 2);
+        } catch (err) {
+          kapiResult.textContent = '请求异常: ' + err.message;
+        }
+      });
+
+      // ===== 测试 /kapi（不带 credentials） =====
+      document.getElementById('testKapiNoCredBtn').addEventListener('click', async function () {
+        kapiResult.textContent = '请求中（不带 credentials）...';
+        try {
+          var res = await fetch('/kapi', {
+            method: 'GET',
+            // 不设置 credentials，默认 same-origin 在同源下也会带 cookie
+            // 这里用 credentials: 'omit' 明确不带 cookie
+            credentials: 'omit'
+          });
+          var data = await res.json();
+          kapiResult.textContent = '状态码: ' + res.status + '\n响应内容:\n' + JSON.stringify(data, null, 2);
+        } catch (err) {
+          kapiResult.textContent = '请求异常: ' + err.message;
+        }
+      });
+
+      // ===== 页面加载时检查是否已有登录会话 =====
+      checkSession();
     </script>
   </body>
 </html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <title>CCS Proxy Page</title>
+  </head>
+  <body>
+    <script>
+      // 监听父窗口发来的请求指令
+      window.addEventListener('message', async (event) => {
+        const ownOrigin = window.location.origin;
+        const { action, endpoint, reqId, init } = event.data;
+
+        if (action === 'fetch') {
+          try {
+            // 校验 endpoint 是否为同源路径（防止 SSRF）
+            const url = new URL(endpoint, ownOrigin);
+            if (url.origin !== ownOrigin) {
+              throw new Error('Forbidden: cross-origin requests are not allowed');
+            }
+
+            // 使用 credentials: 'include' 携带 cookie，确保登录态被服务端识别
+            const res = await fetch(endpoint, {
+              credentials: 'include',
+              ...(init || {})
+            });
+
+            // 透传完整的响应信息（匹配 fetch 语义：HTTP 错误也 resolve，只有网络错误才 reject）
+            const body = await res.text();
+            event.source.postMessage(
+              {
+                reqId,
+                response: {
+                  status: res.status,
+                  statusText: res.statusText,
+                  body
+                }
+              },
+              event.origin
+            );
+          } catch (err) {
+            event.source.postMessage({ reqId, success: false, error: err.message }, event.origin);
+          }
+        }
+      });
+    </script>
+    CCS Proxy Page
+  </body>
+</html>
