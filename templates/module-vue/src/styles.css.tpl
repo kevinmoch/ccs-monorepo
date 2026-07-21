@@ -15,6 +15,7 @@ body {
     sans-serif;
 }
 
+/* Custom Scrollbar */
 ::-webkit-scrollbar,
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -26,7 +27,7 @@ body {
 }
 ::-webkit-scrollbar-thumb,
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #CBD5E1;
+  background-color: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-corner,
@@ -93,7 +94,7 @@ body {
 }
 .module-header a.router-link-active {
   background: color-mix(in srgb, var(--ccs-primary, #006fd6) 14%, transparent);
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 .metric-value {
   font-size: clamp(34px, 5vw, 52px);
@@ -113,7 +114,7 @@ body {
 .metric-card strong {
   font-size: clamp(30px, 5vw, 46px);
   line-height: 1;
-  color: var(--ccs-primary, #006fd6);
+  color: var(--ccs-link-color, #2563eb);
 }
 .metric-card small {
   font-size: 13px;
