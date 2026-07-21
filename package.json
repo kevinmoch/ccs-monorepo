@@ -30,6 +30,7 @@
     "tsx": "latest",
     "turbo": "latest",
     "typescript": "latest",
+    "vite": "latest",
     "vitest": "latest",
     "workbox-build": "^7.4.1"
   }
