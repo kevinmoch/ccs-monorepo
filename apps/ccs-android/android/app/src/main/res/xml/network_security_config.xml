@@ -23,6 +23,7 @@
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
+            <certificates src="@raw/taas_ca" />
         </trust-anchors>
     </domain-config>
 </network-security-config>
