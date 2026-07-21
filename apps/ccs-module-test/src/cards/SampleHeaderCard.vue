@@ -7,7 +7,7 @@
           <span v-if="index < breadcrumb.length - 1" class="header-card__breadcrumb-sep">›</span>
         </template>
       </nav>
-      <h1 class="header-card__title" @click="getProxyUser">{{ title }}</h1>
+      <h1 class="header-card__title" @click="testProxy">{{ title }}</h1>
       <p class="header-card__desc">{{ description }}</p>
     </div>
   </CardShell>
@@ -27,11 +27,23 @@ const props = withDefaults(
   }
 );
 
-const getProxyUser = async () => {
-  const res = await window.top?.fetchProxy?.('/kapi');
+const testProxy = async () => {
+  const baseUrl = sessionStorage.getItem('ccs-base-url-override') || import.meta.env.CCS_BASE_URL || '';
+  const res = await window.top?.fetchProxy?.(baseUrl + '/ierp/kapi/app/MaterialTemplate/call', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      className: 'kd.ecc.index.webapi.ECCIndexIerpApi',
+      methodName: 'getCarousel',
+      ismobile: '1'
+    })
+  });
   if (res) {
-    const user = await res.json();
-    alert(user.username);
+    const data = await res.json();
+    alert(`baseUrl: ${baseUrl} \ndata: ${data.errorCode}`);
   }
 };
 </script>
