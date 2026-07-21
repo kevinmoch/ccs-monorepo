@@ -1965,6 +1965,14 @@ adb install dist/android/ccps-debug.apk
 
 **原因**：项目使用的本地开发证书是自签名的，Android 系统不信任自签名证书。虽然 `capacitor.config.ts` 中配置了 `androidScheme: 'https'` 和 `cleartext: true`（允许明文 HTTP），但文档/上传服务如果使用 HTTPS 自签名证书将无法在 Android WebView 中正常访问。
 
+#### 信任内部测试域名的证书（networkSecurityConfig）
+
+`apps/ccs-android/android/app/src/main/res/xml/network_security_config.xml` 中为两个内部测试域名（`jijian.taas.huawei.com`、`ccs-alpha.taas.huawei.com`）配置了域名级信任锚（`system` + `user`），并在 `AndroidManifest.xml` 中通过 `android:networkSecurityConfig` 启用：
+
+- 这两个域名使用内部 CA 签发的证书时，WebView（含登录页和 fetchProxy 的 proxy.html iframe）可以正常建立 TLS 连接，前提是**设备上已安装该内部 CA 证书**（设置 → 安全 → 安装证书）
+- 如需免装 CA，可将内部 CA 导出为 PEM/DER 放入 `res/raw/` 并在该 XML 的 `trust-anchors` 中追加 `<certificates src="@raw/..." />`
+- 注意：配置 `networkSecurityConfig` 后清单中的 `usesCleartextTraffic` 属性不再生效，明文 HTTP 由 XML 中 `base-config cleartextTrafficPermitted="true"` 保持开启
+
 #### 测试步骤
 
 1. **确保手机和电脑在同一局域网**

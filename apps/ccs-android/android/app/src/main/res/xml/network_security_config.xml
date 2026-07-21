@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- When this file is present, the manifest's usesCleartextTraffic attribute is ignored,
+         so cleartext must be allowed here explicitly to preserve the existing behaviour
+         (local doc/upload test services over plain HTTP). -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Internal test domains served with certificates issued by an internal (non-public) CA.
+         WebView honours the app's network security config, so trusting user-installed CAs
+         for exactly these two hosts lets the CCS login page and the fetchProxy proxy.html
+         iframe load once the internal CA is installed on the device
+         (Settings > Security > Encryption & credentials > Install a certificate).
+         To avoid per-device CA installation, export the internal CA as PEM/DER, place it
+         under res/raw/ (e.g. res/raw/taas_ca.pem) and add:
+             <certificates src="@raw/taas_ca" /> -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">jijian.taas.huawei.com</domain>
+        <domain includeSubdomains="true">ccs-alpha.taas.huawei.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
