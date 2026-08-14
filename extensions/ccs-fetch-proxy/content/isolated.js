@@ -107,6 +107,16 @@
   // SW -> MAIN world command forwarding
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg || msg.__ccsExt !== true) return false;
+
+    // Broadcast discovery: the SW's in-memory frame registry is wiped whenever it is
+    // idle-terminated, and static (already-loaded) frames never navigate again to re-register.
+    // Re-announce this frame on demand so routing keeps working across SW restarts.
+    if (msg.type === 'frame-ping') {
+      send({ __ccsExt: true, type: 'frame-register', origin: location.origin, href: location.href, isTop: IS_TOP });
+      sendResponse({ ok: true });
+      return false;
+    }
+
     if (!IS_TOP && msg.type === 'fetch-exec') {
       pendingExec.set(msg.reqId, sendResponse);
       postToMain({ kind: 'CCS_EXT_EXECUTE', reqId: msg.reqId, url: msg.url, init: msg.init });

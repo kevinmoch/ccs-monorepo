@@ -63,6 +63,38 @@ async function isShellTab(tabId, selfOrigin) {
   return whitelistAllows(top.origin);
 }
 
+// Frames only register at document_start, but the in-memory registry is wiped whenever the MV3
+// service worker is idle-terminated (~30s) — and static, already-loaded frames never navigate
+// again, so they would stay unregistered forever. On a routing miss we actively rediscover:
+// broadcast frame-ping to every frame in the tab; each frame's ISOLATED script re-registers in
+// response. After a short grace period the caller can retry the lookup with a warm registry.
+function discoverFrames(tabId) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    try {
+      chrome.tabs.sendMessage(tabId, { __ccsExt: true, proto: 'ccs-fetch-proxy', type: 'frame-ping' }, () => {
+        void chrome.runtime.lastError; // some frames may not answer; ignore
+      });
+    } catch {
+      /* tab already gone */
+    }
+    setTimeout(finish, 500);
+  });
+}
+
+function findFrameCandidates(tabId, targetOrigin) {
+  const candidates = [];
+  for (const entry of frameRegistry.values()) {
+    if (entry.tabId === tabId && entry.frameId !== 0 && entry.origin === targetOrigin) candidates.push(entry);
+  }
+  return candidates.sort((a, b) => b.ts - a.ts);
+}
+
 async function routeFetchRequest(msg, sender) {
   const tabId = sender.tab && sender.tab.id;
 
@@ -73,9 +105,11 @@ async function routeFetchRequest(msg, sender) {
     return { ok: false, error: `Invalid request URL: ${msg.url}` };
   }
 
-  const candidates = [];
-  for (const entry of frameRegistry.values()) {
-    if (entry.tabId === tabId && entry.frameId !== 0 && entry.origin === targetOrigin) candidates.push(entry);
+  let candidates = findFrameCandidates(tabId, targetOrigin);
+  if (!candidates.length) {
+    // Registry may be cold (SW restarted) — ask all live frames to re-register, then retry once.
+    await discoverFrames(tabId);
+    candidates = findFrameCandidates(tabId, targetOrigin);
   }
   if (!candidates.length) {
     return {
@@ -83,7 +117,6 @@ async function routeFetchRequest(msg, sender) {
       error: `未找到已打开的目标子网站页面（origin: ${targetOrigin}），请先在主窗口打开对应页面（如待办任务）后重试`
     };
   }
-  candidates.sort((a, b) => b.ts - a.ts);
 
   const target = candidates[0];
   return new Promise((resolve) => {
@@ -135,7 +168,11 @@ async function handleMessage(msg, sender) {
 
     case 'lockdown-check': {
       if (frameId === 0) return { lockdown: false };
-      if (!(await isShellTab(tabId))) return { lockdown: false };
+      if (!(await isShellTab(tabId))) {
+        // Cold registry (SW restarted, static top frame never re-registered) — rediscover first.
+        await discoverFrames(tabId);
+        if (!(await isShellTab(tabId))) return { lockdown: false };
+      }
       const top = topFrameOf(tabId);
       const selfOrigin = toOrigin(msg.origin);
       // Cross-origin frames only: same-origin module iframes keep their existing behavior
