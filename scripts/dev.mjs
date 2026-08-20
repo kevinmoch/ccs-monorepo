@@ -3,7 +3,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.dirname(fileURLToPath(import.meta.url)).replace(/\/scripts$/, '');
+// 跨平台取仓库根目录：dirname 是 scripts/，再向上一级即为 repoRoot。
+// 不要用 replace(/\/scripts$/)，Windows 下 fileURLToPath 返回反斜杠路径会匹配失败。
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function startDev({ ssl = false, sslModules = false, sdk = false, args = [] } = {}) {
   const isWindows = process.platform === 'win32';
@@ -22,7 +24,9 @@ function startDev({ ssl = false, sslModules = false, sdk = false, args = [] } = 
     // 必须给绝对路径——vite 在子应用目录里求值相对路径会错位。
     const sdkPath = path.resolve(repoRoot, process.env.WEBSKILL_SRC ?? '../web-skill-sdk');
     if (!existsSync(sdkPath)) {
-      console.error(`[ccs] --sdk 需要本地 webskill SDK 仓库，未找到：${sdkPath}\n      可用 WEBSKILL_SRC=<SDK 路径> 指定。`);
+      console.error(
+        `[ccs] --sdk 需要本地 webskill SDK 仓库，未找到：${sdkPath}\n      可用 WEBSKILL_SRC=<SDK 路径> 指定。`
+      );
       process.exit(1);
     }
     env.WEBSKILL_SRC = sdkPath;
