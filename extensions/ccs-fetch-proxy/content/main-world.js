@@ -100,6 +100,49 @@
     window.dispatchEvent(new CustomEvent('ccs-ext-fetch-ready'));
   }
 
+  // 页面感知 / 页面操作桥（content/dom-agent.js 在目标帧里执行）。
+  // 范围白名单一律由外壳传入，本层不带任何缺省。
+  const pendingDomRequests = new Map(); // reqId -> { resolve, reject, timer }
+
+  function installCcsExtDom() {
+    if (window.ccsExtDom) return;
+
+    const send = (targetUrl, op, payload) =>
+      new Promise((resolve, reject) => {
+        let url;
+        try {
+          url = new URL(targetUrl, location.href).href;
+        } catch (err) {
+          reject(new TypeError(`ccsExtDom: invalid target url (${err && err.message})`));
+          return;
+        }
+        const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const timer = setTimeout(() => {
+          if (pendingDomRequests.delete(reqId)) {
+            reject(new Error(`ccsExtDom: ${op} timeout after ${REQUEST_TIMEOUT_MS}ms`));
+          }
+        }, REQUEST_TIMEOUT_MS);
+        pendingDomRequests.set(reqId, { resolve, reject, timer });
+        postToIsolated({ kind: 'CCS_EXT_DOM_REQUEST', reqId, targetUrl: url, op, payload });
+      });
+
+    window.ccsExtDom = {
+      perceive: (targetUrl, scope) => send(targetUrl, 'perceive', scope),
+      act: (targetUrl, request) => send(targetUrl, 'act', request)
+    };
+
+    window.dispatchEvent(new CustomEvent('ccs-ext-dom-ready'));
+  }
+
+  function settleDomRequest(data) {
+    const entry = pendingDomRequests.get(data.reqId);
+    if (!entry) return;
+    pendingDomRequests.delete(data.reqId);
+    clearTimeout(entry.timer);
+    if (data.ok) entry.resolve(data.result);
+    else entry.reject(new Error(data.error || 'ccsExtDom: request failed'));
+  }
+
   function settleTopRequest(data) {
     const entry = pendingTopRequests.get(data.reqId);
     if (!entry) return;
@@ -225,8 +268,11 @@
     if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
 
     if (IS_TOP) {
-      if (data.kind === 'CCS_EXT_ENABLE') installCcsExtFetch();
-      else if (data.kind === 'CCS_EXT_FETCH_RESPONSE') settleTopRequest(data);
+      if (data.kind === 'CCS_EXT_ENABLE') {
+        installCcsExtFetch();
+        installCcsExtDom();
+      } else if (data.kind === 'CCS_EXT_FETCH_RESPONSE') settleTopRequest(data);
+      else if (data.kind === 'CCS_EXT_DOM_RESPONSE') settleDomRequest(data);
     } else {
       if (data.kind === 'CCS_EXT_EXECUTE') executeFetch(data.reqId, data.url, data.init);
       else if (data.kind === 'CCS_EXT_LOCKDOWN') activateLockdown();

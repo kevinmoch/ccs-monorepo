@@ -95,19 +95,42 @@ function findFrameCandidates(tabId, targetOrigin) {
   return candidates.sort((a, b) => b.ts - a.ts);
 }
 
-async function routeFetchRequest(msg, sender) {
-  const tabId = sender.tab && sender.tab.id;
+// The caller hands us the exact iframe src. Ranking on origin + recency alone silently prefers
+// whatever same-origin frame registered last — a hidden helper/download frame the sub-system
+// opened after the real page — which answers with an almost empty document instead of failing.
+function rankByUrl(candidates, targetUrl) {
+  let targetPath;
+  try {
+    targetPath = new URL(targetUrl).pathname;
+  } catch {
+    targetPath = undefined;
+  }
+  const score = (entry) => {
+    if (entry.href === targetUrl) return 2;
+    if (targetPath === undefined) return 0;
+    try {
+      // In-frame navigation keeps the iframe's src attribute but changes location.href,
+      // so the path is the strongest signal that survives it.
+      return new URL(entry.href).pathname === targetPath ? 1 : 0;
+    } catch {
+      return 0;
+    }
+  };
+  return [...candidates].sort((a, b) => score(b) - score(a) || b.ts - a.ts);
+}
 
+async function routeToFrame(tabId, targetUrl, command) {
   let targetOrigin;
   try {
-    targetOrigin = new URL(msg.url).origin;
+    targetOrigin = new URL(targetUrl).origin;
   } catch {
-    return { ok: false, error: `Invalid request URL: ${msg.url}` };
+    return { ok: false, error: `Invalid target URL: ${targetUrl}` };
   }
 
   let candidates = findFrameCandidates(tabId, targetOrigin);
-  if (!candidates.length) {
-    // Registry may be cold (SW restarted) — ask all live frames to re-register, then retry once.
+  // Zero: registry may be cold (SW restarted). More than one: the registered hrefs may predate
+  // in-frame navigation, and stale hrefs would misrank. Both cases want a fresh round.
+  if (candidates.length !== 1) {
     await discoverFrames(tabId);
     candidates = findFrameCandidates(tabId, targetOrigin);
   }
@@ -118,11 +141,11 @@ async function routeFetchRequest(msg, sender) {
     };
   }
 
-  const target = candidates[0];
+  const target = rankByUrl(candidates, targetUrl)[0];
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(
       tabId,
-      { __ccsExt: true, proto: 'ccs-fetch-proxy', type: 'fetch-exec', reqId: msg.reqId, url: msg.url, init: msg.init },
+      { __ccsExt: true, proto: 'ccs-fetch-proxy', ...command },
       { frameId: target.frameId },
       (res) => {
         if (chrome.runtime.lastError) {
@@ -139,6 +162,26 @@ async function routeFetchRequest(msg, sender) {
         );
       }
     );
+  });
+}
+
+function routeFetchRequest(msg, sender) {
+  return routeToFrame(sender.tab && sender.tab.id, msg.url, {
+    type: 'fetch-exec',
+    reqId: msg.reqId,
+    url: msg.url,
+    init: msg.init
+  });
+}
+
+// Page perception / page action share the fetch routing: same tab, same origin match, same
+// "open the page first" failure mode. Only the forwarded command differs.
+function routeDomRequest(msg, sender) {
+  return routeToFrame(sender.tab && sender.tab.id, msg.targetUrl, {
+    type: 'dom-exec',
+    reqId: msg.reqId,
+    op: msg.op,
+    payload: msg.payload
   });
 }
 
@@ -186,6 +229,19 @@ async function handleMessage(msg, sender) {
       if (!(await isShellTab(tabId, msg.origin)))
         return { ok: false, error: 'Forbidden: shell origin is not whitelisted (see extension options)' };
       return routeFetchRequest(msg, sender);
+    }
+
+    case 'dom-proxy-request': {
+      if (frameId !== 0)
+        return {
+          ok: false,
+          error: 'Forbidden: only the top-level shell frame can issue page perception/action commands'
+        };
+      if (!(await isShellTab(tabId, msg.origin)))
+        return { ok: false, error: 'Forbidden: shell origin is not whitelisted (see extension options)' };
+      if (msg.op !== 'perceive' && msg.op !== 'act')
+        return { ok: false, error: `Unsupported DOM operation: ${msg.op}` };
+      return routeDomRequest(msg, sender);
     }
 
     default:

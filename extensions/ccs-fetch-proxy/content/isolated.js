@@ -5,9 +5,10 @@
 //    re-sending on every navigation (this is what keeps the SW's frame registry fresh and what
 //    the whitelist check relies on — no "tabs" permission is needed anywhere).
 //  - Top frame (the ccs-framework shell): ask the SW for shell-check, then tell the MAIN world
-//    script to install `window.ccsExtFetch`; afterwards bridge MAIN <-> SW fetch traffic.
+//    script to install `window.ccsExtFetch` / `window.ccsExtDom`; afterwards bridge MAIN <-> SW
+//    fetch and DOM traffic.
 //  - Sub frames: ask the SW for lockdown-check (cross-origin frames under a whitelisted shell
-//    get CCS_EXT_LOCKDOWN) and forward SW fetch-exec commands to the MAIN world executor.
+//    get CCS_EXT_LOCKDOWN) and forward SW fetch-exec / dom-exec commands to the MAIN world.
 (() => {
   'use strict';
 
@@ -29,7 +30,7 @@
       }
     });
 
-  // reqId -> sendResponse callback, for fetch-exec commands forwarded to the MAIN world
+  // reqId -> sendResponse callback, for fetch-exec / dom-exec commands forwarded to the MAIN world
   const pendingExec = new Map();
 
   // Register on every navigation. document_start guarantees this fires before any page script
@@ -101,6 +102,40 @@
         pendingExec.delete(data.reqId);
         callback({ ok: data.ok === true, response: data.response, error: data.error });
       }
+      return;
+    }
+
+    // 页面感知 / 页面操作：与 fetch 同一条链路，只是载荷是 DOM 指令而不是请求
+    if (IS_TOP && data.kind === 'CCS_EXT_DOM_REQUEST') {
+      send({
+        __ccsExt: true,
+        type: 'dom-proxy-request',
+        reqId: data.reqId,
+        targetUrl: data.targetUrl,
+        op: data.op,
+        payload: data.payload,
+        origin: location.origin
+      }).then((res) => {
+        if (res && res.ok === true) {
+          postToMain({ kind: 'CCS_EXT_DOM_RESPONSE', reqId: data.reqId, ok: true, result: res.result });
+        } else {
+          postToMain({
+            kind: 'CCS_EXT_DOM_RESPONSE',
+            reqId: data.reqId,
+            ok: false,
+            error: (res && res.error) || 'ccsExtDom: extension service worker unavailable'
+          });
+        }
+      });
+      return;
+    }
+
+    if (!IS_TOP && data.kind === 'CCS_EXT_DOM_EXECUTE_RESULT') {
+      const callback = pendingExec.get(data.reqId);
+      if (callback) {
+        pendingExec.delete(data.reqId);
+        callback({ ok: data.ok === true, result: data.result, error: data.error });
+      }
     }
   });
 
@@ -121,6 +156,12 @@
       pendingExec.set(msg.reqId, sendResponse);
       postToMain({ kind: 'CCS_EXT_EXECUTE', reqId: msg.reqId, url: msg.url, init: msg.init });
       return true; // keep the sendResponse channel open for the async result
+    }
+
+    if (!IS_TOP && msg.type === 'dom-exec') {
+      pendingExec.set(msg.reqId, sendResponse);
+      postToMain({ kind: 'CCS_EXT_DOM_EXECUTE', reqId: msg.reqId, op: msg.op, payload: msg.payload });
+      return true;
     }
     return false;
   });

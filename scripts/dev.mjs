@@ -1,6 +1,11 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-function startDev({ ssl = false, sslModules = false, args = [] } = {}) {
+const repoRoot = path.dirname(fileURLToPath(import.meta.url)).replace(/\/scripts$/, '');
+
+function startDev({ ssl = false, sslModules = false, sdk = false, args = [] } = {}) {
   const isWindows = process.platform === 'win32';
   const spawnArgs = ['exec', 'turbo', 'run', 'dev', '--filter=ccs-framework', '--filter=ccs-module-*', ...args];
 
@@ -10,6 +15,17 @@ function startDev({ ssl = false, sslModules = false, args = [] } = {}) {
   }
   if (sslModules) {
     env.CCS_DEV_SSL_MODULES = 'true';
+  }
+  if (sdk) {
+    // webskill SDK 源码联调：指向本地 SDK 仓库（默认与 monorepo 平级的 ../web-skill-sdk，
+    // 可用 WEBSKILL_SRC 环境变量覆盖）。不传这个 flag 时 @webskill/* 走 node_modules 发布版。
+    // 必须给绝对路径——vite 在子应用目录里求值相对路径会错位。
+    const sdkPath = path.resolve(repoRoot, process.env.WEBSKILL_SRC ?? '../web-skill-sdk');
+    if (!existsSync(sdkPath)) {
+      console.error(`[ccs] --sdk 需要本地 webskill SDK 仓库，未找到：${sdkPath}\n      可用 WEBSKILL_SRC=<SDK 路径> 指定。`);
+      process.exit(1);
+    }
+    env.WEBSKILL_SRC = sdkPath;
   }
 
   const child = spawn('pnpm', spawnArgs, {
@@ -42,7 +58,8 @@ function startDev({ ssl = false, sslModules = false, args = [] } = {}) {
 const extraArgs = process.argv.slice(2);
 const useSsl = extraArgs.includes('--ssl');
 const useSslAll = extraArgs.includes('--ssl-all');
+const useSdk = extraArgs.includes('--sdk');
 // --ssl-all implies --ssl for ccs-framework
 const effectiveSsl = useSsl || useSslAll;
-const turboArgs = extraArgs.filter((a) => a !== '--ssl' && a !== '--ssl-all');
-startDev({ ssl: effectiveSsl, sslModules: useSslAll, args: turboArgs });
+const turboArgs = extraArgs.filter((a) => a !== '--ssl' && a !== '--ssl-all' && a !== '--sdk');
+startDev({ ssl: effectiveSsl, sslModules: useSslAll, sdk: useSdk, args: turboArgs });

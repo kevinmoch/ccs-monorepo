@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CCS Fetch Proxy",
   "version": "0.1.0",
-  "description": "Proxy fetch requests through the CCS shell's embedded cross-origin iframes (with the sub-site's login session), and keep sub-site navigation inside the shell instead of opening new windows.",
+  "description": "Proxy fetch requests and AI page perception/actions through the CCS shell's embedded cross-origin iframes (with the sub-site's login session), and keep sub-site navigation inside the shell instead of opening new windows.",
   "permissions": ["storage"],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -18,7 +18,7 @@
       "matches": ["<all_urls>"],
       "all_frames": true,
       "run_at": "document_start",
-      "js": ["content/main-world.js"],
+      "js": ["content/main-world.js", "content/dom-agent.js"],
       "world": "MAIN"
     }
   ],

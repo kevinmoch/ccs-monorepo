@@ -28,6 +28,9 @@ export function applyTheme(mode: ThemeMode, root: HTMLElement = document.documen
   const tokens = themeTokens[mode];
   root.dataset.theme = mode;
   root.classList.toggle('dark', mode === 'dark');
+  // 必须同步 color-scheme：Chrome 按内层文档的 color-scheme 决定 iframe 画布底色，
+  // 只设 light 时画布恒为不透明白——模块页 body 是透明的，暗色下就露出一整块白底。
+  root.style.colorScheme = mode;
   root.style.setProperty('--ccs-primary', tokens.primaryColor);
   root.style.setProperty('--ccs-bg', tokens.background);
   root.style.setProperty('--ccs-text', tokens.text);
