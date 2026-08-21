@@ -250,10 +250,13 @@
     );
 
     // window.open(url) → navigate this frame instead of popping a new window out of the shell.
+    // about:blank / javascript: 不拦：前者被页面用来开空白页写字（打印预览等），改成帧内跳转
+    // 会把本帧导航成空页；后者在 location 赋值里语义不同，退回原生行为。
     const originalOpen = window.open;
     window.open = function (url) {
-      if (url != null && url !== '') {
-        location.href = typeof url === 'string' ? url : url.toString();
+      const href = url == null ? '' : String(url);
+      if (href !== '' && !/^about:blank/i.test(href) && !/^javascript:/i.test(href)) {
+        location.href = href;
         return window;
       }
       return originalOpen ? originalOpen.apply(this, arguments) : null;

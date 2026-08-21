@@ -119,6 +119,27 @@ function rankByUrl(candidates, targetUrl) {
   return [...candidates].sort((a, b) => score(b) - score(a) || b.ts - a.ts);
 }
 
+// 帧失语（ISOLATED 已转发但 MAIN 永不回音等）时 sendMessage 的回调永远不来；
+// 没有超时，多候选循环会吊死在第一个失语帧上，后续候选与兜底都轮不到
+const FRAME_RESPONSE_TIMEOUT_MS = 5000;
+
+function sendToFrame(tabId, frameId, command) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish({ res: undefined, timedOut: true }), FRAME_RESPONSE_TIMEOUT_MS);
+    chrome.tabs.sendMessage(tabId, { __ccsExt: true, proto: 'ccs-fetch-proxy', ...command }, { frameId }, (res) => {
+      const lastError = chrome.runtime.lastError;
+      finish({ res: lastError ? undefined : res, lastError });
+    });
+  });
+}
+
 async function routeToFrame(tabId, targetUrl, command) {
   let targetOrigin;
   try {
@@ -141,28 +162,53 @@ async function routeToFrame(tabId, targetUrl, command) {
     };
   }
 
-  const target = rankByUrl(candidates, targetUrl)[0];
-  return new Promise((resolve) => {
-    chrome.tabs.sendMessage(
-      tabId,
-      { __ccsExt: true, proto: 'ccs-fetch-proxy', ...command },
-      { frameId: target.frameId },
-      (res) => {
-        if (chrome.runtime.lastError) {
-          // Frame navigated away or was removed — drop the stale entry and surface a clear error.
-          frameRegistry.delete(`${tabId}:${target.frameId}`);
-          resolve({
-            ok: false,
-            error: `目标页面已失效（${chrome.runtime.lastError.message}），请重新打开对应页面后重试`
-          });
-          return;
-        }
-        resolve(
-          res && res.ok === true ? res : { ok: false, error: (res && res.error) || '目标页面未返回结果，请重试' }
-        );
+  // 同源多帧时注册表的 href 可能是旧的（帧内导航不改 iframe 的 src），排序只是猜。
+  // 多候选才带 expectHref 让目标帧自验：拒投就纠偏注册表并顺延下一候选；全部拒投时退回
+  // 最佳猜测投递（首帧的 src 属性天然滞后于帧内导航，不能因自验失败就整体拒绝）。
+  // expectHref 是页面地址语义，只对 dom-exec 有意义：fetch-exec 的 targetUrl 是 API 端点，
+  // 拿去跟帧的 location.pathname 比对必然全部拒投，白白多绕一圈才落到兜底。
+  const ranked = rankByUrl(candidates, targetUrl);
+  const verify = command.type === 'dom-exec' ? { expectHref: targetUrl } : {};
+  let lastFailure;
+  if (ranked.length > 1) {
+    for (const target of ranked) {
+      const { res, lastError, timedOut } = await sendToFrame(tabId, target.frameId, { ...command, ...verify });
+      if (timedOut) {
+        // 超时不是帧死了（可能只是在忙），注册表条目留着，顺延下一候选
+        lastFailure = '目标页面响应超时，请重试';
+        continue;
       }
-    );
-  });
+      if (lastError) {
+        // Frame navigated away or was removed — drop the stale entry and try the next candidate.
+        frameRegistry.delete(`${tabId}:${target.frameId}`);
+        lastFailure = `目标页面已失效（${lastError.message}），请重新打开对应页面后重试`;
+        continue;
+      }
+      if (res && res.error === 'frame-url-mismatch') {
+        // 帧自报的实际地址写回注册表，后续请求不用再猜
+        if (res.href) frameRegistry.set(`${tabId}:${target.frameId}`, { ...target, href: res.href, ts: Date.now() });
+        lastFailure = '目标页面地址已变化，未命中候选帧';
+        continue;
+      }
+      return res && res.ok === true ? res : { ok: false, error: (res && res.error) || '目标页面未返回结果，请重试' };
+    }
+  }
+  // 兜底挑仍在注册表里的最佳候选：循环里被删的条目已确认失效，不值得再投一次
+  const fallback = ranked.find((target) => frameRegistry.has(`${tabId}:${target.frameId}`)) ?? ranked[0];
+  const { res, lastError, timedOut } = await sendToFrame(tabId, fallback.frameId, command);
+  if (timedOut) {
+    return { ok: false, error: lastFailure ?? '目标页面响应超时，请重试' };
+  }
+  if (lastError) {
+    frameRegistry.delete(`${tabId}:${fallback.frameId}`);
+    return {
+      ok: false,
+      error: `目标页面已失效（${lastError.message}），请重新打开对应页面后重试`
+    };
+  }
+  return res && res.ok === true
+    ? res
+    : { ok: false, error: (res && res.error) || lastFailure || '目标页面未返回结果，请重试' };
 }
 
 function routeFetchRequest(msg, sender) {

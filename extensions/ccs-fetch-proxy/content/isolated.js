@@ -17,16 +17,28 @@
 
   const postToMain = (msg) => window.postMessage({ __ccsExt: true, proto: PROTO, ...msg }, location.origin);
 
-  // fire-and-forget runtime message with lastError swallowed (e.g. SW asleep or missing)
+  // Runtime 消息的两种失败要分开说：
+  //  - 扩展上下文失效（扩展刚在 chrome://extensions 更新而页面没刷新）：chrome.runtime.id
+  //    不存在，sendMessage 直接抛——此时页面里的桥已死，只有刷新页面能恢复，必须说清；
+  //  - SW 未应答（冷启动竞态等）：回调里带 lastError，把原始信息透传给调用方。
+  const CONTEXT_DEAD = { ok: false, error: 'ccsExt: 扩展上下文已失效（扩展刚更新过），请刷新本页面后重试' };
   const send = (msg) =>
     new Promise((resolve) => {
       try {
+        if (!chrome.runtime || !chrome.runtime.id) {
+          resolve(CONTEXT_DEAD);
+          return;
+        }
         chrome.runtime.sendMessage(msg, (res) => {
-          void chrome.runtime.lastError;
-          resolve(res ?? null);
+          const err = chrome.runtime.lastError;
+          if (res !== undefined && res !== null) {
+            resolve(res);
+          } else {
+            resolve({ ok: false, error: `ccsExt: ${(err && err.message) || 'service worker unavailable'}` });
+          }
         });
       } catch {
-        resolve(null);
+        resolve(CONTEXT_DEAD);
       }
     });
 
@@ -139,6 +151,18 @@
     }
   });
 
+  // 自报家门：同源帧可能有多个（弹窗转帧内跳转后 href 与 src 分叉），注册表只能猜。
+  // 按 pathname 比较（容忍 SPA/hash/查询串变化），拒投让 service worker 换下一候选帧，
+  // 避免把请求打进已失效/报错的那一帧。目标帧若拒投，会顺带自报实际地址供 SW 纠偏。
+  const hrefMatches = (expected) => {
+    if (!expected) return true;
+    try {
+      return new URL(expected).pathname === new URL(location.href).pathname;
+    } catch {
+      return true;
+    }
+  };
+
   // SW -> MAIN world command forwarding
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg || msg.__ccsExt !== true) return false;
@@ -153,12 +177,20 @@
     }
 
     if (!IS_TOP && msg.type === 'fetch-exec') {
+      if (!hrefMatches(msg.expectHref)) {
+        sendResponse({ ok: false, error: 'frame-url-mismatch', href: location.href });
+        return false;
+      }
       pendingExec.set(msg.reqId, sendResponse);
       postToMain({ kind: 'CCS_EXT_EXECUTE', reqId: msg.reqId, url: msg.url, init: msg.init });
       return true; // keep the sendResponse channel open for the async result
     }
 
     if (!IS_TOP && msg.type === 'dom-exec') {
+      if (!hrefMatches(msg.expectHref)) {
+        sendResponse({ ok: false, error: 'frame-url-mismatch', href: location.href });
+        return false;
+      }
       pendingExec.set(msg.reqId, sendResponse);
       postToMain({ kind: 'CCS_EXT_DOM_EXECUTE', reqId: msg.reqId, op: msg.op, payload: msg.payload });
       return true;

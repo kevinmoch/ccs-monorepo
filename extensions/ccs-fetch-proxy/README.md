@@ -97,6 +97,16 @@ window.ccsExtFetch(url, init)                     顶层窗口 MAIN world
 
 生命周期说明：MV3 Service Worker 空闲约 30 秒会被 Chrome 终止，内存中的 frame 注册表随之清空；已加载的静态 iframe 不会再次触发 `document_start` 注册。为此 SW 在路由未命中时会向该 tab 所有 frame 广播 `frame-ping`，各 frame 的 ISOLATED 脚本收到后立即重新注册，随后重试路由——页面保持打开即可，无需刷新。
 
+嵌套 iframe 感知：content script 以 `all_frames: true` 运行，嵌套 iframe（无论同源还是跨域）里的 dom-agent 同样在场并向注册表自报。感知时每帧会把内部可路由的嵌套 iframe 地址（`nestedFrameUrls`）一并上报，外壳据此沿同一条桥逐帧下钻，因此 iframe 里再嵌 iframe 的内容也能被 AI 读到；后续操作（act）按句柄发放帧路由回对应帧。外壳侧约束：只钻子系统白名单 origin 的嵌套帧，深度封顶 2 层、嵌套帧封顶 4（连首帧一次感知最多 5 帧）。同源但没有 URL 的帧（`srcdoc`/`about:blank`，报错页/注入内容常藏在里面）过不了按 URL 的路由，由父帧直接读 contentDocument 内联进快照（限 include 范围内且可见的帧）。
+
+读空防瞎编：三类诚实信号防止模型拿空快照编造内容。其一，帧地址如实上报：可路由地址以帧内真实 `location.href` 优先（帧内导航不改 src 属性，拿旧 src 去感知会读到报错帧）；首帧实际读到的页面与外壳请求地址分叉时，外壳补一条 note 说明帧已导航。其二，画布渲染页（WPS/Office 文档预览）内容全画在 canvas 上、DOM 无文字，帧内检测到「大画布 + 整页读不出文本（脚本源码不计）」时携带 `canvasNote`，外壳转成 note 告知模型内容不可机读。其三，整棵树读不出任何可访问名时，外壳同样补 note 并要求模型如实报告而非只描述外壳。
+
+可点的 div、图片与图标链接：ERP 大量可交互元素是无语义角色的 div、当链接用的图片/图标或文字链接型单元格，默认不发句柄。dom-agent 对 generic/img/cell 元素做角色提升（提升为 button 后即可发句柄），依据是通用可交互信号而非枚举具体 class：**监听器探针**（脚本以 `document_start` 注入，包裹 `addEventListener`，挂过 click 类监听的元素即为可交互——行为事实，Tailwind 等工具类写法的菜单项只有这条路认得出）、`tabindex`（非 -1）、`title` 属性、class/id 含交互语义词根（btn/action/menu/link/tab/trigger/icon 族等，边界匹配不误伤 `table`）、computed `cursor: pointer`（最贵，殿后）。提升需有可辨识线索：文字型元素要有名字或后代文本（<span> 包文字的链接会被补上名字），图片无需文字（缩略图自身是线索），图标按钮从图标类名反推语义当名字（el-icon-view → view）。后代里已有可发句柄控件的容器不再提升，避免父按钮套子链接。外壳下发的 `roleHints` 仅作逃生舱，默认不声明任何选择器。感知侧名字解析与操作侧同序，`title` 属性殿后。
+
+句柄稳定性：ref 按元素稳定发放、跨感知保留——同一元素每次感知拿到的是同一个 ref，只要元素还在页面上且在可操作范围内，旧 ref 就一直可用（与 SDK 的「每次感知整体替换」是有意偏离）。这样 perceive 与 act 之间即使再发生一次感知（重读确认、多帧下钻、新一轮对话先感知），模型手里的 ref 也不会作废。外壳侧的句柄归属表同口径保留，仅在帧内报「引用过期」时删除对应条目。
+
+点击结果的可见性：两重机制防止「点击成功后 AI 看不见结果、循环重点同一目标」。其一，新窗口拦截（main-world.js 的 lockdown，仅在白名单外壳下的跨域帧激活，不会波及普通浏览）：帧内的 `window.open` 与 `<a target>` 被改为当前帧跳转（`about:blank`/`javascript:` 除外），点击触发的详情/预览页不会跑到外壳读不到的新窗口（真文件下载不受影响，附件响应由 Content-Disposition 触发）；其二，导航证据：act 成功后若本帧地址已变，结果里携带 `navigated: true` 与新地址，整个 outcome 会原样回给模型，明确告知页面已切换、不应再点原目标。固有限制：真实跨文档导航 commit 后帧上下文销毁，当次 act 响应可能发不出去（外壳表现为「目标页面已失效」），下一次感知会按帧自报的新地址跟上。
+
 ## 目录结构
 
 ```
