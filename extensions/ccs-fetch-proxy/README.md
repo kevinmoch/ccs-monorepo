@@ -93,7 +93,13 @@ window.ccsExtFetch(url, init)                     顶层窗口 MAIN world
   → new Response(...) resolve（HTTP 错误也 resolve，对齐 fetch 语义）
 ```
 
-安全要点：postMessage 仅接受同 frame 同源消息（`event.source === window`）；统一信封 `{ __ccsExt: true, proto: 'ccs-fetch-proxy' }`；扩展不申请 `tabs` 等敏感权限，白名单校验依据 content script 自报的 `location.origin`。
+安全要点：扩展不申请 `tabs` 等敏感权限，白名单校验依据 content script 自报的 `location.origin`。
+
+ISOLATED ↔ MAIN 的私有通道：MAIN world 的脚本与页面脚本共享 realm，只按 `event.source === window` + `event.origin` 过滤等于不设防——同源页面脚本可以自己 `postMessage` 伪造一条 `dom-exec`（把授权面改成整页），也可以监听到真实指令的 `reqId` 后抢先回传伪造结果，让外壳把编造的快照当成真页面。因此：
+
+- **入站（ISOLATED → MAIN）**：ISOLATED 在 `document_start` 生成一次性随机 token 递给 MAIN 侧两段脚本，指令必须带对 token；MAIN 侧监听器早于页面任何脚本注册，收到发给自己的报文立刻 `stopImmediatePropagation`，页面既学不到 token 也看不见指令内容。信封新增 `to` 字段（`main` / `dom` / `iso`）指明归谁消费与截停，两段 MAIN 脚本互不吞报文。
+- **出站（MAIN → ISOLATED）**：不截停（跨 world 的 `stopImmediatePropagation` 行为各版本不一，截停有掐死 ISOLATED 接收的风险），故出站不带 token，改由随指令下发的一次性 `execId` 认证——`execId` 只存在于被截停的入站报文里，页面猜不到，用过即删，重放无效。
+- **探针撤销**：`dom-agent.js` 在 `document_start` 包裹 `EventTarget.prototype.addEventListener` 采集点击监听器（最强的可交互信号），那时还不知道本帧是否在白名单外壳之下。`lockdown-check` 现在额外返回 `shell`（同源子帧也为真），确认「不是外壳下的帧」后 ISOLATED 会下发 `CCS_EXT_DOM_DISARM`，dom-agent 把原型还原，不在无关站点的帧里留痕。
 
 生命周期说明：MV3 Service Worker 空闲约 30 秒会被 Chrome 终止，内存中的 frame 注册表随之清空；已加载的静态 iframe 不会再次触发 `document_start` 注册。为此 SW 在路由未命中时会向该 tab 所有 frame 广播 `frame-ping`，各 frame 的 ISOLATED 脚本收到后立即重新注册，随后重试路由——页面保持打开即可，无需刷新。
 
@@ -105,6 +111,8 @@ window.ccsExtFetch(url, init)                     顶层窗口 MAIN world
 
 句柄稳定性：ref 按元素稳定发放、跨感知保留——同一元素每次感知拿到的是同一个 ref，只要元素还在页面上且在可操作范围内，旧 ref 就一直可用（与 SDK 的「每次感知整体替换」是有意偏离）。这样 perceive 与 act 之间即使再发生一次感知（重读确认、多帧下钻、新一轮对话先感知），模型手里的 ref 也不会作废。外壳侧的句柄归属表同口径保留，仅在帧内报「引用过期」时删除对应条目。
 
+模态授权面：外壳只声明静态的 `actionInclude` / `actionExclude`，而 ERP 的表单大多在点击后弹出的对话框里。因此 act 成功后新出现的模态会被「提升」——其子树**并入**（不是替换）授权面，下一次感知里可读可发句柄。两条边界：其一，提升是并入，替换会把外壳下发的整个授权面冲掉，同时开两个模态时后一个还会冲掉前一个；其二，提升只是扩大可操作集合，不是免检票——act 的范围闸门对模态内目标一视同仁，`actionExclude` 与感知侧的 `exclude` 在模态里同样生效。提升记录按「仍在文档中**且仍匹配模态选择器**」清理：Element Plus 这类组件关闭对话框时只是隐藏、节点仍留在 DOM 里，只看 `isConnected` 会让用户后来自己点开的同一个对话框继续被当成已授权。用户手动打开、不在授权面里的对话框会得到一条 note 说明「因非本次操作打开故未读取」，且**不报它的名字**——范围外的内容一个字都不该进模型上下文，标题也是内容。
+
 点击结果的可见性：两重机制防止「点击成功后 AI 看不见结果、循环重点同一目标」。其一，新窗口拦截（main-world.js 的 lockdown，仅在白名单外壳下的跨域帧激活，不会波及普通浏览）：帧内的 `window.open` 与 `<a target>` 被改为当前帧跳转（`about:blank`/`javascript:` 除外），点击触发的详情/预览页不会跑到外壳读不到的新窗口（真文件下载不受影响，附件响应由 Content-Disposition 触发）；其二，导航证据：act 成功后若本帧地址已变，结果里携带 `navigated: true` 与新地址，整个 outcome 会原样回给模型，明确告知页面已切换、不应再点原目标。固有限制：真实跨文档导航 commit 后帧上下文销毁，当次 act 响应可能发不出去（外壳表现为「目标页面已失效」），下一次感知会按帧自报的新地址跟上。
 
 ## 目录结构
@@ -113,6 +121,7 @@ window.ccsExtFetch(url, init)                     顶层窗口 MAIN world
 ccs-fetch-proxy/
 ├── manifest.json                  MV3 清单（storage 权限、双 content script、SW、options）
 ├── content/main-world.js          MAIN world：顶层 API 安装 / 子 frame 执行器 + 新窗口拦截
+├── content/dom-agent.js           MAIN world（仅子 frame）：DOM 感知 / 操作执行、句柄表、模态提升
 ├── content/isolated.js            ISOLATED world：frame 注册、shell/lockdown 查询、MAIN ↔ SW 桥接
 ├── background/service-worker.js   白名单校验、frame 注册表、按 origin 路由
 └── options/

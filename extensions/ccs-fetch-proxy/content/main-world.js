@@ -8,9 +8,9 @@
 //  - Sub frames: fetch executor (real `window.fetch` with credentials) and — for cross-origin
 //    frames only, decided by the service worker — new-window lockdown.
 //
-// All postMessage traffic uses the envelope { __ccsExt: true, proto: 'ccs-fetch-proxy', kind }
-// and only messages where event.source === window && event.origin === location.origin are
-// accepted (same-frame, same-origin only).
+// ISOLATED ↔ MAIN 的报文走一条私有通道：页面脚本与本脚本同 realm，光按 event.source /
+// event.origin 过滤挡不住它伪造指令或抢答结果。入站指令验一次性 token（document_start 由
+// ISOLATED 递来），并在页面任何监听器之前截停；出站报文不带 token，改用一次性 execId 认证。
 (() => {
   'use strict';
 
@@ -18,7 +18,16 @@
   const IS_TOP = window === window.top;
   const REQUEST_TIMEOUT_MS = 30000;
 
-  const postToIsolated = (msg) => window.postMessage({ __ccsExt: true, proto: PROTO, ...msg }, location.origin);
+  // 原生引用在 document_start 取好，页面之后改原型也劫持不到这条链路
+  const nativeAddEventListener = EventTarget.prototype.addEventListener;
+  const nativeStopImmediate = Event.prototype.stopImmediatePropagation;
+  const nativePostMessage = window.postMessage;
+  let bridgeToken;
+
+  // 出站报文不带 token：它不截停，页面读得到。结果类报文靠 ISOLATED 发下的一次性
+  // execId 认证（见 isolated.js）；顶层的请求类报文本就由外壳页面自己发起，SW 会再校验白名单。
+  const postToIsolated = (msg) =>
+    nativePostMessage.call(window, { __ccsExt: true, proto: PROTO, to: 'iso', ...msg }, location.origin);
 
   // ─── base64 helpers (binary-safe body transport) ───────────────────────────
   function bytesToBase64(bytes) {
@@ -264,11 +273,24 @@
   }
 
   // ─── Message dispatch ──────────────────────────────────────────────────────
-  window.addEventListener('message', (event) => {
+  // 本监听器在 document_start 注册，早于页面任何脚本，所以发给本脚本的报文一律就地截停：
+  // 页面既学不到 token，也看不见指令内容。`to === 'dom'` 是 dom-agent.js 的报文，放行给它；
+  // 出站（to === 'iso'）不截停——跨 world 的 stopImmediatePropagation 行为各版本不一，
+  // 截停它有掐死 ISOLATED 接收的风险，故出站改用一次性 execId 认证（见 isolated.js）。
+  nativeAddEventListener.call(window, 'message', (event) => {
     if (event.source !== window) return;
     if (event.origin !== location.origin) return;
     const data = event.data;
     if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
+    if (data.to !== 'main') return;
+    nativeStopImmediate.call(event);
+
+    if (data.kind === 'CCS_EXT_HANDSHAKE') {
+      // 只认第一条：它由 document_start 的 ISOLATED 脚本发出，页面脚本此时还没机会运行
+      if (bridgeToken === undefined && typeof data.token === 'string') bridgeToken = data.token;
+      return;
+    }
+    if (bridgeToken === undefined || data.token !== bridgeToken) return;
 
     if (IS_TOP) {
       if (data.kind === 'CCS_EXT_ENABLE') {

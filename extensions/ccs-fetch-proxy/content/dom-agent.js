@@ -9,14 +9,63 @@
 // 会把模型手里的 ref 全部作废，表现为「每次执行都提示引用过期」。
 //
 // 范围（include/exclude）永远由外壳下发，本脚本不带任何缺省白名单：没有范围就什么都不读。
-// 授权判定在 service worker（顶层 shell origin 必须在白名单里），到这里已是被批准的请求。
+// 授权判定在 service worker（顶层 shell origin 必须在白名单里），指令只从 ISOLATED 世界经
+// 一条带 token 的私有通道进来（见下），页面脚本伪造不了，到这里已是被批准的请求。
 (() => {
   'use strict';
 
   const PROTO = 'ccs-fetch-proxy';
   if (window === window.top) return; // 顶层外壳自己有 DOM，用不上桥
 
-  const postToIsolated = (msg) => window.postMessage({ __ccsExt: true, proto: PROTO, ...msg }, location.origin);
+  // ─── 与 ISOLATED 世界的私有通道 ──────────────────────────────────────
+  // 本脚本跑在 MAIN 世界，与页面脚本同一个 realm：只按 event.source/origin 过滤等于不设防。
+  // 页面脚本可以自己 postMessage 伪造一条 dom-exec，把授权面改成整页；也可以监听到真实指令
+  // 的 reqId，抢在本脚本之前回传伪造结果，让外壳把编造的快照/执行结论当成真页面。
+  // 两步加固：① ISOLATED 在 document_start 递来一次性随机 token，入站指令必须带对；
+  // ② 本脚本的 message 监听器早于页面任何脚本注册，收到发给自己的报文立刻
+  // stopImmediatePropagation——页面既学不到 token，也看不见指令内容。
+  // 原生方法在 document_start 就取好引用，页面之后再改原型也劫持不到这条链路。
+  const nativeAddEventListener = EventTarget.prototype.addEventListener;
+  const nativeStopImmediate = Event.prototype.stopImmediatePropagation;
+  const nativePostMessage = window.postMessage;
+  let bridgeToken;
+
+  // 出站报文不带 token：它不截停，页面读得到（内容也就是它自己的 DOM，无新增泄露）。
+  // ISOLATED 靠只存在于被截停的入站指令里的一次性 execId 认证结果，页面猜不到也重放不了。
+  const postToIsolated = (msg) =>
+    nativePostMessage.call(window, { __ccsExt: true, proto: PROTO, to: 'iso', ...msg }, location.origin);
+
+  nativeAddEventListener.call(window, 'message', (event) => {
+    if (event.source !== window) return;
+    if (event.origin !== location.origin) return;
+    const data = event.data;
+    if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
+    if (data.to !== 'dom') return; // 同世界还有 main-world.js，别把它的报文吃掉
+    nativeStopImmediate.call(event); // 到此为止：页面脚本看不到本条报文
+    if (data.kind === 'CCS_EXT_HANDSHAKE') {
+      // 只认第一条：它由 document_start 的 ISOLATED 脚本发出，页面脚本此时还没机会运行
+      if (bridgeToken === undefined && typeof data.token === 'string') bridgeToken = data.token;
+      return;
+    }
+    if (bridgeToken === undefined || data.token !== bridgeToken) return;
+    if (data.kind === 'CCS_EXT_DOM_DISARM') {
+      disarmProbe();
+      return;
+    }
+    if (data.kind !== 'CCS_EXT_DOM_EXECUTE') return;
+
+    const run = data.op === 'act' ? act(data.payload) : Promise.resolve(perceive(data.payload));
+    run.then(
+      (result) => postToIsolated({ kind: 'CCS_EXT_DOM_EXECUTE_RESULT', reqId: data.reqId, ok: true, result }),
+      (err) =>
+        postToIsolated({
+          kind: 'CCS_EXT_DOM_EXECUTE_RESULT',
+          reqId: data.reqId,
+          ok: false,
+          error: (err && err.message) || String(err)
+        })
+    );
+  });
 
   // ─── 监听器探针：最强的可交互信号 ────────────────────────────────────
   // 本脚本 document_start 注入，先于页面脚本运行：包裹 addEventListener，把挂过
@@ -26,7 +75,6 @@
   // 由其余信号兜底。removeEventListener 不除名：误留的元素仍会被名字/可见性闸门拦住。
   const clickListenerTargets = new WeakSet();
   const CLICK_EVENT_TYPES = new Set(['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup']);
-  const nativeAddEventListener = EventTarget.prototype.addEventListener;
 
   // Chrome 的 unload 弃用（Permissions-Policy unload=()，部分环境默认禁用）下，页面注册
   // unload 监听器会打一条 violation，而调用栈指到下面的包装函数，看起来像本扩展在报错。
@@ -37,8 +85,7 @@
     if (unloadBlocked !== undefined) return unloadBlocked;
     try {
       const policy = document.permissionsPolicy || document.featurePolicy;
-      const known =
-        policy && typeof policy.features === 'function' ? policy.features().includes('unload') : false;
+      const known = policy && typeof policy.features === 'function' ? policy.features().includes('unload') : false;
       unloadBlocked = Boolean(
         known && policy && typeof policy.allowsFeature === 'function' && !policy.allowsFeature('unload')
       );
@@ -48,11 +95,22 @@
     return unloadBlocked;
   }
 
-  EventTarget.prototype.addEventListener = function (type, listener, options) {
+  function probeAddEventListener(type, listener, options) {
     if (type === 'unload' && unloadDisallowed()) return undefined;
     if (CLICK_EVENT_TYPES.has(type) && this instanceof Element) clickListenerTargets.add(this);
     return nativeAddEventListener.call(this, type, listener, options);
-  };
+  }
+  EventTarget.prototype.addEventListener = probeAddEventListener;
+
+  // 探针必须在 document_start 装好才看得见页面注册的监听器，可那时还不知道本帧是否在白名单
+  // 外壳之下——于是每个网站的每个子帧都被改了原型、还吞掉了 unload 注册。ISOLATED 拿到确定
+  // 答复「不是外壳下的帧」后会发来 DISARM，把原型还回去，不给无关站点留痕。
+  // 只在原型仍是自己那份时还原：页面若在其上再包了一层，动它会把人家的包装一并抹掉。
+  function disarmProbe() {
+    if (EventTarget.prototype.addEventListener === probeAddEventListener) {
+      EventTarget.prototype.addEventListener = nativeAddEventListener;
+    }
+  }
 
   // ─── 感知：常量与 @webskill/browser 逐条对齐 ────────────────────────────────
   const SECRET_INPUT_TYPES = new Set(['password', 'hidden']);
@@ -95,6 +153,7 @@
   const MAX_TEXT = 200;
   const SKIPPED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
   const MODAL_SELECTOR = '[role=dialog][open], dialog[open], [aria-modal=true]';
+  const LISTBOX_SELECTOR = '[role=listbox], [role=grid], [role=menu]';
   const FILLABLE_TAGS = new Set(['INPUT', 'TEXTAREA']);
   // 取像只对这三种标签，与 @webskill/browser 的 isCapturableElement 一致
   const CAPTURABLE_TAGS = new Set(['IMG', 'CANVAS', 'SVG']);
@@ -299,15 +358,32 @@
     return computed.display === 'none' || computed.visibility === 'hidden';
   }
 
+  // 原生 disabled 只覆盖原生控件；ERP 里大量「禁用」是自绘按钮上的 aria-disabled，
+  // 不认它就会点下去一个页面已明确标为不可用的东西
+  function isDisabled(element) {
+    return element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
+  }
+
   // ─── 句柄表：按元素稳定发放，跨感知保留 ────────────────────────────────
   // 同一元素永远拿同一个 ref：模型重读页面时看到的还是同一批 ref，旧 ref 只要元素还在
   // 页面上、还在可操作范围内就继续有效。每次感知仍会把本次发放的 ref 全量上报给外壳
-  // （issued），快照契约不变；act 的第二道闸门（可操作范围、可见性）照常拦住过期目标。
+  // （issued），快照契约不变。
+  // isConnected 只是存活判断，用来防止表无限膨胀，**不是**安全判据——「元素还挂在文档上」
+  // 跟「外壳授权过它」毫无关系。真正的安全判断只有 act 里那道闸门：actionable ∧ ¬actionExcluded。
   let handleTable = new Map(); // ref -> { element, target }，跨感知保留
   const refByElement = new WeakMap(); // element -> ref
   let actionable = new Set();
   let actionExcluded = new Set();
   const elevatedModals = new Set();
+
+  // 提升是「本次由已授权动作打开的这个对话框」的一次性授权，不是发给该元素的长期通行证。
+  // 只按 isConnected 清理挡不住这种情况：对话框元素常驻 DOM、靠属性开合（Element Plus 等），
+  // 关掉再由用户手动打开时它仍在集合里，就被当成已授权。因此关闭（不再匹配模态选择器）即撤销。
+  function pruneElevatedModals() {
+    for (const modal of elevatedModals) {
+      if (!modal.isConnected || !modal.matches(MODAL_SELECTOR)) elevatedModals.delete(modal);
+    }
+  }
 
   function issueRef(element, role, issued) {
     if (!actionable.has(element) || actionExcluded.has(element)) return undefined;
@@ -404,7 +480,9 @@
 
   // 已描述的子树里有没有拿到句柄的节点：容器提升决策用（见 promoteRole）
   function subtreeHasRef(nodes) {
-    return nodes.some((node) => node.ref !== undefined || (node.children !== undefined && subtreeHasRef(node.children)));
+    return nodes.some(
+      (node) => node.ref !== undefined || (node.children !== undefined && subtreeHasRef(node.children))
+    );
   }
 
   function describeNode(element, excluded, provenance, captureTargets, issued) {
@@ -589,23 +667,26 @@
     }
 
     // 已授权操作打开的模态：追加并标来源，授权面临时扩大必须看得见
+    pruneElevatedModals();
     for (const modal of elevatedModals) {
-      if (!modal.isConnected) {
-        elevatedModals.delete(modal);
-        continue;
-      }
-      actionable = new Set([modal, ...modal.querySelectorAll('*')]);
-      const node = describeNode(modal, new Set(), 'modal-elevated', captureTargets, issued);
+      // 并入而不是覆盖：写成 actionable = new Set([...modal 子树]) 会把外壳下发的整个授权面
+      // 冲掉，此后所有非模态目标在 act 的第二道闸门上一律报「已不在可操作范围」；
+      // 同时开着两个提升过的模态时，后一个还会把前一个也冲掉。
+      actionable.add(modal);
+      for (const descendant of modal.querySelectorAll('*')) actionable.add(descendant);
+      // 感知侧的 exclude 在模态里同样有效：提升的是「能不能操作」，不是「能不能读」
+      const node = describeNode(modal, excluded, 'modal-elevated', captureTargets, issued);
       if (node !== undefined) nodes.push(node);
     }
-    // 用户自己点开的对话框不在授权面里——给条可操作的说明，别让它凭空消失
+    // 用户自己点开的对话框不在授权面里——给条可操作的说明，别让它凭空消失。
+    // 不报它的名字：范围外的内容一个字都不该进模型上下文，标题也是内容。
     for (const modal of query(MODAL_SELECTOR)) {
       if (elevatedModals.has(modal)) continue;
       nodes.push({
         role: 'note',
         name:
-          `The dialog "${nameOf(modal) || 'dialog'}" is open but outside the authorized scope because it was ` +
-          'opened manually. Ask the user to let you open it instead.'
+          'A dialog is open but outside the authorized scope because it was opened manually, ' +
+          'so its content was not read. Ask the user to let you open it instead.'
       });
     }
 
@@ -773,10 +854,20 @@
         : fail(`The control did not accept "${value}".`);
     }
 
+    const openBefore = new Set(query(LISTBOX_SELECTOR));
     element.click();
-    const listbox = await waitFor(
-      () => document.querySelector('[role=listbox], [role=grid], [role=menu]') || undefined
-    );
+    // 只认这次点击之后才出现、或才显示出来的面板：页面上常年挂着别的隐藏 listbox
+    // （Element Plus 等复用同一个 popper），原先抓到关着的那个就会一路走到
+    // 「没有名为 X 的选项」，把「面板没打开」误报成「选项不存在」
+    const listbox = await waitFor(() => {
+      let visible;
+      for (const candidate of query(LISTBOX_SELECTOR)) {
+        if (hidden(candidate)) continue;
+        if (!openBefore.has(candidate)) return candidate;
+        visible = visible || candidate;
+      }
+      return visible;
+    });
     if (!listbox) return fail('The options panel did not open.');
 
     const option = Array.from(listbox.querySelectorAll('[role=option], [role=gridcell], [role=menuitem], option')).find(
@@ -807,6 +898,7 @@
 
   async function act(payload) {
     const entry = handleTable.get(payload && payload.ref);
+    // isConnected 只判存活，授权判断全在下面那道闸门
     if (!entry || !entry.element.isConnected) {
       return { ok: false, target: { role: 'generic' }, reason: 'The element reference is unknown or expired.' };
     }
@@ -814,22 +906,22 @@
     const target = describeElement(element);
     const fail = (reason) => ({ ok: false, target, reason });
 
+    pruneElevatedModals();
     const inElevatedModal = Array.from(elevatedModals).some((modal) => modal.contains(element));
-    if (!inElevatedModal) {
-      const owningModal = element.closest(MODAL_SELECTOR);
-      if (owningModal) {
-        return fail(
-          'That dialog is not in the authorized scope because it was opened manually. ' +
-            'Ask me to open it, or add it to the host allowlist.'
-        );
-      }
-      // 第二道闸门：发句柄之后页面可能变了，目标可能已挪出可操作范围
-      if (!actionable.has(element) || actionExcluded.has(element)) {
-        return fail('The element is no longer inside the actionable scope.');
-      }
+    if (!inElevatedModal && element.closest(MODAL_SELECTOR)) {
+      return fail(
+        'That dialog is not in the authorized scope because it was opened manually. ' +
+          'Ask me to open it, or add it to the host allowlist.'
+      );
+    }
+    // 第二道闸门，对所有目标一视同仁：发句柄之后页面可能变了，目标可能已挪出可操作范围。
+    // 提升过的模态是把子树并入 actionable（见 perceive），不是发一张免检票——原先让它整段
+    // 跳过这道闸门，等于 actionExclude 在模态里失效。
+    if (!actionable.has(element) || actionExcluded.has(element)) {
+      return fail('The element is no longer inside the actionable scope.');
     }
     if (hidden(element)) return fail('The element is not visible.');
-    if (element.hasAttribute('disabled')) return fail('The element is disabled.');
+    if (isDisabled(element)) return fail('The element is disabled.');
 
     const modalsBefore = modalSnapshot();
     const urlBefore = location.href;
@@ -893,25 +985,6 @@
   // lockdown 承担：它只在「白名单外壳下的跨域帧」激活，而本脚本跑在所有网站的所有帧里，
   // 在这里拦截会无差别改写用户正常浏览行为（Ctrl+点击、具名 target 导航等），故删除。
   // 导航证据（act 的 navigated/documentUrl）不依赖拦截的位置，照常工作。
-
-  // ─── 指令入口（ISOLATED 层转发 service worker 的 dom-exec） ──────────────────
-  window.addEventListener('message', (event) => {
-    if (event.source !== window) return;
-    if (event.origin !== location.origin) return;
-    const data = event.data;
-    if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
-    if (data.kind !== 'CCS_EXT_DOM_EXECUTE') return;
-
-    const run = data.op === 'act' ? act(data.payload) : Promise.resolve(perceive(data.payload));
-    run.then(
-      (result) => postToIsolated({ kind: 'CCS_EXT_DOM_EXECUTE_RESULT', reqId: data.reqId, ok: true, result }),
-      (err) =>
-        postToIsolated({
-          kind: 'CCS_EXT_DOM_EXECUTE_RESULT',
-          reqId: data.reqId,
-          ok: false,
-          error: (err && err.message) || String(err)
-        })
-    );
-  });
+  //
+  // 指令入口在文件开头的私有通道里，与原生引用一并在 document_start 就位。
 })();

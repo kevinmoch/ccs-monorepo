@@ -256,17 +256,19 @@ async function handleMessage(msg, sender) {
     }
 
     case 'lockdown-check': {
-      if (frameId === 0) return { lockdown: false };
+      if (frameId === 0) return { lockdown: false, shell: false };
       if (!(await isShellTab(tabId))) {
         // Cold registry (SW restarted, static top frame never re-registered) — rediscover first.
         await discoverFrames(tabId);
-        if (!(await isShellTab(tabId))) return { lockdown: false };
+        if (!(await isShellTab(tabId))) return { lockdown: false, shell: false };
       }
       const top = topFrameOf(tabId);
       const selfOrigin = toOrigin(msg.origin);
       // Cross-origin frames only: same-origin module iframes keep their existing behavior
       // (IframeCard.vue already handles same-origin lockdown on its own).
-      return { lockdown: Boolean(top) && selfOrigin !== top.origin };
+      // `shell` 与 lockdown 分开报：同源子帧也可能收到 dom-exec，它需要知道自己在白名单外壳
+      // 之下（好留着 dom-agent 的监听器探针），而 lockdown 只对跨域帧成立。
+      return { lockdown: Boolean(top) && selfOrigin !== top.origin, shell: true };
     }
 
     case 'fetch-proxy-request': {

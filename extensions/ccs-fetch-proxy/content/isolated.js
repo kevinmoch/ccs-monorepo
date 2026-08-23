@@ -9,13 +9,36 @@
 //    fetch and DOM traffic.
 //  - Sub frames: ask the SW for lockdown-check (cross-origin frames under a whitelisted shell
 //    get CCS_EXT_LOCKDOWN) and forward SW fetch-exec / dom-exec commands to the MAIN world.
+//
+// MAIN 侧的脚本与页面脚本同 realm，所以两个世界之间的报文都走一条带一次性 token 的
+// 私有通道（见下方 bridgeToken）：页面既伪造不了指令，也抢答不了结果。
 (() => {
   'use strict';
 
   const PROTO = 'ccs-fetch-proxy';
   const IS_TOP = window === window.top;
 
-  const postToMain = (msg) => window.postMessage({ __ccsExt: true, proto: PROTO, ...msg }, location.origin);
+  // ─── 与同帧 MAIN 世界的私有通道 ────────────────────────────────────────
+  // MAIN 世界与页面脚本共享 realm，光靠 event.source/origin 拦不住同源页面脚本：它能伪造
+  // 指令，也能抢答结果。两个方向分开加固：
+  //  · 入站（本层 → MAIN）：document_start 生成一次性随机 token 一并递过去，MAIN 侧的监听器
+  //    早于页面任何脚本注册，收到发给自己的报文立刻 stopImmediatePropagation，页面学不到
+  //    token，也就伪造不出 dom-exec / ENABLE / LOCKDOWN 这类指令。`to` 指明归谁消费与截停，
+  //    两段 MAIN 脚本各管各的，谁也不会把对方的报文吃掉。
+  //  · 出站（MAIN → 本层）：不截停（跨 world 的 stopImmediatePropagation 行为各版本不一，
+  //    截停有掐死本层接收的风险），因此出站报文不带 token，改由随指令下发的一次性 execId
+  //    认证——execId 只存在于被截停的入站报文里，页面猜不到；用过即删，重放也无效。
+  // crypto.randomUUID 要求安全上下文，http 的子站点上是 undefined；getRandomValues 没这道限制
+  const nonce = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+  const bridgeToken = nonce();
+  const post = (to, msg) =>
+    window.postMessage({ __ccsExt: true, proto: PROTO, to, token: bridgeToken, ...msg }, location.origin);
+  const postToMain = (msg) => post('main', msg);
+  const postToDom = (msg) => post('dom', msg);
+
+  post('main', { kind: 'CCS_EXT_HANDSHAKE' });
+  if (!IS_TOP) post('dom', { kind: 'CCS_EXT_HANDSHAKE' });
 
   // Runtime 消息的两种失败要分开说：
   //  - 扩展上下文失效（扩展刚在 chrome://extensions 更新而页面没刷新）：chrome.runtime.id
@@ -42,7 +65,8 @@
       }
     });
 
-  // reqId -> sendResponse callback, for fetch-exec / dom-exec commands forwarded to the MAIN world
+  // execId -> sendResponse callback, for fetch-exec / dom-exec commands forwarded to the MAIN world.
+  // 键用一次性 execId 而不是 SW 的 reqId：它同时是结果报文的凭据（见上方通道说明）。
   const pendingExec = new Map();
 
   // Register on every navigation. document_start guarantees this fires before any page script
@@ -67,21 +91,33 @@
   } else {
     const requestLockdown = async (attempt) => {
       const res = await send({ __ccsExt: true, type: 'lockdown-check', origin: location.origin });
-      if (res && res.lockdown) {
-        postToMain({ kind: 'CCS_EXT_LOCKDOWN' });
-      } else if (attempt + 1 < CHECK_MAX_ATTEMPTS) {
-        setTimeout(() => requestLockdown(attempt + 1), CHECK_RETRY_DELAY_MS);
+      // shell=true 表示「本帧确实在白名单外壳之下」，同源子帧也算；lockdown 只对跨域帧为真
+      if (res && res.shell) {
+        if (res.lockdown) postToMain({ kind: 'CCS_EXT_LOCKDOWN' });
+        return;
       }
+      if (attempt + 1 < CHECK_MAX_ATTEMPTS) {
+        setTimeout(() => requestLockdown(attempt + 1), CHECK_RETRY_DELAY_MS);
+        return;
+      }
+      // 重试用尽仍不是白名单外壳下的帧：让 dom-agent 撤掉它在 document_start 装上的监听器探针。
+      // 那个探针改了 EventTarget.prototype 并吞掉 unload 注册，本不该留在无关站点的帧里。
+      // 只在拿到明确答复时撤：压根收不到答复多半是扩展上下文失效/SW 冷启动慢，那种情况下
+      // 误撤会让真外壳帧的角色提升掉一档，宁可保守留着。
+      if (res) postToDom({ kind: 'CCS_EXT_DOM_DISARM' });
     };
     requestLockdown(0);
   }
 
-  // MAIN world -> SW bridge (same frame, same origin only)
+  // MAIN world -> SW bridge (same frame, same origin)
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     if (event.origin !== location.origin) return;
     const data = event.data;
     if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
+    // 只收发给自己的报文。出站报文不带 token（见上方通道说明）：结果类靠 pendingExec 里的
+    // 一次性 execId 认证，顶层的请求类本就由外壳页面发起、由 SW 再校验白名单。
+    if (data.to !== 'iso') return;
 
     if (IS_TOP && data.kind === 'CCS_EXT_FETCH_REQUEST') {
       send({
@@ -181,8 +217,9 @@
         sendResponse({ ok: false, error: 'frame-url-mismatch', href: location.href });
         return false;
       }
-      pendingExec.set(msg.reqId, sendResponse);
-      postToMain({ kind: 'CCS_EXT_EXECUTE', reqId: msg.reqId, url: msg.url, init: msg.init });
+      const execId = nonce();
+      pendingExec.set(execId, sendResponse);
+      postToMain({ kind: 'CCS_EXT_EXECUTE', reqId: execId, url: msg.url, init: msg.init });
       return true; // keep the sendResponse channel open for the async result
     }
 
@@ -191,8 +228,9 @@
         sendResponse({ ok: false, error: 'frame-url-mismatch', href: location.href });
         return false;
       }
-      pendingExec.set(msg.reqId, sendResponse);
-      postToMain({ kind: 'CCS_EXT_DOM_EXECUTE', reqId: msg.reqId, op: msg.op, payload: msg.payload });
+      const execId = nonce();
+      pendingExec.set(execId, sendResponse);
+      postToDom({ kind: 'CCS_EXT_DOM_EXECUTE', reqId: execId, op: msg.op, payload: msg.payload });
       return true;
     }
     return false;
