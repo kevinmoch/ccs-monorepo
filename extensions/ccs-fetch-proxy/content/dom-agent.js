@@ -159,6 +159,8 @@
   const CAPTURABLE_TAGS = new Set(['IMG', 'CANVAS', 'SVG']);
   // 原图字节要过 postMessage 才到外壳；压缩在外壳侧做，这里只挡住明显过大的
   const MAX_RAW_IMAGE_BYTES = 8 * 1024 * 1024;
+  // 按尺寸落选的说明，与 @webskill/browser 的 FR-20.3 逐字一致；和「超名额」「取像失败」必须可区分
+  const ICON_SKIPPED_NOTE = 'Not captured: this image is smaller than the icon threshold';
 
   const clip = (text) => {
     const normalized = String(text == null ? '' : text)
@@ -182,6 +184,44 @@
   // class（换一种声明就失效），靠上面两条通用途径：外壳显式 roleHints（逃生舱）与
   // 内置通用可交互信号。只提升可操作角色。
   let activeRoleHints = [];
+
+  /** 本次感知的图标阈值（平方像素），0 为不过滤；与 roleHints 一样由外壳逐次下发 */
+  let activeMinImageArea = 0;
+
+  /**
+   * 元素的显示尺寸，取不到返回 undefined（同 @webskill/browser 的 measuredSizeOf）。
+   * 逐级回退而不只看 rect：帧内元素可能在没布局的容器里，rect 恒为 0，
+   * 只认它会把所有图判成 0 面积。
+   */
+  function measuredSizeOf(element) {
+    const rect = element.getBoundingClientRect && element.getBoundingClientRect();
+    if (rect && rect.width > 0 && rect.height > 0) return { width: rect.width, height: rect.height };
+    const { naturalWidth, naturalHeight } = element;
+    if (naturalWidth > 0 && naturalHeight > 0) return { width: naturalWidth, height: naturalHeight };
+    // <canvas> 的 width/height 是数值 IDL 属性；<svg> 的同名属性是 SVGAnimatedLength，落不进这一档
+    const { width: propWidth, height: propHeight } = element;
+    if (typeof propWidth === 'number' && typeof propHeight === 'number' && propWidth > 0 && propHeight > 0) {
+      return { width: propWidth, height: propHeight };
+    }
+    const attrWidth = Number.parseFloat(element.getAttribute('width'));
+    const attrHeight = Number.parseFloat(element.getAttribute('height'));
+    if (attrWidth > 0 && attrHeight > 0) return { width: attrWidth, height: attrHeight };
+    const box = (element.getAttribute('viewBox') || '').trim().split(/[\s,]+/);
+    if (box.length === 4) {
+      const width = Number.parseFloat(box[2]);
+      const height = Number.parseFloat(box[3]);
+      if (width > 0 && height > 0) return { width, height };
+    }
+    return undefined;
+  }
+
+  /** 测不到尺寸就**不过滤**：宁可多取一张，也不能把图全吞了 */
+  function isBelowMinArea(element) {
+    if (activeMinImageArea <= 0) return false;
+    const size = measuredSizeOf(element);
+    if (size === undefined) return false;
+    return size.width * size.height < activeMinImageArea;
+  }
 
   function hintRoleOf(element) {
     for (const hint of activeRoleHints) {
@@ -519,7 +559,10 @@
     if (children.length > 0) node.children = children;
     // 登记在剪枝之后：另起一次 querySelectorAll 扫描会绕过 exclude
     if (captureTargets !== undefined && CAPTURABLE_TAGS.has(element.tagName.toUpperCase())) {
-      captureTargets.push({ element, node });
+      // 必须拦在入队之前：名额是对 captureTargets 做 slice 定的，
+      // 放到取像循环里过滤就变成「先被图标占满名额再一个个跳过」
+      if (isBelowMinArea(element)) node.imageNote = ICON_SKIPPED_NOTE;
+      else captureTargets.push({ element, node });
     }
     return node;
   }
@@ -638,6 +681,7 @@
     const capture = (payload && payload.capture) || undefined;
     const wantImages = Boolean(capture && capture.images && capture.maxImages > 0);
     const captureTargets = wantImages ? [] : undefined;
+    activeMinImageArea = wantImages && capture.minImageArea > 0 ? capture.minImageArea : 0;
 
     const sets = selectorSets(payload.actionInclude, payload.actionExclude);
     actionable = sets.inSet;
