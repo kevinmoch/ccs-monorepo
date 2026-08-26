@@ -1,0 +1,19 @@
+{
+  "name": "ccs-fetch-proxy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "build:sdk": "cross-env WEBSKILL_SRC=../../../web-skill-sdk vite build",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webskill/sdk": "^0.15.0"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "typescript": "^5.9.2",
+    "vite": "^8.0.16"
+  }
+}

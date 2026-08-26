@@ -184,6 +184,36 @@
         pendingExec.delete(data.reqId);
         callback({ ok: data.ok === true, result: data.result, error: data.error });
       }
+      return;
+    }
+
+    // 下载观察窗：载荷里只有 token 与等待预算，回程只有一个计数
+    if (IS_TOP && data.kind === 'CCS_EXT_DOWNLOAD_REQUEST') {
+      send({
+        __ccsExt: true,
+        type: 'download-window',
+        op: data.op,
+        token: data.token,
+        timeoutMs: data.timeoutMs,
+        origin: location.origin
+      }).then((res) => {
+        if (res && res.ok === true) {
+          postToMain({
+            kind: 'CCS_EXT_DOWNLOAD_RESPONSE',
+            reqId: data.reqId,
+            ok: true,
+            token: res.token,
+            count: res.count
+          });
+        } else {
+          postToMain({
+            kind: 'CCS_EXT_DOWNLOAD_RESPONSE',
+            reqId: data.reqId,
+            ok: false,
+            error: (res && res.error) || 'ccsExtDownloads: extension service worker unavailable'
+          });
+        }
+      });
     }
   });
 

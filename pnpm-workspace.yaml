@@ -1,3 +1,6 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  # 浏览器扩展。产物提交进仓库（解包加载的就是这个目录），但它的 content/dom-agent.js
+  # 由 @webskill/sdk 打包而来，所以必须进工作区才能装到依赖。
+  - 'extensions/*'

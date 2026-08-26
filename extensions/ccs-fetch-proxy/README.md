@@ -5,13 +5,27 @@
 1. **跨域取数代理**：在外壳顶层窗口注入 `window.ccsExtFetch(input, init)`，接口与标准 `fetch` 完全一致；调用后请求会被路由到当前已打开的内嵌子网站 iframe（如 ERP 待办任务页面）中执行——同 origin、携带该页面的 cookie/登录态，从而绕过跨域限制，供 AI 对话框等外壳代码获取子网站后台数据。
 2. **新窗口拦截**：外壳内嵌的**跨域**子网站页面（origin 与外壳不同）中，所有会弹出新窗口/新标签的跳转（`a[target=_blank]`、`form[target]`、`window.open`）都被强制改为在当前 iframe 内导航，不再跳出外壳。
 
-> 要求 Chrome 111+（MAIN world content script 支持）。纯原生 JS，无构建步骤、无第三方依赖。
+> 要求 Chrome 111+（MAIN world content script 支持）。
+>
+> 页面感知/操作层（`content/dom-agent.js`）由 `src/domAgent.ts` 打包而成，内核是
+> `@webskill/browser` 的 `createPageAgentHandler`；**产物已提交进仓库**，直接解包加载即可，
+> 只有改动 `src/` 或升级 SDK 时才需要重新构建。其余文件（service worker、两个桥接脚本、
+> options）仍是纯原生 JS，不经构建。
 
 ## 安装（Load unpacked）
 
 1. 打开 `chrome://extensions`，右上角开启 **开发者模式**；
 2. 点击 **加载已解压的扩展程序**，选择本目录（`extensions/ccs-fetch-proxy/`）；
 3. 安装后无需重启浏览器；如修改了扩展代码，回到 `chrome://extensions` 点击该扩展卡片上的刷新图标，并刷新已打开的外壳页面。
+
+## 构建（仅改动 `src/` 时）
+
+```bash
+pnpm --filter ccs-fetch-proxy build        # 用已发布的 @webskill/sdk
+pnpm --filter ccs-fetch-proxy build:sdk    # 用本地 SDK 源码（../../../web-skill-sdk）
+```
+
+产物写回 `content/dom-agent.js`（带 GENERATED 标记）。**不要手改那个文件**，下一次构建会覆盖。
 
 ## 配置：外壳白名单
 
@@ -95,6 +109,8 @@ window.ccsExtFetch(url, init)                     顶层窗口 MAIN world
 
 安全要点：扩展不申请 `tabs` 等敏感权限，白名单校验依据 content script 自报的 `location.origin`。
 
+`downloads` 权限只服务于**操作触发的下载信号**（WebSkill SDK 0.15.0 分册 15）：外壳在一次页面操作前后各调一次 `window.ccsExtDownloads`，SW 只回一个**完成计数**——文件名、大小、类型、来源 URL 都不出 SW，也从不调 `chrome.downloads.search`/`open`/`download`。窗口是时间闭区间（open 之前、settle 之后一概不计），最长 30s 自动作废；开窗与投递页面指令走同一道闸门（白名单外壳的顶层帧）。模型要读文件内容仍必须走 `list_downloaded_files` / `read_downloaded_file` 的逐次确认卡。
+
 ISOLATED ↔ MAIN 的私有通道：MAIN world 的脚本与页面脚本共享 realm，只按 `event.source === window` + `event.origin` 过滤等于不设防——同源页面脚本可以自己 `postMessage` 伪造一条 `dom-exec`（把授权面改成整页），也可以监听到真实指令的 `reqId` 后抢先回传伪造结果，让外壳把编造的快照当成真页面。因此：
 
 - **入站（ISOLATED → MAIN）**：ISOLATED 在 `document_start` 生成一次性随机 token 递给 MAIN 侧两段脚本，指令必须带对 token；MAIN 侧监听器早于页面任何脚本注册，收到发给自己的报文立刻 `stopImmediatePropagation`，页面既学不到 token 也看不见指令内容。信封新增 `to` 字段（`main` / `dom` / `iso`）指明归谁消费与截停，两段 MAIN 脚本互不吞报文。
@@ -109,7 +125,7 @@ ISOLATED ↔ MAIN 的私有通道：MAIN world 的脚本与页面脚本共享 re
 
 可点的 div、图片与图标链接：ERP 大量可交互元素是无语义角色的 div、当链接用的图片/图标或文字链接型单元格，默认不发句柄。dom-agent 对 generic/img/cell 元素做角色提升（提升为 button 后即可发句柄），依据是通用可交互信号而非枚举具体 class：**监听器探针**（脚本以 `document_start` 注入，包裹 `addEventListener`，挂过 click 类监听的元素即为可交互——行为事实，Tailwind 等工具类写法的菜单项只有这条路认得出）、`tabindex`（非 -1）、`title` 属性、class/id 含交互语义词根（btn/action/menu/link/tab/trigger/icon 族等，边界匹配不误伤 `table`）、computed `cursor: pointer`（最贵，殿后）。提升需有可辨识线索：文字型元素要有名字或后代文本（<span> 包文字的链接会被补上名字），图片无需文字（缩略图自身是线索），图标按钮从图标类名反推语义当名字（el-icon-view → view）。后代里已有可发句柄控件的容器不再提升，避免父按钮套子链接。外壳下发的 `roleHints` 仅作逃生舱，默认不声明任何选择器。感知侧名字解析与操作侧同序，`title` 属性殿后。
 
-句柄稳定性：ref 按元素稳定发放、跨感知保留——同一元素每次感知拿到的是同一个 ref，只要元素还在页面上且在可操作范围内，旧 ref 就一直可用（与 SDK 的「每次感知整体替换」是有意偏离）。这样 perceive 与 act 之间即使再发生一次感知（重读确认、多帧下钻、新一轮对话先感知），模型手里的 ref 也不会作废。外壳侧的句柄归属表同口径保留，仅在帧内报「引用过期」时删除对应条目。
+句柄稳定性：帧内的 ref 按元素稳定发放、跨感知保留——同一元素每次感知拿到的是同一个 ref。外壳侧的句柄描述表则按 SDK 的「每次感知整体替换」语义（`createRemoteTargetRegistry`）：没感知过就执行 = 拒绝，宁可让模型多感知一次。帧内保留的好处在于同一元素重感知后仍是同一个 ref，确认卡与留痕里指称一致。
 
 模态授权面：外壳只声明静态的 `actionInclude` / `actionExclude`，而 ERP 的表单大多在点击后弹出的对话框里。因此 act 成功后新出现的模态会被「提升」——其子树**并入**（不是替换）授权面，下一次感知里可读可发句柄。两条边界：其一，提升是并入，替换会把外壳下发的整个授权面冲掉，同时开两个模态时后一个还会冲掉前一个；其二，提升只是扩大可操作集合，不是免检票——act 的范围闸门对模态内目标一视同仁，`actionExclude` 与感知侧的 `exclude` 在模态里同样生效。提升记录按「仍在文档中**且仍匹配模态选择器**」清理：Element Plus 这类组件关闭对话框时只是隐藏、节点仍留在 DOM 里，只看 `isConnected` 会让用户后来自己点开的同一个对话框继续被当成已授权。用户手动打开、不在授权面里的对话框会得到一条 note 说明「因非本次操作打开故未读取」，且**不报它的名字**——范围外的内容一个字都不该进模型上下文，标题也是内容。
 
@@ -119,9 +135,13 @@ ISOLATED ↔ MAIN 的私有通道：MAIN world 的脚本与页面脚本共享 re
 
 ```
 ccs-fetch-proxy/
-├── manifest.json                  MV3 清单（storage 权限、双 content script、SW、options）
+├── manifest.json                  MV3 清单（storage + downloads 权限、双 content script、SW、options、图标）
+├── icons/                         扩展图标（16/32/48/128，源自 apps/ccs-android 的 ic_launcher.png，裁掉透明边距）
+├── src/domAgent.ts                【源码】监听器探针 + @webskill/browser 的 createPageAgentHandler + 报文翻译
+├── src/scopes.ts                  【源码】帧内声明的可操作范围与角色逃生舱
+├── vite.config.mjs                src/domAgent.ts → content/dom-agent.js 的 IIFE 打包
 ├── content/main-world.js          MAIN world：顶层 API 安装 / 子 frame 执行器 + 新窗口拦截
-├── content/dom-agent.js           MAIN world（仅子 frame）：DOM 感知 / 操作执行、句柄表、模态提升
+├── content/dom-agent.js           【构建产物，勿改】MAIN world：页面感知 / 操作执行
 ├── content/isolated.js            ISOLATED world：frame 注册、shell/lockdown 查询、MAIN ↔ SW 桥接
 ├── background/service-worker.js   白名单校验、frame 注册表、按 origin 路由
 └── options/

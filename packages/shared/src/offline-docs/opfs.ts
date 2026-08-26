@@ -31,6 +31,7 @@ import {
   getAndroidFileUri,
   listAndroidFileNames,
   persistOpfsStorage,
+  readAndroidBinary,
   readAndroidText,
   writeAndroidText
 } from '../storage/native-fs';
@@ -214,7 +215,50 @@ export async function createCachedObjectUrl(document: OfflineDocument): Promise<
   return { kind: 'cache', url: URL.createObjectURL(file), blob: file };
 }
 
+/**
+ * 读取已缓存文档的原始字节（Web OPFS / Electron 离线服务 / Android 原生三端统一出口）。
+ * 缓存不完整或读取失败时返回 `undefined`。`contentType` 以本次读取为准重新给出，
+ * 不复用调用方手里可能已过期的类型。
+ */
+export async function readCachedDocumentBytes(id: string): Promise<{ contentType: string; bytes: Uint8Array } | undefined> {
+  const electron = getElectronOfflineDocs<ElectronOfflineDocsBridge>();
+  if (electron) {
+    try {
+      // getCachedFileUrl 只在缓存完整时给 URL；离线服务按文件后缀回 Content-Type
+      const url = await electron.getCachedFileUrl(id);
+      if (!url) return undefined;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) return undefined;
+      const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
+      return { contentType, bytes: new Uint8Array(await response.arrayBuffer()) };
+    } catch {
+      return undefined;
+    }
+  }
+
+  const meta = await getDocumentMeta(id);
+  if (!meta || (meta.status !== 'offline' && meta.status !== 'update-available')) return undefined;
+
+  if (isAndroidNative()) {
+    try {
+      return { contentType: meta.mimeType, bytes: await readAndroidBinary(getAndroidDocPath(meta.localName)) };
+    } catch {
+      return undefined;
+    }
+  }
+
+  try {
+    const docsDir = await getDocsDirectory();
+    const file = await (await docsDir.getFileHandle(meta.localName)).getFile();
+    // OPFS 写入时没带 type，file.type 几乎总是空串——回退到下载时记录的 mimeType
+    return { contentType: file.type || meta.mimeType, bytes: new Uint8Array(await file.arrayBuffer()) };
+  } catch {
+    return undefined;
+  }
+}
+
 export async function openOnlineDocument(document: OfflineDocument) {
+
   const absoluteUrl = resolveOfflineDocsUrl(document.url);
 
   const electron = getElectronOfflineDocs<ElectronOfflineDocsBridge>();

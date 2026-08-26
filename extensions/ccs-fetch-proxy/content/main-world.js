@@ -110,13 +110,14 @@
   }
 
   // 页面感知 / 页面操作桥（content/dom-agent.js 在目标帧里执行）。
-  // 范围白名单一律由外壳传入，本层不带任何缺省。
+  // 报文体就是 SDK 的 `PageAgentRequest`，本层不认识它的内容，只按 `type` 选一个 op 供
+  // service worker 校验，别的一律原样转发——协议归 SDK 管，改协议不该改这一层。
   const pendingDomRequests = new Map(); // reqId -> { resolve, reject, timer }
 
   function installCcsExtDom() {
     if (window.ccsExtDom) return;
 
-    const send = (targetUrl, op, payload) =>
+    const send = (targetUrl, request) =>
       new Promise((resolve, reject) => {
         let url;
         try {
@@ -125,6 +126,7 @@
           reject(new TypeError(`ccsExtDom: invalid target url (${err && err.message})`));
           return;
         }
+        const op = request && request.type === 'execute' ? 'act' : 'perceive';
         const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         const timer = setTimeout(() => {
           if (pendingDomRequests.delete(reqId)) {
@@ -132,13 +134,12 @@
           }
         }, REQUEST_TIMEOUT_MS);
         pendingDomRequests.set(reqId, { resolve, reject, timer });
-        postToIsolated({ kind: 'CCS_EXT_DOM_REQUEST', reqId, targetUrl: url, op, payload });
+        postToIsolated({ kind: 'CCS_EXT_DOM_REQUEST', reqId, targetUrl: url, op, payload: request });
       });
 
-    window.ccsExtDom = {
-      perceive: (targetUrl, scope) => send(targetUrl, 'perceive', scope),
-      act: (targetUrl, request) => send(targetUrl, 'act', request)
-    };
+    // 解析值为 { reply: PageAgentReply, documentUrl }：外壳按 URL 寻址目标帧，
+    // 帧在请求途中导航过就要能看出来，所以应答必须带回它实际所处的地址。
+    window.ccsExtDom = { send };
 
     window.dispatchEvent(new CustomEvent('ccs-ext-dom-ready'));
   }
@@ -150,6 +151,42 @@
     clearTimeout(entry.timer);
     if (data.ok) entry.resolve(data.result);
     else entry.reject(new Error(data.error || 'ccsExtDom: request failed'));
+  }
+
+  // 下载观察窗桥（SDK 0.15.0 分册 15）。外壳一次页面操作前 open、操作后 settle，
+  // 拿回的只有一个计数——文件名/大小/类型都不经过这条通路。
+  const pendingDownloadRequests = new Map(); // reqId -> { resolve, reject, timer }
+
+  function installCcsExtDownloads() {
+    if (window.ccsExtDownloads) return;
+
+    const ask = (op, payload) =>
+      new Promise((resolve, reject) => {
+        const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const timer = setTimeout(() => {
+          if (pendingDownloadRequests.delete(reqId)) {
+            reject(new Error(`ccsExtDownloads: ${op} timeout after ${REQUEST_TIMEOUT_MS}ms`));
+          }
+        }, REQUEST_TIMEOUT_MS);
+        pendingDownloadRequests.set(reqId, { resolve, reject, timer });
+        postToIsolated({ kind: 'CCS_EXT_DOWNLOAD_REQUEST', reqId, op, ...payload });
+      });
+
+    window.ccsExtDownloads = {
+      open: () => ask('open', {}).then((data) => data.token),
+      settle: (token, timeoutMs) => ask('settle', { token, timeoutMs }).then((data) => data.count || 0)
+    };
+
+    window.dispatchEvent(new CustomEvent('ccs-ext-downloads-ready'));
+  }
+
+  function settleDownloadRequest(data) {
+    const entry = pendingDownloadRequests.get(data.reqId);
+    if (!entry) return;
+    pendingDownloadRequests.delete(data.reqId);
+    clearTimeout(entry.timer);
+    if (data.ok) entry.resolve(data);
+    else entry.reject(new Error(data.error || 'ccsExtDownloads: request failed'));
   }
 
   function settleTopRequest(data) {
@@ -296,8 +333,10 @@
       if (data.kind === 'CCS_EXT_ENABLE') {
         installCcsExtFetch();
         installCcsExtDom();
+        installCcsExtDownloads();
       } else if (data.kind === 'CCS_EXT_FETCH_RESPONSE') settleTopRequest(data);
       else if (data.kind === 'CCS_EXT_DOM_RESPONSE') settleDomRequest(data);
+      else if (data.kind === 'CCS_EXT_DOWNLOAD_RESPONSE') settleDownloadRequest(data);
     } else {
       if (data.kind === 'CCS_EXT_EXECUTE') executeFetch(data.reqId, data.url, data.init);
       else if (data.kind === 'CCS_EXT_LOCKDOWN') activateLockdown();

@@ -48,6 +48,7 @@ export {
 	isOpfsAvailable,
 	openCachedDocument,
 	openOnlineDocument,
+	readCachedDocumentBytes,
 	removeDocumentCache,
 	removeManyDocumentCaches,
 	saveDocumentMeta,

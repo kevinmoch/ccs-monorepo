@@ -20,6 +20,70 @@ const STORAGE_KEY = 'shellWhitelist';
 // "tabId:frameId" -> { tabId, frameId, origin, href, isTop, ts }
 const frameRegistry = new Map();
 
+// ─── 下载观察窗（SDK 0.15.0 分册 15 的宿主端口后半段） ────────────────────────
+//
+// 外壳只能看见自己那一帧的点击，跨域子系统页里的下载它一无所知；`chrome.downloads`
+// 是唯一看得全的地方，所以窗口开在 SW 里，外壳只拿一个不透明 token。
+//
+// 只数**完成**次数：文件名、大小、类型、来源 URL 一律不出这个文件（D-15-3）。
+// 模型要读内容仍必须走 list_downloaded_files / read_downloaded_file 的逐次确认卡。
+//
+// 窗口是时间闭区间：open 之前与 settle 之后的下载一概不计（FR-15.2）。
+// 窗口最长活 WINDOW_TTL_MS，之后自动作废——外壳崩了/没调 settle 也不会留下常驻监听。
+const WINDOW_TTL_MS = 30_000;
+
+/** token -> { ids: Set<downloadId>, openedAt, onHit? } */
+const downloadWindows = new Map();
+
+function sweepDownloadWindows() {
+  const now = Date.now();
+  for (const [token, win] of [...downloadWindows.entries()]) {
+    if (now - win.openedAt > WINDOW_TTL_MS) downloadWindows.delete(token);
+  }
+}
+
+// 顶层注册：SW 被唤醒时监听器必须已经在，否则窗口期内的下载事件直接丢
+chrome.downloads.onChanged.addListener((delta) => {
+  if (!delta.state || delta.state.current !== 'complete') return;
+  for (const win of downloadWindows.values()) {
+    if (win.ids.has(delta.id)) continue;
+    win.ids.add(delta.id);
+    if (win.onHit) win.onHit();
+  }
+});
+
+function openDownloadWindow() {
+  sweepDownloadWindows();
+  const token = `dl-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  downloadWindows.set(token, { ids: new Set(), openedAt: Date.now() });
+  return token;
+}
+
+/**
+ * 关窗并回报计数。`timeoutMs <= 0` 是「操作抛错了」那条路：关窗、丢弃计数。
+ * token 认不出来（SW 被回收过）也返回 0——宁可少报，绝不多报。
+ */
+function settleDownloadWindow(token, timeoutMs) {
+  const win = downloadWindows.get(token);
+  if (!win) return Promise.resolve(0);
+  const close = () => {
+    downloadWindows.delete(token);
+    return win.ids.size;
+  };
+  if (timeoutMs <= 0) {
+    close();
+    return Promise.resolve(0);
+  }
+  if (win.ids.size > 0) return Promise.resolve(close());
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(close()), timeoutMs);
+    win.onHit = () => {
+      clearTimeout(timer);
+      resolve(close());
+    };
+  });
+}
+
 // Normalizes any whitelist entry or self-reported origin to a comparable origin string.
 // Tolerant by design: entries may carry a path, query string, hash or trailing slash
 // (e.g. "https://localhost:3000/?login=tenant" === "https://localhost:3000").
@@ -290,6 +354,18 @@ async function handleMessage(msg, sender) {
       if (msg.op !== 'perceive' && msg.op !== 'act')
         return { ok: false, error: `Unsupported DOM operation: ${msg.op}` };
       return routeDomRequest(msg, sender);
+    }
+
+    case 'download-window': {
+      // 与 dom-proxy-request 同一道闸门：只有白名单外壳的顶层帧能开窗
+      if (frameId !== 0) return { ok: false, error: 'Forbidden: only the top-level shell frame can watch downloads' };
+      if (!(await isShellTab(tabId, msg.origin)))
+        return { ok: false, error: 'Forbidden: shell origin is not whitelisted (see extension options)' };
+      if (msg.op === 'open') return { ok: true, token: openDownloadWindow() };
+      if (msg.op === 'settle') {
+        return { ok: true, count: await settleDownloadWindow(msg.token, Number(msg.timeoutMs) || 0) };
+      }
+      return { ok: false, error: `Unsupported download-window operation: ${msg.op}` };
     }
 
     default:
