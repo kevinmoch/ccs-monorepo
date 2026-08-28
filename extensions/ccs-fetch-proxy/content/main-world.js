@@ -254,13 +254,22 @@
     if (lockdownActive) return;
     lockdownActive = true;
 
+    const SAFE = '_self';
+    // `_top` / `_parent` 也算逃逸：它们不开新窗口，但会把整个外壳导航走，比开新窗口更糟
+    const escaping = (value) => typeof value === 'string' && value !== '' && value.toLowerCase() !== SAFE;
+
     const rewriteTarget = (el) => {
-      if (el.target && el.target !== '_self') el.target = '_self';
+      if (escaping(el.target)) el.target = SAFE;
+    };
+    // <button formtarget> / <input formtarget> 覆盖表单自己的 target，只改 form 拦不住
+    const rewriteFormTarget = (el) => {
+      if (escaping(el.formTarget)) el.formTarget = SAFE;
     };
     const rewriteIn = (root) => {
       if (!root || !root.querySelectorAll) return;
-      root.querySelectorAll('a[target]').forEach(rewriteTarget);
-      root.querySelectorAll('form[target]').forEach(rewriteTarget);
+      // <base target> 让**不带 target 属性**的链接也开新窗口，只扫 a[target] 会整片漏掉
+      root.querySelectorAll('a[target], area[target], form[target], base[target]').forEach(rewriteTarget);
+      root.querySelectorAll('button[formtarget], input[formtarget]').forEach(rewriteFormTarget);
     };
 
     const start = () => {
@@ -273,39 +282,157 @@
 
       new MutationObserver((mutations) => {
         for (const mutation of mutations) {
+          if (mutation.type === 'attributes') {
+            const el = mutation.target;
+            if (mutation.attributeName === 'formtarget') rewriteFormTarget(el);
+            else if (el.matches && el.matches('a, area, form, base')) rewriteTarget(el);
+            continue;
+          }
           for (const node of mutation.addedNodes) {
             if (!(node instanceof Element)) continue;
-            if (node.matches('a[target], form[target]')) rewriteTarget(node);
+            if (node.matches('a[target], area[target], form[target], base[target]')) rewriteTarget(node);
+            if (node.matches('button[formtarget], input[formtarget]')) rewriteFormTarget(node);
             rewriteIn(node);
           }
         }
-      }).observe(root, { childList: true, subtree: true });
+        // 改回 _self 会再触发一轮 attributes 记录，但那一轮 escaping() 为假，不会自激
+      }).observe(root, {
+        childList: true,
+        subtree: true,
+        // 属性也要看：SPA 常在**已存在**的元素上改 target，那不是 childList 变更
+        attributes: true,
+        attributeFilter: ['target', 'formtarget']
+      });
     };
     start();
+
+    /**
+     * 属性/特性写入处的兜底。扫描 + 冒泡都够不着「造出来就点、从不入 DOM」的锚：
+     *   const a = document.createElement('a'); a.target = '_blank'; a.click();
+     * 它不在文档树里，click 事件不会传到 document，只能在赋值那一刻就把值掰回来。
+     */
+    const coerceTargetProp = (ctor, prop) => {
+      if (!ctor || !ctor.prototype) return;
+      const desc = Object.getOwnPropertyDescriptor(ctor.prototype, prop);
+      if (!desc || typeof desc.get !== 'function' || typeof desc.set !== 'function') return;
+      Object.defineProperty(ctor.prototype, prop, {
+        configurable: true,
+        enumerable: desc.enumerable,
+        get() {
+          return desc.get.call(this);
+        },
+        set(value) {
+          desc.set.call(this, escaping(String(value)) ? SAFE : value);
+        }
+      });
+    };
+    coerceTargetProp(window.HTMLAnchorElement, 'target');
+    coerceTargetProp(window.HTMLAreaElement, 'target');
+    coerceTargetProp(window.HTMLFormElement, 'target');
+    coerceTargetProp(window.HTMLBaseElement, 'target');
+    coerceTargetProp(window.HTMLButtonElement, 'formTarget');
+    coerceTargetProp(window.HTMLInputElement, 'formTarget');
+
+    // 反射属性走 setAttribute 时不会经过上面的 setter（React 等框架就是这么写 target 的）
+    const TARGET_TAGS = { A: 1, AREA: 1, FORM: 1, BASE: 1 };
+    const FORM_TARGET_TAGS = { BUTTON: 1, INPUT: 1 };
+    const nativeSetAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name, value) {
+      if (typeof name === 'string' && escaping(String(value))) {
+        const lower = name.toLowerCase();
+        if (
+          (lower === 'target' && TARGET_TAGS[this.tagName]) ||
+          (lower === 'formtarget' && FORM_TARGET_TAGS[this.tagName])
+        ) {
+          return nativeSetAttribute.call(this, name, SAFE);
+        }
+      }
+      return nativeSetAttribute.call(this, name, value);
+    };
 
     // Capture-phase fallback for links created/rewritten after mousedown but before click,
     // or handlers that restore target programmatically.
     document.addEventListener(
       'click',
       (event) => {
-        const target = event.target;
-        const anchor = target && target.closest ? target.closest('a[target]') : null;
-        if (anchor) rewriteTarget(anchor);
+        // composedPath 而不是 target.closest：影子树里的锚会被重定向成宿主元素，closest 找不到它
+        const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+        for (const node of path) {
+          if (!node || node.nodeType !== 1) continue;
+          const tag = node.tagName;
+          if (tag === 'BUTTON' || tag === 'INPUT') rewriteFormTarget(node);
+          else if (tag === 'A' || tag === 'AREA' || tag === 'FORM') {
+            rewriteTarget(node);
+            break;
+          }
+        }
       },
       true
     );
 
     // window.open(url) → navigate this frame instead of popping a new window out of the shell.
-    // about:blank / javascript: 不拦：前者被页面用来开空白页写字（打印预览等），改成帧内跳转
-    // 会把本帧导航成空页；后者在 location 赋值里语义不同，退回原生行为。
+    // javascript: 不拦：它在 location 赋值里语义不同，退回原生行为。
     const originalOpen = window.open;
+    const nativeOpen = (args) => (originalOpen ? originalOpen.apply(window, args) : null);
+
+    /**
+     * `window.open('', '_blank')` 之后再给 `location.href` 赋值——绕弹窗拦截器的经典写法，
+     * 也是本次实测里漏得最狠的一条。直接放行原生 open 等于白锁；但直接不开又会打断
+     * 「开空白页往里 write」的打印预览。所以先给一个替身：
+     *   - 赋 `location` → 本帧跳转（想开的那一页仍然到得了，只是留在外壳里）；
+     *   - 碰 `document` 之类真需要窗口的东西 → 那一刻才开真窗口并转发。
+     */
+    const blankWindowStub = () => {
+      let real;
+      const ensureReal = () => {
+        if (real === undefined) real = nativeOpen(['', '_blank']);
+        return real;
+      };
+      const navigateSelf = (href) => {
+        const text = href == null ? '' : String(href);
+        if (text !== '' && !/^about:blank/i.test(text)) location.href = text;
+      };
+      const location_ = {
+        get href() {
+          return location.href;
+        },
+        set href(value) {
+          navigateSelf(value);
+        },
+        assign: navigateSelf,
+        replace: navigateSelf
+      };
+      const noop = () => undefined;
+      const shims = { location: location_, closed: false, opener: window, name: '', close: noop, focus: noop, blur: noop };
+      return new Proxy(
+        {},
+        {
+          get(_target, prop) {
+            if (prop in shims) return shims[prop];
+            const win = ensureReal();
+            if (!win) return undefined;
+            const value = win[prop];
+            return typeof value === 'function' ? value.bind(win) : value;
+          },
+          set(_target, prop, value) {
+            if (prop === 'location') {
+              navigateSelf(value);
+              return true;
+            }
+            const win = ensureReal();
+            if (win) win[prop] = value;
+            return true;
+          }
+        }
+      );
+    };
+
     window.open = function (url) {
       const href = url == null ? '' : String(url);
-      if (href !== '' && !/^about:blank/i.test(href) && !/^javascript:/i.test(href)) {
-        location.href = href;
-        return window;
-      }
-      return originalOpen ? originalOpen.apply(this, arguments) : null;
+      if (/^javascript:/i.test(href)) return nativeOpen(arguments);
+      if (href === '' || /^about:blank/i.test(href)) return blankWindowStub();
+      location.href = href;
+      return window;
     };
   }
 
