@@ -69,9 +69,107 @@
   // 键用一次性 execId 而不是 SW 的 reqId：它同时是结果报文的凭据（见上方通道说明）。
   const pendingExec = new Map();
 
+  // 外壳把这一类页嵌进自己的标签里时要裁掉顶部那条（LOGO + 面包屑，跟外壳重复）。
+  // 有没有这一条只有帧内自己看得见，跟标题一样随注册报上去
+  const hasHeaderWrap = () => {
+    try {
+      return document.querySelector('.cssHeaderWrap') !== null;
+    } catch {
+      return false;
+    }
+  };
+
   // Register on every navigation. document_start guarantees this fires before any page script
   // could confuse the registry.
-  send({ __ccsExt: true, type: 'frame-register', origin: location.origin, href: location.href, isTop: IS_TOP });
+  //
+  // 标题一并报：外壳的面包屑要显示「用户/模型钻到了哪一层」，而菜单数据只到四级，
+  // 再往下的页面标题只有帧内自己知道。document_start 时 <title> 还没解析，SPA 换页
+  // 也不触发 load，所以下面还要盯着它变。
+  // 外壳要知道「这一帧属于它的哪个标签页」。地址猜不出来——一次扇出开的几页往往
+  // 只差 query，重定向后连 query 都对不上。改由帧自己把 SW 发的句柄回给嵌它的那个窗口：
+  // 句柄是 64 位随机数且只存在于本 world，页面脚本既偷不到也猜不到，冒答只会绑坏它自己那个标签。
+  const KEY_REQUEST = 'ccs-frame-key-request';
+  let frameKey;
+  /** 外壳那个窗口。句柄比问询晚到时用它补报 */
+  let asker;
+  const replyKey = () => {
+    if (frameKey === undefined || asker === undefined) return;
+    asker.source.postMessage({ __ccsExt: true, proto: PROTO, kind: 'CCS_EXT_FRAME_KEY', key: frameKey }, asker.origin);
+  };
+  if (!IS_TOP) {
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (data === null || typeof data !== 'object' || data.__ccsShell !== KEY_REQUEST) return;
+      if (event.source !== window.parent) return;
+      asker = { source: event.source, origin: event.origin };
+      replyKey();
+    });
+  }
+
+  const announce = async () => {
+    const res = await send({
+      __ccsExt: true,
+      type: 'frame-register',
+      origin: location.origin,
+      href: location.href,
+      title: document.title || '',
+      headerWrap: hasHeaderWrap(),
+      isTop: IS_TOP
+    });
+    if (res !== null && typeof res === 'object' && typeof res.key === 'string' && res.key !== frameKey) {
+      frameKey = res.key;
+      replyKey();
+    }
+    return res;
+  };
+
+  announce();
+
+  // <title> 的变化就是「这一帧换了一页」最可靠的信号：hash 路由不触发 load，
+  // history.pushState 不触发 popstate（是调用方自己发的）。标题节点可能整个被换掉，
+  // 因此观察的是 <head> 的子树而不是某个具体节点。
+  let announceTimer;
+  const scheduleAnnounce = () => {
+    clearTimeout(announceTimer);
+    // 合并抖动：SPA 换页时标题常被连写好几次
+    announceTimer = setTimeout(announce, 200);
+  };
+  const watchTitle = () => {
+    if (!document.head) return;
+    new MutationObserver(scheduleAnnounce).observe(document.head, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    // 补报一次：<title> 往往在 head 出现的同一轮解析里就已就位，而 document_start
+    // 那次上报里它还是空串。只等 mutation 的话初始标题永远补不上来，外壳拿到的
+    // 就是一个空标题——「弹窗标题不对」正是这么来的。
+    scheduleAnnounce();
+  };
+  if (document.head) watchTitle();
+  else document.addEventListener('DOMContentLoaded', watchTitle, { once: true });
+
+  // 头部那一条往往等数据回来才渲染，落在 document_start 那次上报之后。它既不改 href
+  // 也不改 <title>，不主动补报的话外壳会一直按「这一页没有头部」处理
+  const HEADER_WATCH_MS = 15000;
+  const watchHeader = () => {
+    if (!document.body || hasHeaderWrap()) return;
+    const observer = new MutationObserver(() => {
+      if (!hasHeaderWrap()) return;
+      observer.disconnect();
+      scheduleAnnounce();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    // 探不到就收手：整棵 body 子树的回调在重页面上不是免费的
+    setTimeout(() => observer.disconnect(), HEADER_WATCH_MS);
+  };
+  if (document.body) watchHeader();
+  else document.addEventListener('DOMContentLoaded', watchHeader, { once: true });
+
+  // 有些页面等数据回来才把标题改成最终值，那已经在 load 之后了
+  window.addEventListener('load', scheduleAnnounce);
+  window.addEventListener('hashchange', scheduleAnnounce);
+  window.addEventListener('popstate', scheduleAnnounce);
 
   // Bounded retries: the SW may cold-start or still be processing this frame's registration
   // when the first check arrives, so a failed check is retried briefly before giving up.
@@ -160,6 +258,7 @@
         type: 'dom-proxy-request',
         reqId: data.reqId,
         targetUrl: data.targetUrl,
+        frameKey: data.frameKey,
         op: data.op,
         payload: data.payload,
         origin: location.origin
@@ -172,6 +271,23 @@
             reqId: data.reqId,
             ok: false,
             error: (res && res.error) || 'ccsExtDom: extension service worker unavailable'
+          });
+        }
+      });
+      return;
+    }
+
+    // 受管帧清单：外壳据此认领工作集成员、拿到寻址用的句柄
+    if (IS_TOP && data.kind === 'CCS_EXT_FRAMES_REQUEST') {
+      send({ __ccsExt: true, type: 'frame-list', origin: location.origin }).then((res) => {
+        if (res && res.ok === true) {
+          postToMain({ kind: 'CCS_EXT_FRAMES_RESPONSE', reqId: data.reqId, ok: true, frames: res.frames });
+        } else {
+          postToMain({
+            kind: 'CCS_EXT_FRAMES_RESPONSE',
+            reqId: data.reqId,
+            ok: false,
+            error: (res && res.error) || 'ccsExtFrames: extension service worker unavailable'
           });
         }
       });
@@ -214,6 +330,15 @@
           });
         }
       });
+      return;
+    }
+
+    // 子帧里的一次开新窗口（window.open / target=_blank）：只把地址转达给 SW，本帧不跳转。
+    // 真开不开、开在哪由外壳决定；它接不住时把结果回给 MAIN，那边退回本帧跳转。
+    if (!IS_TOP && data.kind === 'CCS_EXT_OPEN_REQUEST') {
+      send({ __ccsExt: true, type: 'page-opened', url: data.url, origin: location.origin }).then((res) => {
+        postToMain({ kind: 'CCS_EXT_OPEN_RESULT', reqId: data.reqId, ok: !!(res && res.ok) });
+      });
     }
   });
 
@@ -237,7 +362,14 @@
     // idle-terminated, and static (already-loaded) frames never navigate again to re-register.
     // Re-announce this frame on demand so routing keeps working across SW restarts.
     if (msg.type === 'frame-ping') {
-      send({ __ccsExt: true, type: 'frame-register', origin: location.origin, href: location.href, isTop: IS_TOP });
+      announce();
+      sendResponse({ ok: true });
+      return false;
+    }
+
+    // SW 的反向推送只发往顶层帧；外壳在 MAIN world 里订阅
+    if (IS_TOP && msg.type === 'shell-event') {
+      postToMain({ kind: 'CCS_EXT_EVENT', event: msg.event });
       sendResponse({ ok: true });
       return false;
     }

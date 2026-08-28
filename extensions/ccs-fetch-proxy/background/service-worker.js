@@ -17,8 +17,78 @@
 const DEFAULT_SHELL_WHITELIST = ['https://localhost:3000'];
 const STORAGE_KEY = 'shellWhitelist';
 
-// "tabId:frameId" -> { tabId, frameId, origin, href, isTop, ts }
+// "tabId:frameId" -> { tabId, frameId, key, origin, href, title, isTop, ts }
 const frameRegistry = new Map();
+
+// ─── 帧句柄 ───────────────────────────────────────────────────────────────────
+//
+// 按 URL 投递只比 origin + pathname（见 rankByUrl）。工作集一开就是若干个同为 `/ierp/`、
+// 只有 query 不同的隐藏帧——它们彼此不可区分，排序纯属猜。句柄改由 SW 发放并绑定到
+// "tabId:frameId"：帧内导航不改 frameId，所以它跨「列表 → 详情」依然有效。
+//
+// 存进 storage.session 是为了熬过 MV3 的空闲回收：注册表清空后若重新发号，外壳手里的
+// 工作集句柄会在一次 30 秒静默之后集体失效，而那正是用户读一段回复的时间。
+const FRAME_KEY_STORE = 'frameKeys';
+
+/** "tabId:frameId" -> key；null 表示还没从 storage.session 读回来 */
+let frameKeys = null;
+
+async function loadFrameKeys() {
+  if (frameKeys === null) {
+    const stored = await chrome.storage.session.get({ [FRAME_KEY_STORE]: {} });
+    frameKeys = stored[FRAME_KEY_STORE] || {};
+  }
+  return frameKeys;
+}
+
+async function frameKeyFor(slot) {
+  const keys = await loadFrameKeys();
+  if (!keys[slot]) {
+    const bytes = crypto.getRandomValues(new Uint8Array(8));
+    keys[slot] = `frm-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+    await chrome.storage.session.set({ [FRAME_KEY_STORE]: keys });
+  }
+  return keys[slot];
+}
+
+async function dropFrameKeys(predicate) {
+  const keys = await loadFrameKeys();
+  let changed = false;
+  for (const slot of Object.keys(keys)) {
+    if (!predicate(slot)) continue;
+    delete keys[slot];
+    changed = true;
+  }
+  if (changed) await chrome.storage.session.set({ [FRAME_KEY_STORE]: keys });
+}
+
+function findFrameByKey(tabId, key) {
+  for (const entry of frameRegistry.values()) {
+    if (entry.tabId === tabId && entry.key === key) return entry;
+  }
+  return null;
+}
+
+// ─── 外壳事件推送 ─────────────────────────────────────────────────────────────
+//
+// 到目前为止这条链路上每一条报文都是外壳发起的请求/应答对，帧内发生的事外壳一无所知：
+// 用户自己点开一层子页面、或者一次页面操作开出了新页，都没有任何东西会告诉外壳。
+// 这里补上唯一的反向通路——只发往顶层帧（外壳自己），子帧收不到。
+function notifyShell(tabId, event) {
+  if (tabId == null) return;
+  try {
+    chrome.tabs.sendMessage(
+      tabId,
+      { __ccsExt: true, proto: 'ccs-fetch-proxy', type: 'shell-event', event },
+      { frameId: 0 },
+      () => {
+        void chrome.runtime.lastError; // 外壳可能已经关了
+      }
+    );
+  } catch {
+    /* tab already gone */
+  }
+}
 
 // ─── 下载观察窗（SDK 0.15.0 分册 15 的宿主端口后半段） ────────────────────────
 //
@@ -286,8 +356,33 @@ function routeFetchRequest(msg, sender) {
 
 // Page perception / page action share the fetch routing: same tab, same origin match, same
 // "open the page first" failure mode. Only the forwarded command differs.
-function routeDomRequest(msg, sender) {
-  return routeToFrame(sender.tab && sender.tab.id, msg.targetUrl, {
+//
+// 带 frameKey 时不走 URL 排序：句柄是精确的，省掉 discoverFrames 的 500ms，也不会在
+// 若干个同路径帧之间猜错。句柄认不出来（帧已关闭）如实报错，不回落到按 URL 猜——
+// 那会把请求投到另一页上，而模型完全看不出来。
+async function routeDomRequest(msg, sender) {
+  const tabId = sender.tab && sender.tab.id;
+  if (msg.frameKey) {
+    let target = findFrameByKey(tabId, msg.frameKey);
+    if (!target) {
+      await discoverFrames(tabId);
+      target = findFrameByKey(tabId, msg.frameKey);
+    }
+    if (!target) return { ok: false, error: 'frame-key-unknown' };
+    const { res, lastError, timedOut } = await sendToFrame(tabId, target.frameId, {
+      type: 'dom-exec',
+      reqId: msg.reqId,
+      op: msg.op,
+      payload: msg.payload
+    });
+    if (timedOut) return { ok: false, error: '目标页面响应超时，请重试' };
+    if (lastError) {
+      frameRegistry.delete(`${tabId}:${target.frameId}`);
+      return { ok: false, error: 'frame-key-unknown' };
+    }
+    return res && res.ok === true ? res : { ok: false, error: (res && res.error) || '目标页面未返回结果，请重试' };
+  }
+  return routeToFrame(tabId, msg.targetUrl, {
     type: 'dom-exec',
     reqId: msg.reqId,
     op: msg.op,
@@ -302,15 +397,39 @@ async function handleMessage(msg, sender) {
   switch (msg.type) {
     case 'frame-register': {
       if (tabId == null) return { ok: true };
-      frameRegistry.set(`${tabId}:${frameId}`, {
+      const slot = `${tabId}:${frameId}`;
+      const key = await frameKeyFor(slot);
+      const previous = frameRegistry.get(slot);
+      const entry = {
         tabId,
         frameId,
+        key,
         origin: toOrigin(msg.origin),
         href: msg.href || '',
+        title: msg.title || '',
+        headerWrap: Boolean(msg.headerWrap),
         isTop: Boolean(msg.isTop) || frameId === 0,
         ts: Date.now()
-      });
-      return { ok: true };
+      };
+      frameRegistry.set(slot, entry);
+      // 只在真的换了页/换了标题时通知：注册在每次导航与每次 <title> 变更时都会重发
+      if (
+        !entry.isTop &&
+        (previous === undefined ||
+          previous.href !== entry.href ||
+          previous.title !== entry.title ||
+          previous.headerWrap !== entry.headerWrap)
+      ) {
+        notifyShell(tabId, {
+          kind: 'frame',
+          key,
+          href: entry.href,
+          title: entry.title,
+          headerWrap: entry.headerWrap,
+          origin: entry.origin
+        });
+      }
+      return { ok: true, key };
     }
 
     case 'shell-check': {
@@ -356,6 +475,35 @@ async function handleMessage(msg, sender) {
       return routeDomRequest(msg, sender);
     }
 
+    // 外壳要一份「这个标签页里现在有哪些受管帧」。它同时是句柄的发放窗口：
+    // 外壳拿 href 认出主帧、拿句柄寻址，从此不再依赖按 URL 排序那套猜测。
+    case 'frame-list': {
+      if (frameId !== 0) return { ok: false, error: 'Forbidden: only the top-level shell frame can list frames' };
+      if (!(await isShellTab(tabId, msg.origin)))
+        return { ok: false, error: 'Forbidden: shell origin is not whitelisted (see extension options)' };
+      await discoverFrames(tabId);
+      const frames = [];
+      for (const entry of frameRegistry.values()) {
+        if (entry.tabId !== tabId || entry.isTop) continue;
+        frames.push({ key: entry.key, href: entry.href, title: entry.title, origin: entry.origin });
+      }
+      return { ok: true, frames };
+    }
+
+    // 一次页面操作把新页「开」出来了（子帧里被改道的 window.open）。
+    // 只是**转达地址**：真正开不开、开在哪，由外壳决定——扩展不替它开任何东西。
+    case 'page-opened': {
+      if (frameId === 0) return { ok: false, error: 'Forbidden: the shell frame cannot report opened pages' };
+      // 白名单判定要读注册表里的顶层帧，而它会被 MV3 的空闲回收清空。
+      // 这里不能像别处那样信发送方自报的 origin：发送方是子帧，那正是被判定的一方。
+      if (!(await isShellTab(tabId))) {
+        await discoverFrames(tabId);
+        if (!(await isShellTab(tabId))) return { ok: false, error: 'Forbidden: not a whitelisted shell tab' };
+      }
+      notifyShell(tabId, { kind: 'opened', url: msg.url, origin: toOrigin(msg.origin) });
+      return { ok: true };
+    }
+
     case 'download-window': {
       // 与 dom-proxy-request 同一道闸门：只有白名单外壳的顶层帧能开窗
       if (frameId !== 0) return { ok: false, error: 'Forbidden: only the top-level shell frame can watch downloads' };
@@ -385,4 +533,5 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   for (const [key, entry] of [...frameRegistry.entries()]) {
     if (entry.tabId === tabId) frameRegistry.delete(key);
   }
+  void dropFrameKeys((slot) => slot.startsWith(`${tabId}:`));
 });

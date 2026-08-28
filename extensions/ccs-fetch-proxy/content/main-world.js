@@ -24,6 +24,9 @@
   const nativePostMessage = window.postMessage;
   let bridgeToken;
 
+  /** 已转达给外壳、还没等到应答的开页请求：reqId -> 地址（外壳接不住时用它退回本帧跳转）*/
+  const pendingOpens = new Map();
+
   // 出站报文不带 token：它不截停，页面读得到。结果类报文靠 ISOLATED 发下的一次性
   // execId 认证（见 isolated.js）；顶层的请求类报文本就由外壳页面自己发起，SW 会再校验白名单。
   const postToIsolated = (msg) =>
@@ -117,14 +120,20 @@
   function installCcsExtDom() {
     if (window.ccsExtDom) return;
 
-    const send = (targetUrl, request) =>
+    // target 可以是页面地址，也可以是 `{ key }`——句柄由 service worker 发放并绑死
+    // "tabId:frameId"。按地址投递只比 origin + pathname，若干个只差 query 的同源帧
+    // 彼此不可区分；工作集一开就是那种局面，所以那条路只留给「还没拿到句柄」的首次寻址。
+    const send = (target, request) =>
       new Promise((resolve, reject) => {
+        const frameKey = target && typeof target === 'object' ? target.key : undefined;
         let url;
-        try {
-          url = new URL(targetUrl, location.href).href;
-        } catch (err) {
-          reject(new TypeError(`ccsExtDom: invalid target url (${err && err.message})`));
-          return;
+        if (frameKey === undefined) {
+          try {
+            url = new URL(target, location.href).href;
+          } catch (err) {
+            reject(new TypeError(`ccsExtDom: invalid target url (${err && err.message})`));
+            return;
+          }
         }
         const op = request && request.type === 'execute' ? 'act' : 'perceive';
         const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -134,7 +143,7 @@
           }
         }, REQUEST_TIMEOUT_MS);
         pendingDomRequests.set(reqId, { resolve, reject, timer });
-        postToIsolated({ kind: 'CCS_EXT_DOM_REQUEST', reqId, targetUrl: url, op, payload: request });
+        postToIsolated({ kind: 'CCS_EXT_DOM_REQUEST', reqId, targetUrl: url, frameKey, op, payload: request });
       });
 
     // 解析值为 { reply: PageAgentReply, documentUrl }：外壳按 URL 寻址目标帧，
@@ -142,6 +151,39 @@
     window.ccsExtDom = { send };
 
     window.dispatchEvent(new CustomEvent('ccs-ext-dom-ready'));
+  }
+
+  // 受管帧清单与反向事件。到 0.17.0 为止这条链路上只有外壳发起的请求/应答，
+  // 帧内发生的事（用户自己钻进下一层、一次操作开出了新页）外壳一无所知。
+  const pendingFrameRequests = new Map(); // reqId -> { resolve, reject, timer }
+
+  function installCcsExtFrames() {
+    if (window.ccsExtFrames) return;
+
+    window.ccsExtFrames = {
+      list: () =>
+        new Promise((resolve, reject) => {
+          const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          const timer = setTimeout(() => {
+            if (pendingFrameRequests.delete(reqId)) {
+              reject(new Error(`ccsExtFrames: list timeout after ${REQUEST_TIMEOUT_MS}ms`));
+            }
+          }, REQUEST_TIMEOUT_MS);
+          pendingFrameRequests.set(reqId, { resolve, reject, timer });
+          postToIsolated({ kind: 'CCS_EXT_FRAMES_REQUEST', reqId });
+        })
+    };
+
+    window.dispatchEvent(new CustomEvent('ccs-ext-frames-ready'));
+  }
+
+  function settleFrameRequest(data) {
+    const entry = pendingFrameRequests.get(data.reqId);
+    if (!entry) return;
+    pendingFrameRequests.delete(data.reqId);
+    clearTimeout(entry.timer);
+    if (data.ok) entry.resolve(data.frames || []);
+    else entry.reject(new Error(data.error || 'ccsExtFrames: request failed'));
   }
 
   function settleDomRequest(data) {
@@ -258,8 +300,13 @@
     // `_top` / `_parent` 也算逃逸：它们不开新窗口，但会把整个外壳导航走，比开新窗口更糟
     const escaping = (value) => typeof value === 'string' && value !== '' && value.toLowerCase() !== SAFE;
 
+    // target 会被就地掰成 _self，点击时已看不出这条链接原本要开新窗口，得先记下来
+    const wantedNewWindow = new WeakSet();
+
     const rewriteTarget = (el) => {
-      if (escaping(el.target)) el.target = SAFE;
+      if (!escaping(el.target)) return;
+      wantedNewWindow.add(el);
+      el.target = SAFE;
     };
     // <button formtarget> / <input formtarget> 覆盖表单自己的 target，只改 form 拦不住
     const rewriteFormTarget = (el) => {
@@ -322,7 +369,9 @@
           return desc.get.call(this);
         },
         set(value) {
-          desc.set.call(this, escaping(String(value)) ? SAFE : value);
+          const escapes = escaping(String(value));
+          if (escapes) wantedNewWindow.add(this);
+          desc.set.call(this, escapes ? SAFE : value);
         }
       });
     };
@@ -344,6 +393,7 @@
           (lower === 'target' && TARGET_TAGS[this.tagName]) ||
           (lower === 'formtarget' && FORM_TARGET_TAGS[this.tagName])
         ) {
+          if (lower === 'target') wantedNewWindow.add(this);
           return nativeSetAttribute.call(this, name, SAFE);
         }
       }
@@ -370,7 +420,8 @@
       true
     );
 
-    // window.open(url) → navigate this frame instead of popping a new window out of the shell.
+    // 页面想开新窗口时（window.open / target=_blank）把地址交给外壳，由它开成主区标签页：
+    // 用户看得见、点得进、关得掉，眼前这一页也不被顶掉。
     // javascript: 不拦：它在 location 赋值里语义不同，退回原生行为。
     const originalOpen = window.open;
     const nativeOpen = (args) => (originalOpen ? originalOpen.apply(window, args) : null);
@@ -435,13 +486,59 @@
       );
     };
 
+    /**
+     * 把「开新窗口」这件事转达给外壳。返回 false = 这个地址转达不了，调用方按老路走。
+     *
+     * 是乐观转达：外壳接不接得住要等应答。接不住时（页面没跑在外壳里、地址不在白名单内）
+     * 收到 CCS_EXT_OPEN_RESULT 再退回本帧跳转——那正是改造前的行为，最坏也只是晚一个来回。
+     */
+    let openSeq = 0;
+    const handOffOpen = (href) => {
+      let url;
+      try {
+        url = new URL(href, location.href).href;
+      } catch {
+        return false;
+      }
+      if (!/^https?:/i.test(url)) return false;
+      openSeq += 1;
+      const reqId = `open-${openSeq}`;
+      pendingOpens.set(reqId, url);
+      postToIsolated({ kind: 'CCS_EXT_OPEN_REQUEST', reqId, url });
+      return true;
+    };
+
     window.open = function (url) {
       const href = url == null ? '' : String(url);
       if (/^javascript:/i.test(href)) return nativeOpen(arguments);
       if (href === '' || /^about:blank/i.test(href)) return blankWindowStub();
+      if (handOffOpen(href)) return blankWindowStub();
       location.href = href;
       return window;
     };
+
+    /**
+     * `target=_blank` 的链接：target 已经被掰成 `_self`，但用户点它的本意就是开新窗口，
+     * 所以和 `window.open` 走同一条路——外壳开一个主区标签页，本帧留在原页。
+     *
+     * 冒泡阶段而不是捕获阶段：页面自己 `preventDefault` / `stopPropagation` 的照让给页面，
+     * 让不出去的最坏结果也只是退回改造前的「本帧跳转」。
+     */
+    document.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      for (const node of path) {
+        if (!node || node.nodeType !== 1) continue;
+        const tag = node.tagName;
+        if (tag !== 'A' && tag !== 'AREA') continue;
+        // download 是存盘不是开页；非 http(s) 交给浏览器按协议处理
+        if (!wantedNewWindow.has(node) || node.hasAttribute('download')) return;
+        if (typeof node.href !== 'string' || !/^https?:/i.test(node.href)) return;
+        if (handOffOpen(node.href)) event.preventDefault();
+        return;
+      }
+    });
   }
 
   // ─── Message dispatch ──────────────────────────────────────────────────────
@@ -469,12 +566,24 @@
         installCcsExtFetch();
         installCcsExtDom();
         installCcsExtDownloads();
+        installCcsExtFrames();
       } else if (data.kind === 'CCS_EXT_FETCH_RESPONSE') settleTopRequest(data);
       else if (data.kind === 'CCS_EXT_DOM_RESPONSE') settleDomRequest(data);
       else if (data.kind === 'CCS_EXT_DOWNLOAD_RESPONSE') settleDownloadRequest(data);
+      else if (data.kind === 'CCS_EXT_FRAMES_RESPONSE') settleFrameRequest(data);
+      // 反向推送落成 DOM 事件；外壳订阅它就够了，不必轮询
+      else if (data.kind === 'CCS_EXT_EVENT') {
+        window.dispatchEvent(new CustomEvent('ccs-ext-event', { detail: data.event }));
+      }
     } else {
       if (data.kind === 'CCS_EXT_EXECUTE') executeFetch(data.reqId, data.url, data.init);
       else if (data.kind === 'CCS_EXT_LOCKDOWN') activateLockdown();
+      // 外壳没接住这一页（不在白名单内 / 压根没跑在外壳里）：退回本帧跳转，别让用户点了没反应
+      else if (data.kind === 'CCS_EXT_OPEN_RESULT') {
+        const url = pendingOpens.get(data.reqId);
+        pendingOpens.delete(data.reqId);
+        if (url !== undefined && data.ok !== true) location.href = url;
+      }
     }
   });
 })();
