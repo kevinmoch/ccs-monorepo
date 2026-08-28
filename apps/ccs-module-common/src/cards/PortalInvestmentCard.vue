@@ -4,7 +4,14 @@
       <!-- 顶部工具分组：工具库 / 运营看板 / 批复文档管理 -->
       <div class="portal-tools-row">
         <section v-for="group in toolGroups" :key="group.id" class="portal-tool-card ccs-card-surface">
-          <header class="portal-tool-card__header" :title="pickTitle(group, language)">{{ pickTitle(group, language) }}</header>
+          <header
+            class="portal-tool-card__header"
+            :class="{ 'portal-card__header--link': group.url && !group.disabled }"
+            :title="pickTitle(group, language)"
+            @click="group.url && !group.disabled && handleNavigate(group)"
+          >
+            {{ pickTitle(group, language) }}
+          </header>
           <div class="portal-tool-card__body">
             <a
               v-for="leaf in group.children ?? []"
@@ -15,12 +22,21 @@
               @click.prevent="!leaf.disabled && handleNavigate(leaf)"
             >
               <span class="portal-tool-link__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <path d="M14 2v6h6" />
                 </svg>
               </span>
-              <span class="portal-tool-link__text" :title="pickTitle(leaf, language)">{{ pickTitle(leaf, language) }}</span>
+              <span class="portal-tool-link__text" :title="pickTitle(leaf, language)">{{
+                pickTitle(leaf, language)
+              }}</span>
             </a>
           </div>
         </section>
@@ -28,7 +44,9 @@
 
       <!-- 投资立项管理主区域 -->
       <div class="portal-main">
-        <h2 class="portal-title" :title="investmentRoot ? pickTitle(investmentRoot, language) : ''">{{ investmentRoot ? pickTitle(investmentRoot, language) : '' }}</h2>
+        <h2 class="portal-title" :title="investmentRoot ? pickTitle(investmentRoot, language) : ''">
+          {{ investmentRoot ? pickTitle(investmentRoot, language) : '' }}
+        </h2>
 
         <div class="portal-tabs" role="tablist">
           <button
@@ -54,7 +72,14 @@
             class="portal-category-card ccs-card-surface"
             :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
           >
-            <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
+            <header
+              class="portal-category-card__header"
+              :class="{ 'portal-card__header--link': category.url && !category.disabled }"
+              :title="pickTitle(category, language)"
+              @click="category.url && !category.disabled && handleNavigate(category)"
+            >
+              {{ pickTitle(category, language) }}
+            </header>
             <div class="portal-category-card__body">
               <a
                 v-for="leaf in category.children ?? []"
@@ -79,7 +104,14 @@
 import { computed, ref } from 'vue';
 import { CardShell } from '@ccs/card';
 import { useRuntimeStore } from '../stores/runtime';
-import { findMenuNode, pickTitle, splitBySeperateLine, handleNavigate, type ShellMenuNode, MENU_ITEM_WRAP_COUNT } from '../lib/shell-menu';
+import {
+  findMenuNode,
+  pickTitle,
+  splitBySeperateLine,
+  handleNavigate,
+  type ShellMenuNode,
+  MENU_ITEM_WRAP_COUNT
+} from '../lib/shell-menu';
 
 /**
  * menuData：由 pages/portal-investment/PortalInvestmentPage.vue 在挂载时通过
@@ -96,13 +128,17 @@ const loading = computed(() => props.menuData === undefined);
 
 /** 投资立项管理（L1-1）节点：国有/社会投资项目（L2-1、L2-2）+ 工具库/运营看板/批复文档管理（L2-3~L2-5） */
 const investmentRoot = computed(() => findMenuNode(props.menuData ?? [], 'L1-1'));
-const split = computed(() => splitBySeperateLine(investmentRoot.value?.children ?? [], investmentRoot.value?.seperateLine));
+const split = computed(() =>
+  splitBySeperateLine(investmentRoot.value?.children ?? [], investmentRoot.value?.seperateLine)
+);
 const investmentGroups = computed(() => split.value.leftItems);
 const toolGroups = computed(() => split.value.rightItems);
 
 const activeGroupId = ref<string | null>(null);
 const effectiveActiveGroupId = computed(() => activeGroupId.value ?? investmentGroups.value[0]?.id ?? null);
-const activeCategories = computed(() => investmentGroups.value.find((group) => group.id === effectiveActiveGroupId.value)?.children ?? []);
+const activeCategories = computed(
+  () => investmentGroups.value.find((group) => group.id === effectiveActiveGroupId.value)?.children ?? []
+);
 </script>
 
 <style src="../lib/shell-menu.css" scoped></style>

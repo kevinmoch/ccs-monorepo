@@ -1,6 +1,12 @@
 <template>
   <div class="iframe-fullscreen-wrapper" :class="{ 'iframe-fullscreen-wrapper--clip': hideTop > 0 }">
-    <iframe :src="url" class="iframe-fullscreen" frameborder="0" :style="hideTop > 0 ? { position: 'relative', top: `-${hideTop}px`, height: `calc(100% + ${hideTop}px)` } : {}" @load="handleLoad" />
+    <iframe
+      :src="url"
+      class="iframe-fullscreen"
+      frameborder="0"
+      :style="hideTop > 0 ? { position: 'relative', top: `-${hideTop}px`, height: `calc(100% + ${hideTop}px)` } : {}"
+      @load="handleLoad"
+    />
   </div>
 </template>
 
@@ -72,6 +78,11 @@ function attachInPageNavigation(doc: Document, win: Window) {
 function handleLoad(event: Event) {
   observer?.disconnect();
   observer = undefined;
+
+  // 回执给外壳：ccs-framework 的导航桥据此判定「页面真的到了」，AI 巡页才不会读到上一页
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'CCS_PAGE_READY', url: props.url }, window.location.origin);
+  }
 
   if (!isSameOrigin(props.url)) return;
 
