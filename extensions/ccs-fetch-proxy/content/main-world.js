@@ -403,7 +403,15 @@
         replace: navigateSelf
       };
       const noop = () => undefined;
-      const shims = { location: location_, closed: false, opener: window, name: '', close: noop, focus: noop, blur: noop };
+      const shims = {
+        location: location_,
+        closed: false,
+        opener: window,
+        name: '',
+        close: noop,
+        focus: noop,
+        blur: noop
+      };
       return new Proxy(
         {},
         {

@@ -10,7 +10,14 @@
             <h2 class="portal-section-title" :title="pickTitle(section.title, language)">{{ pickTitle(section.title, language) }}</h2>
             <div class="portal-tools-row" v-if="section.items.length > 0">
               <section v-for="item in section.items" :key="item.id" class="portal-tool-card ccs-card-surface">
-                <header class="portal-tool-card__header" :title="pickTitle(item, language)">{{ pickTitle(item, language) }}</header>
+                <header
+                  class="portal-tool-card__header"
+                  :class="{ 'portal-card__header--link': item.url && !item.disabled }"
+                  :title="pickTitle(item, language)"
+                  @click="item.url && !item.disabled && handleNavigate(item)"
+                >
+                  {{ pickTitle(item, language) }}
+                </header>
                 <div class="portal-tool-card__body">
                   <a
                     v-for="leaf in item.children ?? []"
@@ -43,7 +50,14 @@
                 class="portal-category-card ccs-card-surface"
                 :class="{ 'portal-category-card--wide': (category.children ?? []).length > MENU_ITEM_WRAP_COUNT }"
               >
-                <header class="portal-category-card__header" :title="pickTitle(category, language)">{{ pickTitle(category, language) }}</header>
+                <header
+                  class="portal-category-card__header"
+                  :class="{ 'portal-card__header--link': category.url && !category.disabled }"
+                  :title="pickTitle(category, language)"
+                  @click="category.url && !category.disabled && handleNavigate(category)"
+                >
+                  {{ pickTitle(category, language) }}
+                </header>
                 <div class="portal-category-card__body">
                   <a
                     v-for="leaf in category.children ?? []"
