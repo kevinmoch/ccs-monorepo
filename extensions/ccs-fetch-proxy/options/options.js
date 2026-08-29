@@ -3,11 +3,7 @@
   'use strict';
 
   const STORAGE_KEY = 'shellWhitelist';
-  const DEFAULT_WHITELIST = [
-    'https://localhost:3000',
-    'https://localhost.huawei.com:3000',
-    'https://ccs.huawei.com:3000'
-  ];
+  const DEFAULT_WHITELIST = self.CCS_DEFAULT_SHELL_WHITELIST;
 
   const textarea = document.getElementById('whitelist');
   const statusEl = document.getElementById('status');

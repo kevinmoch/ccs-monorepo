@@ -1,12 +1,13 @@
 // CCS Fetch Proxy — MV3 service worker.
 //
 // State:
-//  - Shell whitelist (origins) in chrome.storage.sync, defaults to https://localhost:3000,
-//    editable from the options page.
+//  - Shell whitelist (origins) in chrome.storage.sync, editable from the options page.
+//    The factory default lives in shared/whitelist-defaults.js — shared with the options page
+//    so the two can never drift apart.
 //  - In-memory frame registry keyed by "tabId:frameId", refreshed by every frame's
-//    document_start `frame-register` message. The registry's top-frame entry is the source of
-//    truth for whitelist checks — no "tabs" permission is required because content scripts
-//    self-report location.href.
+//    document_start `frame-register` message. It is used for frame addressing only; whitelist
+//    checks go through the browser-supplied ancestor chain (see shellOriginFor) because the
+//    registry is wiped whenever MV3 idle-terminates this worker.
 //
 // Routing: fetch-proxy-request carries the absolute endpoint URL; the SW picks the most
 // recently registered non-top frame whose origin matches the endpoint origin and forwards the
@@ -14,7 +15,9 @@
 // be whitelisted AND the frame origin must differ from the shell origin (same-origin module
 // iframes are left untouched).
 
-const DEFAULT_SHELL_WHITELIST = ['https://localhost:3000'];
+importScripts('/shared/whitelist-defaults.js');
+
+const DEFAULT_SHELL_WHITELIST = self.CCS_DEFAULT_SHELL_WHITELIST;
 const STORAGE_KEY = 'shellWhitelist';
 
 // "tabId:frameId" -> { tabId, frameId, key, origin, href, title, isTop, ts }
