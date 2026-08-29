@@ -197,6 +197,26 @@ async function isShellTab(tabId, selfOrigin) {
   return whitelistAllows(top.origin);
 }
 
+// 判定一个子帧是否处在白名单外壳之下，返回外壳 origin（不是则返回空串）。
+// 子帧自报的 origin 不能用来判定它自己，但祖先链可以：那是浏览器填进 location.ancestorOrigins
+// 的，ISOLATED world 读到的是真值，页面脚本改不了。注册表会被 MV3 的空闲回收清空，祖先链不会——
+// 早先只认注册表，撞上 SW 冷启动就判定失败，而子帧重试几次后就永久放弃，lockdown 再也装不上。
+async function shellOriginFor(msg, tabId) {
+  const chain = Array.isArray(msg.ancestors) ? msg.ancestors : [];
+  if (chain.length) {
+    // 链尾是最外层；中间帧是谁不影响判定，整棵树都在这个外壳之下
+    const top = toOrigin(chain[chain.length - 1]);
+    return (await whitelistAllows(top)) ? top : '';
+  }
+  // 拿不到祖先链（老浏览器）才退回注册表，冷启动时先主动重新发现
+  if (!(await isShellTab(tabId))) {
+    await discoverFrames(tabId);
+    if (!(await isShellTab(tabId))) return '';
+  }
+  const top = topFrameOf(tabId);
+  return top ? top.origin : '';
+}
+
 // Frames only register at document_start, but the in-memory registry is wiped whenever the MV3
 // service worker is idle-terminated (~30s) — and static, already-loaded frames never navigate
 // again, so they would stay unregistered forever. On a routing miss we actively rediscover:
@@ -440,18 +460,14 @@ async function handleMessage(msg, sender) {
 
     case 'lockdown-check': {
       if (frameId === 0) return { lockdown: false, shell: false };
-      if (!(await isShellTab(tabId))) {
-        // Cold registry (SW restarted, static top frame never re-registered) — rediscover first.
-        await discoverFrames(tabId);
-        if (!(await isShellTab(tabId))) return { lockdown: false, shell: false };
-      }
-      const top = topFrameOf(tabId);
+      const shellOrigin = await shellOriginFor(msg, tabId);
+      if (!shellOrigin) return { lockdown: false, shell: false };
       const selfOrigin = toOrigin(msg.origin);
       // Cross-origin frames only: same-origin module iframes keep their existing behavior
       // (IframeCard.vue already handles same-origin lockdown on its own).
       // `shell` 与 lockdown 分开报：同源子帧也可能收到 dom-exec，它需要知道自己在白名单外壳
       // 之下（好留着 dom-agent 的监听器探针），而 lockdown 只对跨域帧成立。
-      return { lockdown: Boolean(top) && selfOrigin !== top.origin, shell: true };
+      return { lockdown: selfOrigin !== shellOrigin, shell: true };
     }
 
     case 'fetch-proxy-request': {
@@ -494,12 +510,8 @@ async function handleMessage(msg, sender) {
     // 只是**转达地址**：真正开不开、开在哪，由外壳决定——扩展不替它开任何东西。
     case 'page-opened': {
       if (frameId === 0) return { ok: false, error: 'Forbidden: the shell frame cannot report opened pages' };
-      // 白名单判定要读注册表里的顶层帧，而它会被 MV3 的空闲回收清空。
-      // 这里不能像别处那样信发送方自报的 origin：发送方是子帧，那正是被判定的一方。
-      if (!(await isShellTab(tabId))) {
-        await discoverFrames(tabId);
-        if (!(await isShellTab(tabId))) return { ok: false, error: 'Forbidden: not a whitelisted shell tab' };
-      }
+      // 发送方是子帧，也就是被判定的一方，所以不能像别处那样信它自报的 origin
+      if (!(await shellOriginFor(msg, tabId))) return { ok: false, error: 'Forbidden: not a whitelisted shell tab' };
       notifyShell(tabId, { kind: 'opened', url: msg.url, origin: toOrigin(msg.origin) });
       return { ok: true };
     }

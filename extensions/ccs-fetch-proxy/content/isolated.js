@@ -2,8 +2,8 @@
 //
 // Responsibilities:
 //  - All frames: register { origin, href, isTop } with the service worker at document_start,
-//    re-sending on every navigation (this is what keeps the SW's frame registry fresh and what
-//    the whitelist check relies on — no "tabs" permission is needed anywhere).
+//    re-sending on every navigation. This keeps the SW's frame registry fresh for frame
+//    addressing; the whitelist check no longer depends on it (see ancestorOrigins below).
 //  - Top frame (the ccs-framework shell): ask the SW for shell-check, then tell the MAIN world
 //    script to install `window.ccsExtFetch` / `window.ccsExtDom`; afterwards bridge MAIN <-> SW
 //    fetch and DOM traffic.
@@ -17,6 +17,15 @@
 
   const PROTO = 'ccs-fetch-proxy';
   const IS_TOP = window === window.top;
+
+  // 祖先帧的 origin 链由浏览器填，页面脚本伪造不了。SW 的注册表会被 MV3 空闲回收清空，这条不会
+  const ancestorOrigins = () => {
+    try {
+      return Array.from(location.ancestorOrigins || []);
+    } catch {
+      return [];
+    }
+  };
 
   // ─── 与同帧 MAIN 世界的私有通道 ────────────────────────────────────────
   // MAIN 世界与页面脚本共享 realm，光靠 event.source/origin 拦不住同源页面脚本：它能伪造
@@ -188,7 +197,12 @@
     requestEnable(0);
   } else {
     const requestLockdown = async (attempt) => {
-      const res = await send({ __ccsExt: true, type: 'lockdown-check', origin: location.origin });
+      const res = await send({
+        __ccsExt: true,
+        type: 'lockdown-check',
+        origin: location.origin,
+        ancestors: ancestorOrigins()
+      });
       // shell=true 表示「本帧确实在白名单外壳之下」，同源子帧也算；lockdown 只对跨域帧为真
       if (res && res.shell) {
         if (res.lockdown) postToMain({ kind: 'CCS_EXT_LOCKDOWN' });
@@ -336,7 +350,13 @@
     // 子帧里的一次开新窗口（window.open / target=_blank）：只把地址转达给 SW，本帧不跳转。
     // 真开不开、开在哪由外壳决定；它接不住时把结果回给 MAIN，那边退回本帧跳转。
     if (!IS_TOP && data.kind === 'CCS_EXT_OPEN_REQUEST') {
-      send({ __ccsExt: true, type: 'page-opened', url: data.url, origin: location.origin }).then((res) => {
+      send({
+        __ccsExt: true,
+        type: 'page-opened',
+        url: data.url,
+        origin: location.origin,
+        ancestors: ancestorOrigins()
+      }).then((res) => {
         postToMain({ kind: 'CCS_EXT_OPEN_RESULT', reqId: data.reqId, ok: !!(res && res.ok) });
       });
     }
