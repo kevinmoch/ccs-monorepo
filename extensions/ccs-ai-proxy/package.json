@@ -9,7 +9,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@webskill/sdk": "^0.17.0"
+    "@webskill/sdk": "^0.18.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
