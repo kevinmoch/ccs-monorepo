@@ -4,6 +4,7 @@
 
 1. **跨域取数代理**：在外壳顶层窗口注入 `window.ccsExtFetch(input, init)`，接口与标准 `fetch` 完全一致；调用后请求会被路由到当前已打开的内嵌子网站 iframe（如 ERP 待办任务页面）中执行——同 origin、携带该页面的 cookie/登录态，从而绕过跨域限制，供 AI 对话框等外壳代码获取子网站后台数据。
 2. **新窗口拦截**：外壳内嵌的**跨域**子网站页面（origin 与外壳不同）中，所有会弹出新窗口/新标签的跳转（`a[target=_blank]`、`form[target]`、`window.open`）都被强制改为在当前 iframe 内导航，不再跳出外壳。
+3. **水印隐藏**：ERP 子系统页会往 `<body>` 挂一层全屏平铺水印（inline style 的 `data:image/png` 平铺背景 + `pointer-events: none` + 高 z-index）。外壳内嵌的跨域子网站页加载后，该水印层被自动隐藏，避免与外壳视觉重叠、影响阅读。
 
 > 要求 Chrome 111+（MAIN world content script 支持）。
 >
@@ -89,6 +90,10 @@ console.log(r.status, await r.text());
 ### 3. 新窗口拦截（自动生效，无需调用）
 
 白名单外壳内的跨域子网站页面加载后自动激活：`target=_blank` 链接、动态新增链接、`window.open` 均改为当前 iframe 内跳转。同源模块 iframe（ccs-module-common 等）不受扩展干预，由工程内 IframeCard.vue 的既有逻辑处理。
+
+### 4. 水印隐藏（自动生效，无需调用）
+
+与新窗口拦截同一触发信号（白名单外壳之下的跨域子帧）：向子帧注入一条声明式 CSS 规则，按 inline style 特征（`data:image/png` 平铺背景 + `pointer-events: none`）匹配 ERP 的水印覆盖层并隐藏。不用删节点的方式——ERP 页面带防篡改逻辑，节点被删会被重建，而 `display:none` 不触发重建，CSS 规则常驻即持续生效。
 
 ## 工作原理（消息链路）
 

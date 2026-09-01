@@ -541,6 +541,27 @@
     });
   }
 
+  // ─── Sub frame: watermark hiding (cross-origin frames only) ───────────────
+  // ERP 子系统页会往 body 挂一层全屏平铺水印（inline style：data:image/png 平铺背景 +
+  // pointer-events:none + 高 z-index，类名是每次构建可变的哈希）。嵌进外壳后这层与外壳
+  // 自身视觉重叠、影响阅读，故隐藏。
+  //
+  // 用声明式 CSS 而不是删节点：页面带防篡改逻辑，节点被 remove 后会被重建，而
+  // display:none 不触发重建；CSS 规则常驻 <head>，页面重建多少次节点都依然被盖住，
+  // 也无需 MutationObserver 轮询。选择器按「inline style 特征」匹配而非哈希类名，
+  // 对 ERP 侧换类名免疫。
+  //
+  // 只在确认是白名单外壳之下的跨域子帧时启用（与 lockdown 同一信号），
+  // 用户直接打开的无关站点不留任何痕迹。
+  function hideWatermark() {
+    if (document.getElementById('ccs-ext-hide-watermark')) return;
+    const style = document.createElement('style');
+    style.id = 'ccs-ext-hide-watermark';
+    style.textContent =
+      'body > div[style*="data:image/png"][style*="pointer-events: none"] { display: none !important; }';
+    (document.head || document.documentElement).appendChild(style);
+  }
+
   // ─── Message dispatch ──────────────────────────────────────────────────────
   // 本监听器在 document_start 注册，早于页面任何脚本，所以发给本脚本的报文一律就地截停：
   // 页面既学不到 token，也看不见指令内容。`to === 'dom'` 是 dom-agent.js 的报文，放行给它；
@@ -577,7 +598,10 @@
       }
     } else {
       if (data.kind === 'CCS_EXT_EXECUTE') executeFetch(data.reqId, data.url, data.init);
-      else if (data.kind === 'CCS_EXT_LOCKDOWN') activateLockdown();
+      else if (data.kind === 'CCS_EXT_LOCKDOWN') {
+        activateLockdown();
+        hideWatermark();
+      }
       // 外壳没接住这一页（不在白名单内 / 压根没跑在外壳里）：退回本帧跳转，别让用户点了没反应
       else if (data.kind === 'CCS_EXT_OPEN_RESULT') {
         const url = pendingOpens.get(data.reqId);
