@@ -99,3 +99,9 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Injection payloads copied from extensions/ccs-ai-proxy at build time.
+# frame-boot.js is hand-written and stays tracked.
+app/src/main/assets/ccs-inject/main-world.js
+app/src/main/assets/ccs-inject/dom-agent.js
+app/src/main/assets/ccs-inject/erp-origins.json

@@ -1,5 +1,14 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
@@ -94,6 +103,11 @@ const syncResult = spawnSync('npx', ['cap', 'sync', 'android'], {
 });
 if (syncResult.status !== 0) process.exit(syncResult.status ?? 1);
 
+// 8b. 注入产物与 ERP origin 清单进 assets
+// origin 必须在原生侧可读：注入规则只能在 Plugin.load()（首帧加载前）装一次，
+// 那时外壳 JS 还没跑，拿不到 erpOrigins()。
+writeInjectAssets();
+
 if (prepareOnly || missingPrereqs.length > 0) {
   console.log('');
   console.log('Android project prepared successfully (web assets copied).');
@@ -117,11 +131,15 @@ const gradleCmd = process.platform === 'win32' ? join(androidDir, 'gradlew.bat')
 
 if (process.platform === 'win32') {
   // On Windows, use cmd.exe inline set to ensure JAVA_HOME propagates to gradlew
-  const gradleResult = spawnSync(`set "JAVA_HOME=${javaHome}" && set "ANDROID_HOME=${androidSdk}" && set "ANDROID_SDK_ROOT=${androidSdk}" && "${gradleCmd}" clean ${buildType}`, [], {
-    cwd: androidDir,
-    stdio: 'inherit',
-    shell: true
-  });
+  const gradleResult = spawnSync(
+    `set "JAVA_HOME=${javaHome}" && set "ANDROID_HOME=${androidSdk}" && set "ANDROID_SDK_ROOT=${androidSdk}" && "${gradleCmd}" clean ${buildType}`,
+    [],
+    {
+      cwd: androidDir,
+      stdio: 'inherit',
+      shell: true
+    }
+  );
   if (gradleResult.status !== 0) process.exit(gradleResult.status ?? 1);
 } else {
   const gradleResult = spawnSync(gradleCmd, ['clean', buildType], {
@@ -186,6 +204,47 @@ console.log(`APK output: ${outDir}`);
 
 // --- Helpers ---
 
+function writeInjectAssets() {
+  const srcDir = join(repoRoot, 'extensions', 'ccs-ai-proxy', 'content');
+  const outDir = join(androidDir, 'app', 'src', 'main', 'assets', 'ccs-inject');
+  mkdirSync(outDir, { recursive: true });
+
+  for (const name of ['main-world.js', 'dom-agent.js']) {
+    const src = join(srcDir, name);
+    if (!existsSync(src)) {
+      console.error(`Missing injection artifact: ${src}`);
+      console.error('Run "pnpm --filter ccs-fetch-proxy build" first.');
+      process.exit(1);
+    }
+    copyFileSync(src, join(outDir, name));
+  }
+
+  // 与外壳 pageAccess.ts 的 erpOrigins() 同源同规则：租户域优先，排除外壳自身 origin
+  const origins = [
+    ...new Set(
+      [getFirstEnv('CCS_TENANT_URL'), getFirstEnv('CCS_BASE_URL')]
+        .map(originOf)
+        .filter((o) => o && o !== 'https://localhost')
+    )
+  ];
+  if (origins.length === 0) {
+    console.warn(
+      'No CCS_TENANT_URL/CCS_BASE_URL in env — Android frame bridge will stay idle until the shell saves origins and the app restarts.'
+    );
+  }
+  writeFileSync(join(outDir, 'erp-origins.json'), JSON.stringify(origins));
+  console.log(`Injection assets written (erp origins: ${origins.join(', ') || 'none'}).`);
+}
+
+function originOf(url) {
+  if (!url) return undefined;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return undefined;
+  }
+}
+
 function detectAndroidSdk() {
   // 1. Check environment variables
   const fromEnv = getFirstEnv('CCS_ANDROID_SDK', 'ANDROID_HOME', 'ANDROID_SDK_ROOT', 'ANDROID_SDK');
@@ -193,7 +252,13 @@ function detectAndroidSdk() {
 
   // 2. Check common Windows locations
   const home = homedir();
-  const candidates = [join(home, 'AppData', 'Local', 'Android', 'Sdk'), join(home, 'AppData', 'Local', 'Android', 'android-sdk'), 'C:\\Android\\Sdk', 'D:\\Android\\Sdk', join(home, 'Android', 'Sdk')];
+  const candidates = [
+    join(home, 'AppData', 'Local', 'Android', 'Sdk'),
+    join(home, 'AppData', 'Local', 'Android', 'android-sdk'),
+    'C:\\Android\\Sdk',
+    'D:\\Android\\Sdk',
+    join(home, 'Android', 'Sdk')
+  ];
 
   for (const candidate of candidates) {
     if (isRealAndroidSdk(candidate)) return resolve(candidate);
@@ -216,7 +281,11 @@ function detectAndroidSdk() {
 function isRealAndroidSdk(dir) {
   if (!existsSync(dir)) return false;
   // A real Google Android SDK must have at least one of these directories
-  return existsSync(join(dir, 'platform-tools')) || existsSync(join(dir, 'build-tools')) || existsSync(join(dir, 'platforms'));
+  return (
+    existsSync(join(dir, 'platform-tools')) ||
+    existsSync(join(dir, 'build-tools')) ||
+    existsSync(join(dir, 'platforms'))
+  );
 }
 
 function detectJavaHome() {
@@ -309,7 +378,13 @@ function writeSigningConfig(androidDir) {
     process.exit(1);
   }
 
-  const signingProps = [`storeFile=${resolve(keystoreFile).replace(/\\/g, '/')}`, `storePassword=${keystorePassword}`, `keyAlias=${keystoreAlias}`, `keyPassword=${keyPassword}`].join('\n') + '\n';
+  const signingProps =
+    [
+      `storeFile=${resolve(keystoreFile).replace(/\\/g, '/')}`,
+      `storePassword=${keystorePassword}`,
+      `keyAlias=${keystoreAlias}`,
+      `keyPassword=${keyPassword}`
+    ].join('\n') + '\n';
 
   writeFileSync(join(androidDir, 'keystore.properties'), signingProps);
 
@@ -364,6 +439,10 @@ function readFile(path) {
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
+  // .env 里同一个键会重复出现（切环境靠调顺序）。vite/dotenv 是后者覆盖前者，
+  // 这里必须一致，否则原生侧算出的 ERP origin 和外壳的 erpOrigins() 对不上。
+  // 真实进程环境变量仍然优先于 .env。
+  const fromProcess = new Set(Object.keys(process.env));
   for (const line of readFileSync(path, 'utf-8').split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
@@ -374,6 +453,6 @@ function loadEnvFile(path) {
       .slice(eq + 1)
       .trim()
       .replace(/^["']|["']$/g, '');
-    if (!process.env[key]) process.env[key] = val;
+    if (!fromProcess.has(key)) process.env[key] = val;
   }
 }
