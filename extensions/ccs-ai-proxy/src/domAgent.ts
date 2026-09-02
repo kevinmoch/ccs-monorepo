@@ -128,10 +128,10 @@ import { ERP_ACTION_SCOPE, ERP_ROLE_HINTS } from './scopes';
 
     if (data.kind === 'CCS_EXT_HANDSHAKE') {
       // 只认第一条：它由 document_start 的 ISOLATED 脚本发出，页面脚本此时还没机会运行
-      if (bridgeToken === undefined && typeof data.token === 'string') bridgeToken = data.token;
+      if (bridgeToken === undefined && typeof data.authToken === 'string') bridgeToken = data.authToken;
       return;
     }
-    if (bridgeToken === undefined || data.token !== bridgeToken) return;
+    if (bridgeToken === undefined || data.authToken !== bridgeToken) return;
 
     if (data.kind === 'CCS_EXT_DOM_DISARM') disarmProbe();
     else if (data.kind === 'CCS_EXT_DOM_EXECUTE' && typeof data.reqId === 'string') {

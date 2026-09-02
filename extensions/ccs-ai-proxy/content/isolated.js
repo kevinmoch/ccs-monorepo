@@ -41,8 +41,10 @@
   const nonce = () =>
     Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
   const bridgeToken = nonce();
+  // 鉴权字段叫 authToken 而不是 token：下载观察窗的载荷本身带一个 `token`（观察窗句柄），
+  // 同名会被 `...msg` 覆盖掉鉴权值，MAIN 侧校验不过直接丢报文。
   const post = (to, msg) =>
-    window.postMessage({ __ccsExt: true, proto: PROTO, to, token: bridgeToken, ...msg }, location.origin);
+    window.postMessage({ __ccsExt: true, proto: PROTO, to, authToken: bridgeToken, ...msg }, location.origin);
   const postToMain = (msg) => post('main', msg);
   const postToDom = (msg) => post('dom', msg);
 

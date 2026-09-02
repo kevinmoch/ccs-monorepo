@@ -577,10 +577,10 @@
 
     if (data.kind === 'CCS_EXT_HANDSHAKE') {
       // 只认第一条：它由 document_start 的 ISOLATED 脚本发出，页面脚本此时还没机会运行
-      if (bridgeToken === undefined && typeof data.token === 'string') bridgeToken = data.token;
+      if (bridgeToken === undefined && typeof data.authToken === 'string') bridgeToken = data.authToken;
       return;
     }
-    if (bridgeToken === undefined || data.token !== bridgeToken) return;
+    if (bridgeToken === undefined || data.authToken !== bridgeToken) return;
 
     if (IS_TOP) {
       if (data.kind === 'CCS_EXT_ENABLE') {
