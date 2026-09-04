@@ -1,0 +1,22 @@
+/*
+ * 扩展示例自己的工具类产物。
+ *
+ * 三个包各自的 Tailwind 只扫自己的源码，`examples/` 下写的工具类
+ * （本示例是两个挂载文件的布局类）不在任何一份发布产物里。
+ *
+ * 写法与 chatbot-playground 的同名文件一致，理由也一样：
+ * - `@reference` 只求值不输出；缺了它，ui-kit 的默认主题变量不可见，`gap-2` 之类会被静默丢弃；
+ * - 只 `@import` utilities：preflight / base / components 已由 ui-kit.css（本地垫片 src/shared/ui-kit.css）提供，重复输出会二次重置；
+ * - 四个 layer 必须先在这里按序声明，否则 `utilities` 会成为首个声明的层而排到 `components` 之前。
+ *
+ * 因此它在挂载文件里必须排在包样式**之前**。
+ */
+@reference './shared/ui-kit.css';
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@source './';
+/* 两个挂载页的布局类写在 src 外面；不显式扫它们，`h-full` 能不能生成全看 src 里是否恰好也用过 */
+@source '../*.html';

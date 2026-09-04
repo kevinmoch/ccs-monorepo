@@ -9,6 +9,10 @@ coverage
 .env.local
 apps/*/.ccs-card-build
 apps/*/dist
+# 扩展的打包期配置：可能含 API key，只提交 config.example.json
+extensions/*/config.json
+# 由 scripts/writeBakedConfig.mjs 从 config.json 生成，含密钥材料
+extensions/*/src/generated/
 *-lock.*
 !pnpm-lock.yaml
 out

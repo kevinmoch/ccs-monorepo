@@ -1,0 +1,235 @@
+/*
+ * `@webskill/ui-kit` 没有发布形态，这份文件顶替 ui-kit.css 的两个角色：
+ *
+ * 1. 运行时样式：preflight + 明暗两档语义 token（'@webskill/ui-kit/ui-kit.css' 的别名目标）；
+ * 2. src/tailwind.css 的 `@reference` 主题源：`@theme` 里的 --color-* 映射决定
+ *    `bg-background` / `text-muted-foreground` 这类工具类能否生成。
+ *
+ * token 取值逐字取自 @webskill/chatbot 发布产物 chatbot.css（它内嵌了同一份 ui-kit 主题），
+ * 包括明暗两块 unlayered 覆盖的写法——`@supports color-mix` 的 soft 色阶也一并保留。
+ */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Microsoft YaHei',
+    'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Microsoft YaHei', 'PingFang SC',
+    'Noto Sans Mono CJK SC', monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-scrim: var(--scrim);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-canvas: var(--background);
+  --color-surface: var(--card);
+  --color-subtle: var(--accent);
+  --color-ink: var(--foreground);
+  --color-danger: var(--destructive);
+  --color-danger-soft: var(--destructive-soft);
+  --color-sidebar-canvas: var(--sidebar);
+  --color-sidebar-surface: var(--card);
+  --color-sidebar-ink: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--muted-foreground);
+
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.05), 0 4px 16px oklch(0 0 0 / 0.06);
+  --shadow-card-vivid: var(--shadow-card-vivid);
+  --text-min: 0.75rem;
+  --text-code: 0.8125rem;
+}
+
+/* 以下两块保持 unlayered：.dark 元素要靠自身声明压过从 :root 继承的亮色值 */
+:root, :where(.light, [data-theme='light']) {
+  --radius: 0.625rem;
+  --shadow-card-vivid: 0 6px 20px oklch(0 0 0 / 12%);
+  --surface-dashboard: oklch(0.2 0.01 260);
+  --border-dashboard: oklch(1 0 0 / 14%);
+  --palette-sky: oklch(0.95 0.03 240);
+  --palette-sky-ink: oklch(0.35 0.09 240);
+  --palette-violet: oklch(0.95 0.03 300);
+  --palette-violet-ink: oklch(0.35 0.1 300);
+  --palette-amber: oklch(0.95 0.05 85);
+  --palette-amber-ink: oklch(0.36 0.09 85);
+  --palette-rose: oklch(0.95 0.03 15);
+  --palette-rose-ink: oklch(0.37 0.11 15);
+  --palette-emerald: oklch(0.95 0.04 160);
+  --palette-emerald-ink: oklch(0.34 0.08 160);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --scrim: oklch(0.145 0 0 / 45%);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: #0000000f;
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --destructive: oklch(0.52 0.22 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.62 0.13 150);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.72 0.13 75);
+  --warning-foreground: oklch(0.205 0 0);
+  --info: oklch(0.62 0.1 240);
+  --info-foreground: oklch(0.985 0 0);
+  --destructive-soft: var(--destructive);
+  @supports (color: color-mix(in lab, red, red)) {
+    --destructive-soft: color-mix(in oklab, var(--destructive) 12%, var(--background));
+  }
+  --success-soft: var(--success);
+  @supports (color: color-mix(in lab, red, red)) {
+    --success-soft: color-mix(in oklab, var(--success) 12%, var(--background));
+  }
+  --warning-soft: var(--warning);
+  @supports (color: color-mix(in lab, red, red)) {
+    --warning-soft: color-mix(in oklab, var(--warning) 14%, var(--background));
+  }
+  --info-soft: var(--info);
+  @supports (color: color-mix(in lab, red, red)) {
+    --info-soft: color-mix(in oklab, var(--info) 12%, var(--background));
+  }
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #0000000f;
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --brand: oklch(0.55 0.16 275);
+  --brand-foreground: oklch(0.985 0 0);
+}
+
+:where(.dark, [data-theme='dark']) {
+  --shadow-card-vivid: 0 6px 20px oklch(0 0 0 / 40%);
+  --surface-dashboard: oklch(0.18 0.01 260);
+  --border-dashboard: oklch(1 0 0 / 16%);
+  --palette-sky: oklch(0.3 0.05 240);
+  --palette-sky-ink: oklch(0.88 0.06 240);
+  --palette-violet: oklch(0.3 0.06 300);
+  --palette-violet-ink: oklch(0.88 0.07 300);
+  --palette-amber: oklch(0.32 0.06 85);
+  --palette-amber-ink: oklch(0.9 0.09 85);
+  --palette-rose: oklch(0.31 0.06 15);
+  --palette-rose-ink: oklch(0.89 0.07 15);
+  --palette-emerald: oklch(0.29 0.05 160);
+  --palette-emerald-ink: oklch(0.88 0.08 160);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --scrim: oklch(0 0 0 / 60%);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: #ffffff0d;
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.205 0 0);
+  --success: oklch(0.72 0.14 150);
+  --success-foreground: oklch(0.205 0 0);
+  --warning: oklch(0.8 0.13 75);
+  --warning-foreground: oklch(0.205 0 0);
+  --info: oklch(0.72 0.11 240);
+  --info-foreground: oklch(0.205 0 0);
+  --destructive-soft: var(--destructive);
+  @supports (color: color-mix(in lab, red, red)) {
+    --destructive-soft: color-mix(in oklab, var(--destructive) 12%, var(--background));
+  }
+  --success-soft: var(--success);
+  @supports (color: color-mix(in lab, red, red)) {
+    --success-soft: color-mix(in oklab, var(--success) 12%, var(--background));
+  }
+  --warning-soft: var(--warning);
+  @supports (color: color-mix(in lab, red, red)) {
+    --warning-soft: color-mix(in oklab, var(--warning) 14%, var(--background));
+  }
+  --info-soft: var(--info);
+  @supports (color: color-mix(in lab, red, red)) {
+    --info-soft: color-mix(in oklab, var(--info) 12%, var(--background));
+  }
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent: #ffffff0d;
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  --brand: oklch(0.68 0.14 275);
+  --brand-foreground: oklch(0.205 0 0);
+}
+
+/* 原生 <select> 的下拉由浏览器按 color-scheme 绘制，类名管不到，得显式声明 */
+html {
+  color-scheme: light;
+}
+html.dark, .dark, html[data-theme='dark'], [data-theme='dark'] {
+  color-scheme: dark;
+}
+[data-webskill-theme='light'] {
+  color-scheme: light;
+}
+[data-webskill-theme='dark'] {
+  color-scheme: dark;
+}

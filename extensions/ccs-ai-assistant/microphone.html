@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- 授权页只能在**普通标签页**里打开：侧栏页没有地方锚定权限气泡，
+     请求会直接以 not-allowed 返回，用户连弹窗都看不见（0.16.1 分册 10 §2.1） -->
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSkill microphone access</title>
+  </head>
+  <body class="h-full">
+    <div id="root" class="h-full"></div>
+    <script type="module" src="/src/microphone/main.tsx"></script>
+  </body>
+</html>

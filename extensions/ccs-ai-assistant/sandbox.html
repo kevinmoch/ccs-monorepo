@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebSkill sandbox</title>
+  </head>
+  <body>
+    <!--
+      本页只做一件事：把 <script src> 引进来。**不得内联任何脚本**（AC-14.3）——
+      内联脚本要么被扩展页 CSP 拦掉，要么就得往 CSP 里加 'unsafe-inline' 兜底，
+      而这份文件的全部意义就是"沙箱页脚本与包里那份逐字相同"。
+      src/sandbox/sandbox.js 由 scripts/writeSandboxScript.mjs 从
+      SANDBOX_PAGE_SCRIPT_SOURCE 落盘，手改会被 CI 守卫拦下。
+    -->
+    <script src="sandbox.js"></script>
+  </body>
+</html>

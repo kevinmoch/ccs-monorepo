@@ -1,0 +1,110 @@
+{
+  "manifest": {
+    "name": "WebSkill Extension",
+    "version": "0.16.0",
+    "description": "WebSkill chatbot in the side panel, console in the options page, page agent in a content script."
+  },
+  "models": [
+    {
+      "id": "deepseek-1",
+      "label": "DeepSeek",
+      "provider": "openai-compatible",
+      "baseUrl": "https://api.deepseek.com",
+      "model": "deepseek-chat",
+      "apiKey": "",
+      "requestTimeoutMs": 60000,
+      "capabilities": { "tools": true, "image": false }
+    }
+  ],
+  "defaultModel": "deepseek-1",
+  "agentRuntime": {
+    "loop": {
+      "maxTurns": 20,
+      "maxHistoryMessages": 100,
+      "totalTimeoutMs": 300000,
+      "toolTimeoutMs": 60000,
+      "toolResultMaxBytes": 262144,
+      "maxDocumentBytes": 1048576,
+      "maxDocumentTextBytes": 262144,
+      "temperature": 0.7
+    },
+    "skillState": {
+      "quarantineThreshold": 5
+    },
+    "interaction": {
+      "missingParams": "user",
+      "confirmations": "required",
+      "approvalScope": "once-per-run",
+      "interactionTimeoutMs": 300000
+    },
+    "router": "progressive",
+    "hooks": {
+      "timeoutMs": 5000,
+      "failOnHookError": false
+    },
+    "agentCapabilities": {
+      "todo": true,
+      "generativeUi": false,
+      "skillGeneration": false,
+      "delegation": false,
+      "uiPresets": ["charts", "cards", "dashboards", "slides", "reports"]
+    },
+    "multimodal": {
+      "imageAttachments": false,
+      "pageImageCapture": false,
+      "maxImagesPerMessage": 4,
+      "maxImageBytes": 1048576,
+      "minImageArea": 1024
+    },
+    "streaming": true,
+    "renderResult": true
+  },
+  "sandbox": {
+    "executor": "auto",
+    "networkPolicy": "deny-all",
+    "typescript": { "enabled": false },
+    "downloadedFiles": false,
+    "uploadFiles": false,
+    "maxUploadFileBytes": 5242880,
+    "allowHttp": false,
+    "allowPrivateHosts": false,
+    "capabilities": {
+      "readReference": true,
+      "readAsset": true,
+      "writeArtifact": true,
+      "confirm": true,
+      "fetchData": false
+    },
+    "maxDataSourceBytes": 1048576,
+    "dataSources": [],
+    "unsignedSkills": "warn",
+    "documentSurface": false
+  },
+  "quickPrompts": {
+    "limit": 8,
+    "items": [
+      {
+        "id": "qp-summarize",
+        "text": { "zh": "总结当前页面", "en": "Summarize this page" },
+        "icon": "page"
+      },
+      {
+        "id": "qp-skills",
+        "text": { "zh": "有哪些可用技能？", "en": "What skills are available?" },
+        "icon": "list"
+      }
+    ]
+  },
+  "privacy": {
+    "userProfile": false,
+    "encryptProfile": true,
+    "injectMaxBytes": 4096,
+    "recordLimit": 500
+  },
+  "appearance": {
+    "theme": "dark",
+    "locale": "zh",
+    "renderer": "native",
+    "dictationLang": ""
+  }
+}

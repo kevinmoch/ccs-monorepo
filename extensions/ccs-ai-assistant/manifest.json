@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "WebSkill Extension",
+  "version": "0.16.0",
+  "description": "WebSkill chatbot in the side panel, console in the options page, page agent in a content script.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6tNxp+ZvrnzL6Az89PP7hepaEVgo6SeYmyAnnCJIwUY+y6JTN5dip5VmpMQ9uElguXspOA200kiZq4zgAXN0PqKanTqmgYxH/BxF8myIrnWf2t/chaV2rUbxmKXLVrceNwWm6UwoWWsbC95itKVe4vY7gw0oPfhRYVlYcShLohbIywyTz6CzTt9VG653hRYBFh07X5eD1rezNkVAD/1CDfKYu6UZTjIFdnrFoHv+qEBg+IcN2xatUL6bu6Jzt1XTIIY0qCzPOPJ87ngPmSmpN8j/zoalHUo/54w1SIw1CcZVCd9b+bd4Yocfn6YcHN6XTRHozzczW16bJiphsLPXZwIDAQAB",
+  "permissions": ["sidePanel", "storage", "tabs", "scripting", "webNavigation", "downloads"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Open the WebSkill side panel",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "js": ["probe.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "sandbox": {
+    "pages": ["sandbox.html", "view.html"]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; worker-src 'self' blob: data:; child-src 'self' blob: data:;"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    // 源码从 SDK 工作区复制而来，import 写的是不单独发布的内部包名。
+    // 与 scripts/sdkAliases.mjs 同一张映射：vite 用别名，tsc 用这里的 paths。
+    // 注意 extends 来的 paths 不合并、整条覆盖；@ccs/* 本扩展用不到。
+    "baseUrl": ".",
+    "paths": {
+      "@webskill/core": ["./node_modules/@webskill/sdk/dist/index.d.ts"],
+      "@webskill/runtime": ["./node_modules/@webskill/sdk/dist/index.d.ts"],
+      "@webskill/browser": ["./node_modules/@webskill/sdk/dist/browser.d.ts"],
+      "@webskill/agent": ["./node_modules/@webskill/sdk/dist/agent.d.ts"],
+      "@webskill/mcp": ["./node_modules/@webskill/sdk/dist/mcp.d.ts"],
+      "@webskill/governance": ["./node_modules/@webskill/sdk/dist/governance.d.ts"],
+      "@webskill/ui": ["./node_modules/@webskill/sdk/dist/ui.d.ts"],
+      "@webskill/ui-kit": ["./src/shared/uiKit.tsx"]
+    }
+  },
+  "include": ["src", "test", "vite.config.ts", "vite.content.config.ts", "vite.probe.config.ts", "vitest.config.ts"]
+}

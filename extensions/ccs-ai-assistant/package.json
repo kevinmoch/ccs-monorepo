@@ -1,0 +1,42 @@
+{
+  "name": "ccs-ai-assistant",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "sandbox:write": "node scripts/writeSandboxScript.mjs",
+    "config:bake": "node scripts/writeBakedConfig.mjs",
+    "prebuild": "pnpm sandbox:write && pnpm config:bake",
+    "build": "vite build && vite build --config vite.content.config.ts && vite build --config vite.probe.config.ts",
+    "pretypecheck": "pnpm config:bake",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm typecheck"
+  },
+  "dependencies": {
+    "@a2ui/lit": "^0.10.3",
+    "@a2ui/markdown-it": "^0.1.1",
+    "@a2ui/web_core": "^0.10.6",
+    "@lit/context": "^1.1.6",
+    "@monaco-editor/react": "4.7.0",
+    "@openuidev/react-lang": "^0.2.11",
+    "@webskill/chatbot": "^0.16.0",
+    "@webskill/console": "^0.16.0",
+    "@webskill/sdk": "^0.19.0",
+    "lit": "^3.3.3",
+    "monaco-editor": "0.56.0",
+    "pdfjs-dist": "^6.2.108",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "reveal.js": "^6.0.1",
+    "tldts": "^7.4.11",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "jsdom": "^30.0.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "8.1.5"
+  }
+}
