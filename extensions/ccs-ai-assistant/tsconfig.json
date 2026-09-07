@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vite/client"],
+    // `@webskill/chatbot/virtual` 声明了 `virtual:webskill-config`（构建期插件注入的虚拟模块）
+    "types": ["node", "vite/client", "@webskill/chatbot/virtual"],
     "jsx": "react-jsx",
     "noEmit": true,
     // 源码从 SDK 工作区复制而来，import 写的是不单独发布的内部包名。

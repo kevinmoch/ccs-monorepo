@@ -1,10 +1,12 @@
-import { copyFileSync, cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
+import { webskillConfig } from '@webskill/chatbot/vite';
+import type { WebSkillConfigDefaults } from '@webskill/chatbot/config';
 // @ts-expect-error -- 纯 JS 单一事实源，无需为构建脚本引入 d.ts
 import { nodeShimAliasList, sdkAliasList } from './scripts/sdkAliases.mjs';
-import { parseExtensionConfig } from './scripts/extensionConfig.mjs';
+import { parseManifestOverrides } from './scripts/extensionConfig.mjs';
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -16,7 +18,52 @@ function manifestOverrides(): Record<string, string> {
   } catch {
     return {};
   }
-  return parseExtensionConfig(JSON.parse(raw)).manifest;
+  return parseManifestOverrides(JSON.parse(raw));
+}
+
+/**
+ * 出厂设置在**入库的** config.json 里；模型定义与明文 apiKey 单独放 models.json（gitignored）。
+ *
+ * 分开的理由不是洁癖：两者合在一个文件里时，一旦把它加进 .gitignore，
+ * 快捷指令、闸门开关这些**应该随仓库发布**的出厂设置也一并消失了；
+ * 而插件对读不到的配置文件是**静默降级**（当空配置处理，构建照样成功），
+ * 所以这种丢失在 CI 里不会报错，只会静悄悄地出一个功能缺失的产物。
+ *
+ * models.json 缺席（CI、新克隆）时只用 config.json：没有模型定义，但快捷指令与各项设置都在。
+ * 插件只认路径，所以合并结果得先落盘。
+ */
+function webskillConfigFile(): string {
+  const base = fromHere('config.json');
+  const models = fromHere('models.json');
+  if (!existsSync(models)) return base;
+  const merged = {
+    ...(JSON.parse(readFileSync(base, 'utf8')) as Record<string, unknown>),
+    ...(JSON.parse(readFileSync(models, 'utf8')) as Record<string, unknown>)
+  };
+  const outDir = fromHere('node_modules/.webskill');
+  mkdirSync(outDir, { recursive: true });
+  const out = `${outDir}/config.merged.json`;
+  writeFileSync(out, JSON.stringify(merged));
+  return out;
+}
+
+/**
+ * SDK 缺省为「关」的闸门（新增攻击面一律默认关）。它们在 config.json 里被打开
+ * 本身是合法的，但必须是**有意识的决定**——构建日志里出声，避免一份抄来的
+ * config.json 悄悄放宽了权限。这是宿主策略，SDK 不替宿主做主，所以走 `onParsed`。
+ */
+function warnOnOpenedGates(defaults: WebSkillConfigDefaults): void {
+  const gates: [string, boolean | undefined][] = [
+    ['sandbox.allowHttp', defaults.sandbox?.remoteUrl?.allowHttp],
+    ['sandbox.allowPrivateHosts', defaults.sandbox?.remoteUrl?.allowPrivateHosts],
+    ['sandbox.capabilities.fetchData', defaults.sandbox?.capabilities?.fetchData === true],
+    ['privacy.userProfile', defaults.userProfile?.enabled],
+    ['agentRuntime.multimodal.imageAttachments', defaults.multimodal?.imageAttachments],
+    ['agentRuntime.multimodal.pageImageCapture', defaults.multimodal?.pageImageCapture]
+  ];
+  for (const [path, value] of gates) {
+    if (value === true) console.warn(`WARNING: config.json opens a default-off gate: ${path}`);
+  }
 }
 
 /**
@@ -54,7 +101,18 @@ function copyExtensionAssets(): Plugin {
 
 export default defineConfig({
   base: './',
-  plugins: [tailwindcss(), copyExtensionAssets()],
+  plugins: [
+    tailwindcss(),
+    // 私有分发面（自己装 dist/ 的未打包扩展），因此显式选 'bake'：
+    // 凭据进产物是混淆不是加密，只在分发面可控时才该这么选
+    webskillConfig({
+      file: webskillConfigFile(),
+      secrets: 'bake',
+      hostSections: ['manifest'],
+      onParsed: ({ defaults }) => warnOnOpenedGates(defaults)
+    }),
+    copyExtensionAssets()
+  ],
   resolve: {
     alias: [
       // `@webskill/chatbot/chatbot.css` 与 `@webskill/console/console.css` 由发布包的

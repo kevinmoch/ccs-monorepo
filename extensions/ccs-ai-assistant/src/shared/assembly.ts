@@ -28,7 +28,7 @@ import { createBrowserChatbotHost } from '@webskill/browser';
 import type { ChatbotHostAdapter, SandboxExecutorDeps, SettingsSectionId } from '@webskill/chatbot';
 import { createLocalStorageRuntimeConfigStore } from '@webskill/ui-kit';
 import type { RuntimeConfig, RuntimeConfigStore } from '@webskill/ui-kit';
-import { applyBakedDefaults, restoreBakedSecrets, stripBakedSecrets } from './bakedConfig';
+import { applyBakedDefaults, withBakedDefaults } from './bakedConfig';
 import {
   createExtensionConsentStore,
   createExtensionDataSourceCandidateStore,
@@ -110,12 +110,12 @@ export function createExtensionRuntimeConfigStore(): RuntimeConfigStore {
   // 但那份已经 merge 过默认值，分不出「字段缺席」与「用户就是这个值」
   let memory: unknown;
 
-  return {
-    load: async () => restoreBakedSecrets(applyBakedDefaults(readStoredConfig() ?? memory)),
+  // 内层只负责落盘（并记下内存副本）；缺省值与烘焙凭据由 SDK 包装器处理
+  const recording: RuntimeConfigStore = {
+    load: () => inner.load(),
     save: async (config) => {
-      const stripped = await stripBakedSecrets(config);
-      memory = stripped;
-      await inner.save(stripped);
+      memory = config;
+      await inner.save(config);
     },
     reset: async () => {
       memory = undefined;
@@ -123,6 +123,8 @@ export function createExtensionRuntimeConfigStore(): RuntimeConfigStore {
     },
     subscribe: (listener) => inner.subscribe!(listener)
   };
+
+  return withBakedDefaults(recording, () => readStoredConfig() ?? memory);
 }
 
 /** 存储里的原始配置；`undefined` 表示「没配过」，与「配成了空对象」不同 */

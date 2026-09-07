@@ -84,9 +84,10 @@ pnpm --filter ccs-ai-assistant build
 `SANDBOX_PAGE_SCRIPT_SOURCE`。改了 SDK 的沙箱页协议后运行
 `pnpm --filter ccs-ai-assistant sandbox:write` 重新落盘。
 
-### 打包期配置 config.json
+### 打包期配置 config.json / models.json
 
-把 `config.example.json` 复制成 `config.json`，构建时它会改写两处：
+出厂设置在**入库的** `config.json` 里；模型定义与明文 `apiKey` 单独放
+`models.json`（已 gitignore，需要时自己建）。两份合并后作为一份配置交给插件，改写两处：
 
 - **Console 的缺省值**——模型列表、页面图像抓取、智能体运行时 / 沙箱与安全 /
   快捷指令 / 隐私与用户画像 / 外观各分区的开关，都能在这里写死。
@@ -95,8 +96,14 @@ pnpm --filter ccs-ai-assistant build
 - **manifest 的 `name` / `version` / `description`**——写了就覆盖 `manifest.json` 里的那三项，
   其余字段（`key`、权限、入口路径）逐字保留。
 
-映射与校验在 `scripts/extensionConfig.mjs`，产物由 `scripts/writeBakedConfig.mjs`
-生成到 `src/generated/bakedConfig.ts`（构建 / typecheck / test 前自动跑）。
+为什么要拆：两者合在一个文件里时，一旦把它加进 `.gitignore`，
+快捷指令、闸门开关这些**应该随仓库发布**的出厂设置也一并消失了；
+而插件对读不到的配置文件是**静默降级**（当空配置处理，构建照样成功），
+所以这种丢失在 CI 里不会报错，只会静悄悄地出一个功能缺失的产物。
+`models.json` 缺席（CI、新克隆）时只用 `config.json`：没有模型定义，但快捷指令与各项设置都在。
+
+通用配置面的解析与校验归 `@webskill/chatbot/vite` 的 `webskillConfig()` 插件（构建期注入
+`virtual:webskill-config`）；`scripts/extensionConfig.mjs` 里只剩 MV3 专属的 `manifest` 覆写。
 字段名拼错、枚举值非法、`defaultModel` 指向不存在的条目，都会让构建**直接失败**——
 静默忽略会得到「看起来生效了其实没生效」的产物。
 
@@ -110,12 +117,12 @@ pnpm --filter ccs-ai-assistant build
 在模型面板里也能被联动打开。config.json 里它们只有一处，统一落在
 `agentRuntime.multimodal` 下——同一个字段给两个配置位置，冲突时无解。
 
-`config.example.json` 覆盖了 SDK 有默认值的每一个可配字段，
-这一点由 `test/bakedConfig.test.ts` 的守卫用例锁住，防止示例悄悄落后于解析器。
+`config.json` 里写得合不合法，由 `test/extensionConfig.test.ts` 的守卫用例拿
+真的解析器（`parseWebSkillConfig`）跑一遍锁住，防止出厂设置悄悄落后于 SDK。
 
 #### 关于 apiKey：这是混淆，不是加密
 
-`config.json` 里的 `apiKey` 不会以明文进入 `dist`（走 AES-GCM 密文），
+`models.json` 里的 `apiKey` 不会以明文进入 `dist`（走 AES-GCM 密文），
 落进 `localStorage` 的也是占位串。但**密钥与密文在同一个包里**，
 任何人都能调用解密函数拿到明文；运行时它也必然在内存里、也必然明文发给模型提供方。
 
@@ -123,7 +130,7 @@ pnpm --filter ccs-ai-assistant build
 
 > **带 key 构建出来的 `dist/` 等同于凭据本身，不要分发。**
 
-`config.json` 已在 `.gitignore` 里，仓库只提交 `config.example.json`（`apiKey` 留空）。
+`models.json` 已在 `.gitignore` 里，入库的只有不含凭据的 `config.json`。
 另外，`sandbox.allowHttp`、`sandbox.capabilities.fetchData`、`privacy.userProfile`、
 `agentRuntime.multimodal.pageImageCapture` 这类 SDK 缺省为「关」的闸门若在
 config.json 里打开，构建时会打印一条警告——

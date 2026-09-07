@@ -115,8 +115,8 @@ importers:
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@openuidev/react-lang':
-        specifier: ^0.2.11
-        version: 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3)
+        specifier: 0.2.8
+        version: 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3)
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.2.4(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
@@ -128,10 +128,10 @@ importers:
         version: 5.2.0(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
       '@webskill/chatbot':
         specifier: ^0.17.0
-        version: 0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.14)(immer@11.1.17)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))
+        version: 0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.14)(immer@11.1.17)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))
       '@webskill/console':
         specifier: ^0.16.1
-        version: 0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react-is@19.2.8)(react@19.2.5)(redux@5.0.1)
+        version: 0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react-is@19.2.8)(react@19.2.5)(redux@5.0.1)
       '@webskill/sdk':
         specifier: ^0.20.0
         version: 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3))
@@ -184,6 +184,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.21
         version: 10.5.0(postcss@8.5.26)
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
       electron:
         specifier: ^42.3.3
         version: 42.4.0
@@ -193,6 +196,9 @@ importers:
       electron-vite:
         specifier: ^5.0.0
         version: 5.0.0(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))
+      rimraf:
+        specifier: ^6.1.3
+        version: 6.1.3
       tailwindcss:
         specifier: ^4.1.14
         version: 4.2.4
@@ -248,6 +254,9 @@ importers:
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
+      rimraf:
+        specifier: ^6.1.3
+        version: 6.1.3
       tailwindcss:
         specifier: ^4.1.14
         version: 4.2.4
@@ -300,6 +309,9 @@ importers:
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
+      rimraf:
+        specifier: ^6.1.3
+        version: 6.1.3
       tailwindcss:
         specifier: ^4.1.14
         version: 4.2.4
@@ -328,17 +340,17 @@ importers:
         specifier: 4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@openuidev/react-lang':
-        specifier: ^0.2.11
-        version: 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)
+        specifier: 0.2.8
+        version: 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3)
       '@webskill/chatbot':
-        specifier: ^0.16.0
-        version: 0.16.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))
+        specifier: ^0.17.0
+        version: 0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))(vite@8.1.5(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.22.4)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))
       '@webskill/console':
-        specifier: ^0.16.0
-        version: 0.16.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3))(@types/react@19.2.17)(@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)
+        specifier: ^0.16.1
+        version: 0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3))(@types/react@19.2.17)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)
       '@webskill/sdk':
-        specifier: ^0.19.0
-        version: 0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
+        specifier: ^0.20.0
+        version: 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
       lit:
         specifier: ^3.3.3
         version: 3.3.3
@@ -2061,13 +2073,6 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@openuidev/devtools@0.0.4':
-    resolution: {integrity: sha512-DVf5Bu6gpKEfAnETyl/ZOQMyZCi1vapGohNSxaIyZ03jVZ+e5F9fkQJp+5T1ryg0v3vYi3AC0B4NRwEuCbZmmQ==}
-    peerDependencies:
-      '@openuidev/observability': ^0.0.2
-      react: ^18.3.1 || ^19.0.0
-      react-dom: ^18.0.0 || ^19.0.0
-
   '@openuidev/lang-core@0.2.13':
     resolution: {integrity: sha512-WHmFKObX7eWTogYjotlMKcsQMzIjtWOgMA78x8yDUc+7AcoY6cdKewF16cg3BXd0s0CnEP+tm52YxSsNf8ieSw==}
     peerDependencies:
@@ -2077,20 +2082,14 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
 
-  '@openuidev/observability@0.0.2':
-    resolution: {integrity: sha512-uNtO4VGGwcL8Lg1L+9a8JCpee0dOm0djIjItxtGpUPkZNUwzpMQX6mQ4YCtA9Hho4VuqZgHBo1ON8FjsLbNMHg==}
-
-  '@openuidev/react-lang@0.2.11':
-    resolution: {integrity: sha512-RXyRmFLxRBQ/pNnCq4CYFLl/1SnUvv3O5cnyTaaG6RqtXQ/CLmRiooqCtNY8xqi/cDVt3HJTgrfQOCN2ZhAQbg==}
+  '@openuidev/react-lang@0.2.8':
+    resolution: {integrity: sha512-SsbZes76oIviuZH3RW/VL+pZZjx6cOGjhkaeiSwuEnV24jWBgT9qswL4bDaQXpFG2e6sZKWjH/f0fRyqWQzhDA==}
     peerDependencies:
       '@modelcontextprotocol/sdk': '>=1.0.0'
-      react: '*'
-      react-dom: '*'
+      react: ^18.3.1 || ^19.0.0
       zod: ^3.25.0 || ^4.0.0
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
-        optional: true
-      react-dom:
         optional: true
 
   '@oxc-project/types@0.133.0':
@@ -3962,32 +3961,6 @@ packages:
   '@vue/shared@3.5.39':
     resolution: {integrity: sha512-l1rrBtBfTnmxvtsvdQDXltUUy8S1Y+ZaqdfUzmAnJkTd8Z8rv5v/ytW+TKiqEOWyHPoqtPlNFSs0lhRmYVSHVA==}
 
-  '@webskill/chatbot@0.16.0':
-    resolution: {integrity: sha512-8Kdw8Jg98md95tc5wIdPEaAOAeV/wDyPMc5BwtsnmsuOdMxYu+EYroSl0mYxgL0j8etGq9oPoX412Wr6rfgL6A==}
-    peerDependencies:
-      '@a2ui/lit': ^0.10.2
-      '@a2ui/markdown-it': ^0.1.0
-      '@a2ui/web_core': ^0.10.5
-      '@lit/context': ^1.1.0
-      '@openuidev/react-lang': 0.2.8
-      '@webskill/sdk': ^0.19.0
-      react: '>=19.0.0'
-      react-dom: '>=19.0.0'
-      zod: ^3.25.0 || ^4.0.0
-    peerDependenciesMeta:
-      '@a2ui/lit':
-        optional: true
-      '@a2ui/markdown-it':
-        optional: true
-      '@a2ui/web_core':
-        optional: true
-      '@lit/context':
-        optional: true
-      '@openuidev/react-lang':
-        optional: true
-      zod:
-        optional: true
-
   '@webskill/chatbot@0.17.0':
     resolution: {integrity: sha512-DfD7WNwHoNTkpkMFX+NvVJvGC9u8sVe1R0L8NprLF/PzsOV0M2uvpronrNqGujjNDKw37Os2jUU4Fd5zT4BvEA==}
     peerDependencies:
@@ -4015,29 +3988,6 @@ packages:
       vite:
         optional: true
       zod:
-        optional: true
-
-  '@webskill/console@0.16.0':
-    resolution: {integrity: sha512-zs0zmye9kiJmWN2idhUpVVNzAIIboSIBzpTfUq9Xj50zvmNHNeTX7G5qBkndzoqUE0TxzDrxThAXP+MmpXCI9g==}
-    peerDependencies:
-      '@a2ui/lit': ^0.10.2
-      '@a2ui/web_core': ^0.10.5
-      '@monaco-editor/react': '>=4.0.0'
-      '@openuidev/react-lang': 0.2.8
-      '@webskill/sdk': ^0.19.0
-      monaco-editor: '>=0.52.0'
-      react: '>=19.0.0'
-      react-dom: '>=19.0.0'
-    peerDependenciesMeta:
-      '@a2ui/lit':
-        optional: true
-      '@a2ui/web_core':
-        optional: true
-      '@monaco-editor/react':
-        optional: true
-      '@openuidev/react-lang':
-        optional: true
-      monaco-editor:
         optional: true
 
   '@webskill/console@0.16.1':
@@ -5693,11 +5643,6 @@ packages:
   lru-cache@6.0.0:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
-
-  lucide-react@0.575.0:
-    resolution: {integrity: sha512-VuXgKZrk0uiDlWjGGXmKV6MSk9Yy4l10qgVvzGn2AWBx1Ylt0iBexKOAoA6I7JO3m+M9oeovJd3yYENfkUbOeg==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lucide-react@1.32.0:
     resolution: {integrity: sha512-txX56hMFnRxPi1f9/nH69YN8uvAO6a7Y1KSWKjCDAtdD9+soEgmWuCt6iRm1pkxUZo2+YntSdsE1L6bIuKoY8Q==}
@@ -9307,20 +9252,6 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@openuidev/devtools@0.0.4(@openuidev/observability@0.0.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
-    dependencies:
-      '@openuidev/observability': 0.0.2
-      lucide-react: 0.575.0(react@19.2.5)
-      react: 19.2.5
-      react-dom: 19.2.5(react@19.2.5)
-
-  '@openuidev/devtools@0.0.4(@openuidev/observability@0.0.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
-    dependencies:
-      '@openuidev/observability': 0.0.2
-      lucide-react: 0.575.0(react@19.2.8)
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-
   '@openuidev/lang-core@0.2.13(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       ci-info: 4.4.0
@@ -9328,29 +9259,21 @@ snapshots:
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
 
-  '@openuidev/observability@0.0.2': {}
-
-  '@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3)':
+  '@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3)':
     dependencies:
-      '@openuidev/devtools': 0.0.4(@openuidev/observability@0.0.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@openuidev/lang-core': 0.2.13(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)
-      '@openuidev/observability': 0.0.2
       react: 19.2.5
       zod: 4.4.3
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      react-dom: 19.2.5(react@19.2.5)
 
-  '@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)':
+  '@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3)':
     dependencies:
-      '@openuidev/devtools': 0.0.4(@openuidev/observability@0.0.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@openuidev/lang-core': 0.2.13(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)
-      '@openuidev/observability': 0.0.2
       react: 19.2.8
       zod: 4.4.3
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      react-dom: 19.2.8(react@19.2.8)
 
   '@oxc-project/types@0.133.0': {}
 
@@ -11940,37 +11863,7 @@ snapshots:
 
   '@vue/shared@3.5.39': {}
 
-  '@webskill/chatbot@0.16.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))':
-    dependencies:
-      '@assistant-ui/core': 0.3.1(@assistant-ui/store@0.3.1(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(react@19.2.8))(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(assistant-cloud@0.1.41)(react@19.2.8)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))
-      '@assistant-ui/react': 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
-      '@assistant-ui/store': 0.3.1(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(react@19.2.8)
-      '@assistant-ui/tap': 0.9.7(@types/react@19.2.17)(react@19.2.8)
-      '@webskill/sdk': 0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
-      mdast-util-from-markdown: 2.0.3
-      mdast-util-gfm: 3.1.0
-      micromark-extension-gfm: 3.0.0
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-    optionalDependencies:
-      '@a2ui/lit': 0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2)
-      '@a2ui/markdown-it': 0.1.1(@a2ui/web_core@0.10.6)
-      '@a2ui/web_core': 0.10.6
-      '@lit/context': 1.1.6
-      '@openuidev/react-lang': 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)
-      zod: 4.4.3
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - assistant-cloud
-      - immer
-      - ioredis
-      - redis
-      - supports-color
-      - use-sync-external-store
-      - zustand
-
-  '@webskill/chatbot@0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.14)(immer@11.1.17)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))':
+  '@webskill/chatbot@0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))(vite@8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.14)(immer@11.1.17)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))':
     dependencies:
       '@assistant-ui/core': 0.3.1(@assistant-ui/store@0.3.1(@assistant-ui/tap@0.9.7(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5))(@assistant-ui/tap@0.9.7(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(assistant-cloud@0.1.41)(react@19.2.5)(zustand@5.0.15(@types/react@19.2.14)(immer@11.1.17)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))
       '@assistant-ui/react': 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.17)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
@@ -11987,7 +11880,7 @@ snapshots:
       '@a2ui/markdown-it': 0.1.1(@a2ui/web_core@0.10.6)
       '@a2ui/web_core': 0.10.6
       '@lit/context': 1.1.6
-      '@openuidev/react-lang': 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3)
+      '@openuidev/react-lang': 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3)
       vite: 8.0.16(@types/node@22.19.17)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.21.0)(yaml@2.9.0)
       zod: 4.4.3
     transitivePeerDependencies:
@@ -12001,25 +11894,38 @@ snapshots:
       - use-sync-external-store
       - zustand
 
-  '@webskill/console@0.16.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3))(@types/react@19.2.17)(@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)':
+  '@webskill/chatbot@0.17.0(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(@a2ui/web_core@0.10.6)(@lit/context@1.1.6)(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(assistant-cloud@0.1.41)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))(vite@8.1.5(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.22.4)(yaml@2.9.0))(zod@4.4.3)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))':
     dependencies:
-      '@webskill/sdk': 0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
-      fflate: 0.8.3
+      '@assistant-ui/core': 0.3.1(@assistant-ui/store@0.3.1(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(react@19.2.8))(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(assistant-cloud@0.1.41)(react@19.2.8)(zustand@5.0.15(@types/react@19.2.17)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8)))
+      '@assistant-ui/react': 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(immer@11.1.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
+      '@assistant-ui/store': 0.3.1(@assistant-ui/tap@0.9.7(@types/react@19.2.17)(react@19.2.8))(@types/react@19.2.17)(react@19.2.8)
+      '@assistant-ui/tap': 0.9.7(@types/react@19.2.17)(react@19.2.8)
+      '@webskill/sdk': 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
+      mdast-util-from-markdown: 2.0.3
+      mdast-util-gfm: 3.1.0
+      micromark-extension-gfm: 3.0.0
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      recharts: 3.10.1(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)
     optionalDependencies:
       '@a2ui/lit': 0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2)
+      '@a2ui/markdown-it': 0.1.1(@a2ui/web_core@0.10.6)
       '@a2ui/web_core': 0.10.6
-      '@monaco-editor/react': 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@openuidev/react-lang': 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)
-      monaco-editor: 0.56.0
+      '@lit/context': 1.1.6
+      '@openuidev/react-lang': 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3)
+      vite: 8.1.5(@types/node@25.9.2)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.46.2)(tsx@4.22.4)(yaml@2.9.0)
+      zod: 4.4.3
     transitivePeerDependencies:
       - '@types/react'
-      - react-is
-      - redux
+      - '@types/react-dom'
+      - assistant-cloud
+      - immer
+      - ioredis
+      - redis
+      - supports-color
+      - use-sync-external-store
+      - zustand
 
-  '@webskill/console@0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@openuidev/react-lang@0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react-is@19.2.8)(react@19.2.5)(redux@5.0.1)':
+  '@webskill/console@0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3))(@types/react@19.2.14)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3)))(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react-is@19.2.8)(react@19.2.5)(redux@5.0.1)':
     dependencies:
       '@webskill/sdk': 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3))
       fflate: 0.8.3
@@ -12030,7 +11936,25 @@ snapshots:
       '@a2ui/lit': 0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2)
       '@a2ui/web_core': 0.10.6
       '@monaco-editor/react': 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@openuidev/react-lang': 0.2.11(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.4.3)
+      '@openuidev/react-lang': 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.5)(zod@4.4.3)
+      monaco-editor: 0.56.0
+    transitivePeerDependencies:
+      - '@types/react'
+      - react-is
+      - redux
+
+  '@webskill/console@0.16.1(@a2ui/lit@0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2))(@a2ui/web_core@0.10.6)(@monaco-editor/react@4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@openuidev/react-lang@0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3))(@types/react@19.2.17)(@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3)))(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)':
+    dependencies:
+      '@webskill/sdk': 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))
+      fflate: 0.8.3
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      recharts: 3.10.1(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-is@19.2.8)(react@19.2.8)(redux@5.0.1)
+    optionalDependencies:
+      '@a2ui/lit': 0.10.3(@a2ui/markdown-it@0.1.1(@a2ui/web_core@0.10.6))(signal-polyfill@0.2.2)
+      '@a2ui/web_core': 0.10.6
+      '@monaco-editor/react': 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@openuidev/react-lang': 0.2.8(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react@19.2.8)(zod@4.4.3)
       monaco-editor: 0.56.0
     transitivePeerDependencies:
       - '@types/react'
@@ -12072,6 +11996,18 @@ snapshots:
       react-dom: 19.2.5(react@19.2.5)
       tar: 7.5.14
       vue: 3.5.39(typescript@5.8.3)
+
+  '@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))':
+    dependencies:
+      fflate: 0.8.3
+      yaml: 2.9.0
+      zod: 4.4.3
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      tar: 7.5.14
+      vue: 3.5.39(typescript@6.0.3)
 
   '@xmldom/xmldom@0.8.13': {}
 
@@ -13817,14 +13753,6 @@ snapshots:
   lru-cache@6.0.0:
     dependencies:
       yallist: 4.0.0
-
-  lucide-react@0.575.0(react@19.2.5):
-    dependencies:
-      react: 19.2.5
-
-  lucide-react@0.575.0(react@19.2.8):
-    dependencies:
-      react: 19.2.8
 
   lucide-react@1.32.0(react@19.2.5):
     dependencies:
