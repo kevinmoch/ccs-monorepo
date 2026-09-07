@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WebSkill Extension",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "WebSkill chatbot in the side panel, console in the options page, page agent in a content script.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6tNxp+ZvrnzL6Az89PP7hepaEVgo6SeYmyAnnCJIwUY+y6JTN5dip5VmpMQ9uElguXspOA200kiZq4zgAXN0PqKanTqmgYxH/BxF8myIrnWf2t/chaV2rUbxmKXLVrceNwWm6UwoWWsbC95itKVe4vY7gw0oPfhRYVlYcShLohbIywyTz6CzTt9VG653hRYBFh07X5eD1rezNkVAD/1CDfKYu6UZTjIFdnrFoHv+qEBg+IcN2xatUL6bu6Jzt1XTIIY0qCzPOPJ87ngPmSmpN8j/zoalHUo/54w1SIw1CcZVCd9b+bd4Yocfn6YcHN6XTRHozzczW16bJiphsLPXZwIDAQAB",
   "permissions": ["sidePanel", "storage", "tabs", "scripting", "webNavigation", "downloads"],

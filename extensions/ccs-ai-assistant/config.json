@@ -1,7 +1,7 @@
 {
   "manifest": {
     "name": "CCS AI 助手",
-    "version": "0.16.0",
+    "version": "0.17.0",
     "description": "CCS 基建云平台 AI 助手"
   },
   "agentRuntime": {

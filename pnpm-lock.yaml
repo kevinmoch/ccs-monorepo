@@ -398,8 +398,8 @@ importers:
   extensions/ccs-ai-proxy:
     dependencies:
       '@webskill/sdk':
-        specifier: ^0.19.0
-        version: 0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))
+        specifier: ^0.20.0
+        version: 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))
     devDependencies:
       cross-env:
         specifier: ^10.1.0
@@ -11961,18 +11961,6 @@ snapshots:
       - react-is
       - redux
 
-  '@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))':
-    dependencies:
-      fflate: 0.8.3
-      yaml: 2.9.0
-      zod: 4.4.3
-    optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      tar: 7.5.14
-      vue: 3.5.39(typescript@5.9.3)
-
   '@webskill/sdk@0.19.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))':
     dependencies:
       fflate: 0.8.3
@@ -11996,6 +11984,18 @@ snapshots:
       react-dom: 19.2.5(react@19.2.5)
       tar: 7.5.14
       vue: 3.5.39(typescript@5.8.3)
+
+  '@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))':
+    dependencies:
+      fflate: 0.8.3
+      yaml: 2.9.0
+      zod: 4.4.3
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      tar: 7.5.14
+      vue: 3.5.39(typescript@5.9.3)
 
   '@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))':
     dependencies:
