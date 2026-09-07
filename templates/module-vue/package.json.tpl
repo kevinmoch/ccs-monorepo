@@ -10,7 +10,7 @@
     "build:cards": "node scripts/build-cards.mjs",
     "preview": "vite preview",
     "lint": "vue-tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist .ccs-card-build"
+    "clean": "rimraf dist .ccs-card-build"
   },
   "dependencies": {
     "@ccs/runtime": "workspace:*",
@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "cross-env": "^10.1.0",
+    "rimraf": "^6.1.3",
     "tailwindcss": "^4.1.14",
     "typescript": "latest",
     "vue-tsc": "latest"
