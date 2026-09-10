@@ -135,6 +135,9 @@ importers:
       '@webskill/sdk':
         specifier: ^0.21.0
         version: 0.21.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3))
+      docx:
+        specifier: ^9.7.1
+        version: 9.7.1
       lit:
         specifier: ^3.3.3
         version: 3.3.3
@@ -147,6 +150,9 @@ importers:
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
+      pptxgenjs:
+        specifier: ^4.0.1
+        version: 4.0.1
       react:
         specifier: ^19.0.0
         version: 19.2.5
