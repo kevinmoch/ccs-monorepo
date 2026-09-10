@@ -413,8 +413,8 @@ importers:
   extensions/ccs-ai-proxy:
     dependencies:
       '@webskill/sdk':
-        specifier: ^0.20.0
-        version: 0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))
+        specifier: ^0.21.0
+        version: 0.21.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))
     devDependencies:
       cross-env:
         specifier: ^10.1.0
@@ -4029,30 +4029,6 @@ packages:
       '@openuidev/react-lang':
         optional: true
       monaco-editor:
-        optional: true
-
-  '@webskill/sdk@0.20.0':
-    resolution: {integrity: sha512-ayQEuhszVBHNMYbS3X+riVPLP/Q+pEkhR+hXKY5EjM4IrqllkZh7ZAqLGyRztWROWo5KJJnD0Q5uJmrGX58Utw==}
-    engines: {node: '>=22.18'}
-    peerDependencies:
-      '@modelcontextprotocol/sdk': '>=1.29.0'
-      oxc-parser: '>=0.141.0'
-      react: '>=19.0.0'
-      react-dom: '>=19.0.0'
-      tar: '>=7.5.0'
-      vue: '>=3.5.0'
-    peerDependenciesMeta:
-      '@modelcontextprotocol/sdk':
-        optional: true
-      oxc-parser:
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
-      tar:
-        optional: true
-      vue:
         optional: true
 
   '@webskill/sdk@0.21.0':
@@ -12057,18 +12033,6 @@ snapshots:
       - react-is
       - redux
 
-  '@webskill/sdk@0.20.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))':
-    dependencies:
-      fflate: 0.8.3
-      yaml: 2.9.0
-      zod: 4.4.3
-    optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      tar: 7.5.14
-      vue: 3.5.39(typescript@5.9.3)
-
   '@webskill/sdk@0.21.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tar@7.5.14)(vue@3.5.39(typescript@5.8.3))':
     dependencies:
       fflate: 0.8.3
@@ -12081,6 +12045,19 @@ snapshots:
       react-dom: 19.2.5(react@19.2.5)
       tar: 7.5.14
       vue: 3.5.39(typescript@5.8.3)
+
+  '@webskill/sdk@0.21.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@5.9.3))':
+    dependencies:
+      fflate: 0.8.3
+      write-excel-file: 4.1.1
+      yaml: 2.9.0
+      zod: 4.4.3
+    optionalDependencies:
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      tar: 7.5.14
+      vue: 3.5.39(typescript@5.9.3)
 
   '@webskill/sdk@0.21.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tar@7.5.14)(vue@3.5.39(typescript@6.0.3))':
     dependencies:

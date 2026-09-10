@@ -6,10 +6,10 @@
   "scripts": {
     "build": "vite build && vite build --config vite.config.weboffice.mjs",
     "build:sdk": "cross-env WEBSKILL_SRC=../../../web-skill-sdk vite build && vite build --config vite.config.weboffice.mjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && node scripts/checkWebOfficeMirrors.mjs"
   },
   "dependencies": {
-    "@webskill/sdk": "^0.20.0"
+    "@webskill/sdk": "^0.21.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

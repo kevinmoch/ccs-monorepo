@@ -8,7 +8,8 @@
  * 代价是这里有两份「同一个事实」的副本——只读方法名与 `OfficeType` 指纹。
  * 本文件整体搬自 `ccs-ai-assistant/src/shared/webOfficeBridge.ts`，那边由
  * web-skill-sdk 仓的 `test/webOfficeMirrors.test.ts` 与 SDK 声明逐条比对；
- * **本仓没有那道守护**，改动 SDK 的白名单或枚举时要手动把三处对齐。
+ * 本仓这一份由 `scripts/checkWebOfficeMirrors.mjs` 盯着（`npm run lint` 会跑），
+ * 读的是 `@webskill/sdk/browser` 导出的真源，改了不跟就红。
  */
 
 export const WEB_OFFICE_BRIDGE_CHANNEL = 'webskill:web-office-bridge';
