@@ -280,7 +280,7 @@ function rankByUrl(candidates, targetUrl) {
 // 没有超时，多候选循环会吊死在第一个失语帧上，后续候选与兜底都轮不到
 const FRAME_RESPONSE_TIMEOUT_MS = 5000;
 
-function sendToFrame(tabId, frameId, command) {
+function sendToFrame(tabId, frameId, command, timeoutMs = FRAME_RESPONSE_TIMEOUT_MS) {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (value) => {
@@ -289,7 +289,7 @@ function sendToFrame(tabId, frameId, command) {
       clearTimeout(timer);
       resolve(value);
     };
-    const timer = setTimeout(() => finish({ res: undefined, timedOut: true }), FRAME_RESPONSE_TIMEOUT_MS);
+    const timer = setTimeout(() => finish({ res: undefined, timedOut: true }), timeoutMs);
     chrome.tabs.sendMessage(tabId, { __ccsExt: true, proto: 'ccs-fetch-proxy', ...command }, { frameId }, (res) => {
       const lastError = chrome.runtime.lastError;
       finish({ res: lastError ? undefined : res, lastError });
@@ -375,6 +375,100 @@ function routeFetchRequest(msg, sender) {
     url: msg.url,
     init: msg.init
   });
+}
+
+// ─── WebOffice ───────────────────────────────────────────────────────────────
+//
+// 句柄是 `${frameKey}:${localId}`。frameKey 已是 64 位随机、且持久化在 storage.session，
+// 拼出来的句柄同样不可预测，又天然带着寻址信息——于是**不需要**再存一张映射表：
+// 那张表会随 SW 空闲回收一起丢，页面手里的旧句柄就全废了，而这样拼出来的重启后照用。
+//
+// 一次 WebOffice 调用比一次 fetch 慢得多（SDK 自己就可能磨十几秒），超时逐层放大：
+// hook 内 15s < ISOLATED 桥 16s < 这里 18s，好让最内层先超时、报出具体原因而不是笼统的 timeout。
+const WEB_OFFICE_FRAME_TIMEOUT_MS = 18_000;
+
+function parseWebOfficeHandle(handle) {
+  if (typeof handle !== 'string') return null;
+  // localId 形如 `local-1`，frameKey 形如 `frm-…`，两者都不含冒号；从右切一刀最稳
+  const at = handle.lastIndexOf(':');
+  if (at <= 0 || at === handle.length - 1) return null;
+  return { frameKey: handle.slice(0, at), localId: handle.slice(at + 1) };
+}
+
+async function askFrameWebOffice(tabId, frameId, payload) {
+  const { res, lastError, timedOut } = await sendToFrame(
+    tabId,
+    frameId,
+    { type: 'weboffice-exec', payload },
+    WEB_OFFICE_FRAME_TIMEOUT_MS
+  );
+  if (timedOut) return { ok: false, error: '目标页面响应超时，请重试' };
+  if (lastError) {
+    frameRegistry.delete(`${tabId}:${frameId}`);
+    return { ok: false, error: `目标页面已失效（${lastError.message}），请重新打开对应页面后重试` };
+  }
+  return res && res.ok === true ? res : { ok: false, error: (res && res.error) || '目标页面未返回结果，请重试' };
+}
+
+// 枚举整个标签页里的实例。挨帧问是必须的：文档实例可能在业务页那一层（`WebOfficeSDK.init`），
+// 也可能在它下面 WPS 自己插的 office 帧里（`WPSOpenApi` 被收养），两处都要问到。
+// 帧不答话（绝大多数页面根本没有 WPS）不是错误，跳过即可。
+async function listWebOffice(tabId) {
+  await discoverFrames(tabId);
+  const frames = [...frameRegistry.values()].filter((entry) => entry.tabId === tabId && !entry.isTop);
+  const instances = [];
+  const answers = await Promise.all(
+    frames.map((entry) => askFrameWebOffice(tabId, entry.frameId, { kind: 'enumerate' }))
+  );
+  answers.forEach((answer, index) => {
+    if (!answer.ok || !Array.isArray(answer.value)) return;
+    const entry = frames[index];
+    for (const summary of answer.value) {
+      if (!summary || typeof summary.localId !== 'string') continue;
+      instances.push({
+        handle: `${entry.key}:${summary.localId}`,
+        officeType: summary.officeType,
+        fileId: summary.fileId,
+        iframeId: summary.iframeId,
+        viaMount: summary.viaMount,
+        state: summary.state,
+        // 授权判定的输入，必须由扩展给：页面自称的 origin 能让本该弹卡的操作不弹卡
+        origin: entry.origin,
+        tabId
+      });
+    }
+  });
+  return { ok: true, instances };
+}
+
+async function routeWebOfficeRequest(msg, tabId) {
+  if (msg.op === 'list') return listWebOffice(tabId);
+
+  const parsed = parseWebOfficeHandle(msg.handle);
+  if (!parsed) return { ok: false, error: 'Malformed WebOffice handle' };
+  let target = findFrameByKey(tabId, parsed.frameKey);
+  if (!target) {
+    await discoverFrames(tabId);
+    target = findFrameByKey(tabId, parsed.frameKey);
+  }
+  if (!target) return { ok: false, error: 'frame-key-unknown' };
+
+  // 句柄换钥匙。origin / tabId 都取自注册表，页面无从参与——见 SDK 侧 WebOfficeAuthorizationKey 的约定
+  if (msg.op === 'key') return { ok: true, key: { origin: target.origin, tabId, handle: msg.handle } };
+
+  if (msg.op === 'describe') {
+    return askFrameWebOffice(tabId, target.frameId, { kind: 'describe', localId: parsed.localId });
+  }
+  if (msg.op === 'call') {
+    return askFrameWebOffice(tabId, target.frameId, {
+      kind: 'call',
+      localId: parsed.localId,
+      method: msg.method,
+      // 方法白名单挡在 MAIN 侧的信封校验里（bridge.ts 的 isWebOfficeBridgeRequest）
+      args: Array.isArray(msg.args) ? msg.args : []
+    });
+  }
+  return { ok: false, error: `Unsupported WebOffice operation: ${msg.op}` };
 }
 
 // Page perception / page action share the fetch routing: same tab, same origin match, same
@@ -517,6 +611,15 @@ async function handleMessage(msg, sender) {
       if (!(await shellOriginFor(msg, tabId))) return { ok: false, error: 'Forbidden: not a whitelisted shell tab' };
       notifyShell(tabId, { kind: 'opened', url: msg.url, origin: toOrigin(msg.origin) });
       return { ok: true };
+    }
+
+    // 与 dom-proxy-request 同一道闸门：只有白名单外壳的顶层帧读得了文档
+    case 'weboffice-request': {
+      if (frameId !== 0)
+        return { ok: false, error: 'Forbidden: only the top-level shell frame can read WebOffice documents' };
+      if (!(await isShellTab(tabId, msg.origin)))
+        return { ok: false, error: 'Forbidden: shell origin is not whitelisted (see extension options)' };
+      return routeWebOfficeRequest(msg, tabId);
     }
 
     case 'download-window': {

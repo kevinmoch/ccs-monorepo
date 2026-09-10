@@ -347,6 +347,31 @@
       return;
     }
 
+    // WebOffice 只读调用：SW 按句柄寻到承载 jssdk 实例的那一帧，再走该帧的桥
+    if (IS_TOP && data.kind === 'CCS_EXT_WEBOFFICE_REQUEST') {
+      send({
+        __ccsExt: true,
+        type: 'weboffice-request',
+        op: data.op,
+        handle: data.handle,
+        method: data.method,
+        args: data.args,
+        origin: location.origin
+      }).then((res) => {
+        if (res && res.ok === true) {
+          postToMain({ kind: 'CCS_EXT_WEBOFFICE_RESPONSE', reqId: data.reqId, ok: true, result: res });
+        } else {
+          postToMain({
+            kind: 'CCS_EXT_WEBOFFICE_RESPONSE',
+            reqId: data.reqId,
+            ok: false,
+            error: (res && res.error) || 'ccsExtWebOffice: extension service worker unavailable'
+          });
+        }
+      });
+      return;
+    }
+
     if (!IS_TOP && data.kind === 'CCS_EXT_DOM_EXECUTE_RESULT') {
       const callback = pendingExec.get(data.reqId);
       if (callback) {
@@ -413,6 +438,57 @@
     }
   };
 
+  // WebOffice 桥（ISOLATED ↔ 本帧 MAIN world 的 hook）。
+  //
+  // 它不走上面那对 `ccs-fetch-proxy-*` 事件：桥的两端是整体搬自 ccs-ai-assistant 的，
+  // 它自带一对专用事件名与 `channel`/`id` 信封，混进通用通道反而要多一道判别。
+  // 同样是 `document` 上的 CustomEvent，DV-17 那条约束（不得向 WPS 所在窗口投 message）同样成立。
+  const WEB_OFFICE_CHANNEL = 'webskill:web-office-bridge';
+  const WEB_OFFICE_REQUEST_EVENT = `${WEB_OFFICE_CHANNEL}:request`;
+  const WEB_OFFICE_RESPONSE_EVENT = `${WEB_OFFICE_CHANNEL}:response`;
+  // 跟 hook 内部的调用超时同值：它那边先超时就能回一句具体原因，比这里先超时只能报 timeout 强
+  const WEB_OFFICE_TIMEOUT_MS = 16000;
+
+  let webOfficeSeq = 0;
+  const webOfficePending = new Map();
+
+  document.addEventListener(WEB_OFFICE_RESPONSE_EVENT, (event) => {
+    let data;
+    try {
+      data = JSON.parse(event.detail);
+    } catch {
+      return;
+    }
+    if (!data || data.channel !== WEB_OFFICE_CHANNEL || typeof data.id !== 'number') return;
+    const entry = webOfficePending.get(data.id);
+    if (!entry) return;
+    webOfficePending.delete(data.id);
+    clearTimeout(entry.timer);
+    entry.settle(
+      data.ok === true
+        ? { ok: true, value: data.value }
+        : { ok: false, error: typeof data.reason === 'string' ? data.reason : 'WebOffice bridge failed' }
+    );
+  });
+
+  const askWebOffice = (payload) =>
+    new Promise((resolve) => {
+      const id = (webOfficeSeq += 1);
+      let detail;
+      try {
+        detail = JSON.stringify({ channel: WEB_OFFICE_CHANNEL, id, ...payload });
+      } catch {
+        resolve({ ok: false, error: 'WebOffice request is not serialisable' });
+        return;
+      }
+      const timer = setTimeout(() => {
+        webOfficePending.delete(id);
+        resolve({ ok: false, error: 'WebOffice bridge timeout: no MAIN world hook answered' });
+      }, WEB_OFFICE_TIMEOUT_MS);
+      webOfficePending.set(id, { settle: resolve, timer });
+      document.dispatchEvent(new CustomEvent(WEB_OFFICE_REQUEST_EVENT, { detail }));
+    });
+
   // SW -> MAIN world command forwarding
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg || msg.__ccsExt !== true) return false;
@@ -452,6 +528,13 @@
       const execId = nonce();
       pendingExec.set(execId, sendResponse);
       postToDom({ kind: 'CCS_EXT_DOM_EXECUTE', reqId: execId, op: msg.op, payload: msg.payload });
+      return true;
+    }
+
+    // WebOffice 只读调用。不拿 execId 认证：桥的回程走它自己的 response 事件，认领靠信封里的 id。
+    // 不校 expectHref：SW 那边用帧句柄精确寻址，没有按 URL 猜候选帧那一步，也就无需自验。
+    if (msg.type === 'weboffice-exec') {
+      askWebOffice(msg.payload).then((res) => sendResponse(res));
       return true;
     }
     return false;

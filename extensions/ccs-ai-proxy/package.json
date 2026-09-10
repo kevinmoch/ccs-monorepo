@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "build:sdk": "cross-env WEBSKILL_SRC=../../../web-skill-sdk vite build",
+    "build": "vite build && vite build --config vite.config.weboffice.mjs",
+    "build:sdk": "cross-env WEBSKILL_SRC=../../../web-skill-sdk vite build && vite build --config vite.config.weboffice.mjs",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

@@ -205,6 +205,47 @@
     else entry.reject(new Error(data.error || 'ccsExtDom: request failed'));
   }
 
+  // WebOffice 只读通道（SDK 分册 11–13）。文档住在子帧里的 WPS jssdk 实例上，
+  // 本层只负责把调用转给 service worker，它再按句柄寻到那一帧。
+  //
+  // `keyOf` 单独开一道而不是让页面从 `list()` 的结果里自己拼：origin 与 tabId 是授权
+  // 判定的输入（它们能让一次本该弹卡的操作变成不弹卡），必须每次都从扩展取。
+  const pendingWebOfficeRequests = new Map(); // reqId -> { resolve, reject, timer }
+
+  function installCcsExtWebOffice() {
+    if (window.ccsExtWebOffice) return;
+
+    const ask = (op, extra) =>
+      new Promise((resolve, reject) => {
+        const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const timer = setTimeout(() => {
+          if (pendingWebOfficeRequests.delete(reqId)) {
+            reject(new Error(`ccsExtWebOffice: ${op} timeout after ${REQUEST_TIMEOUT_MS}ms`));
+          }
+        }, REQUEST_TIMEOUT_MS);
+        pendingWebOfficeRequests.set(reqId, { resolve, reject, timer });
+        postToIsolated({ kind: 'CCS_EXT_WEBOFFICE_REQUEST', reqId, op, ...extra });
+      });
+
+    window.ccsExtWebOffice = {
+      list: () => ask('list').then((res) => res.instances || []),
+      keyOf: (handle) => ask('key', { handle }).then((res) => res.key),
+      describe: (handle) => ask('describe', { handle }).then((res) => res.value),
+      call: (handle, method, args) => ask('call', { handle, method, args }).then((res) => res.value)
+    };
+
+    window.dispatchEvent(new CustomEvent('ccs-ext-weboffice-ready'));
+  }
+
+  function settleWebOfficeRequest(data) {
+    const entry = pendingWebOfficeRequests.get(data.reqId);
+    if (!entry) return;
+    pendingWebOfficeRequests.delete(data.reqId);
+    clearTimeout(entry.timer);
+    if (data.ok) entry.resolve(data.result);
+    else entry.reject(new Error(data.error || 'ccsExtWebOffice: request failed'));
+  }
+
   // 下载观察窗桥（SDK 0.15.0 分册 15）。外壳一次页面操作前 open、操作后 settle，
   // 拿回的只有一个计数——文件名/大小/类型都不经过这条通路。
   const pendingDownloadRequests = new Map(); // reqId -> { resolve, reject, timer }
@@ -598,10 +639,12 @@
         installCcsExtDom();
         installCcsExtDownloads();
         installCcsExtFrames();
+        installCcsExtWebOffice();
       } else if (data.kind === 'CCS_EXT_FETCH_RESPONSE') settleTopRequest(data);
       else if (data.kind === 'CCS_EXT_DOM_RESPONSE') settleDomRequest(data);
       else if (data.kind === 'CCS_EXT_DOWNLOAD_RESPONSE') settleDownloadRequest(data);
       else if (data.kind === 'CCS_EXT_FRAMES_RESPONSE') settleFrameRequest(data);
+      else if (data.kind === 'CCS_EXT_WEBOFFICE_RESPONSE') settleWebOfficeRequest(data);
       // 反向推送落成 DOM 事件；外壳订阅它就够了，不必轮询
       else if (data.kind === 'CCS_EXT_EVENT') {
         window.dispatchEvent(new CustomEvent('ccs-ext-event', { detail: data.event }));
