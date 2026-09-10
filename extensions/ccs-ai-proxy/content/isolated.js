@@ -113,6 +113,25 @@
     if (frameKey === undefined || asker === undefined) return;
     asker.source.postMessage({ __ccsExt: true, proto: PROTO, kind: 'CCS_EXT_FRAME_KEY', key: frameKey }, asker.origin);
   };
+
+  /**
+   * 父帧就是白名单外壳时记下它的 origin，句柄一到手就主动报过去。
+   * 这是为了省掉外壳那句问询：问询是一条 window message，而外壳的直接子帧正是
+   * 业务页——WPS jssdk 就在那一层 new 出来、监听器就挂在那个 window 上，而它把收到的
+   * 任何一条 message 都当成一次应答来推进队列，多一条就整体错位且不报错。
+   *
+   * 只有「父帧即外壳」的那一层才报（ancestorOrigins 长度为 1）：更深的帧往父帧投消息，
+   * 反倒正好把噪音送进业务页。targetOrigin 也取自 ancestorOrigins，那是浏览器填的，
+   * 页面伪造不了，句柄不会广播给无关 origin。
+   */
+  let shellParentOrigin;
+  const announceKeyToShell = () => {
+    if (frameKey === undefined || shellParentOrigin === undefined) return;
+    window.parent.postMessage(
+      { __ccsExt: true, proto: PROTO, kind: 'CCS_EXT_FRAME_KEY', key: frameKey },
+      shellParentOrigin
+    );
+  };
   if (!IS_TOP) {
     window.addEventListener('message', (event) => {
       const data = event.data;
@@ -135,6 +154,7 @@
     });
     if (res !== null && typeof res === 'object' && typeof res.key === 'string' && res.key !== frameKey) {
       frameKey = res.key;
+      announceKeyToShell();
       replyKey();
     }
     return res;
@@ -213,6 +233,12 @@
       });
       // shell=true 表示「本帧确实在白名单外壳之下」，同源子帧也算；lockdown 只对跨域帧为真
       if (res && res.shell) {
+        // 答复到了才知道父帧是不是外壳，所以主动上报的开关开在这里
+        const ancestors = ancestorOrigins();
+        if (ancestors.length === 1) {
+          shellParentOrigin = ancestors[0];
+          announceKeyToShell();
+        }
         if (res.lockdown) postToMain({ kind: 'CCS_EXT_LOCKDOWN' });
         return;
       }
