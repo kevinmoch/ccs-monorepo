@@ -470,7 +470,29 @@ async function routeWebOfficeRequest(msg, tabId) {
       args: Array.isArray(msg.args) ? msg.args : []
     });
   }
+  if (msg.op === 'pdf') return takeWebOfficePdf(tabId, target);
   return { ok: false, error: `Unsupported WebOffice operation: ${msg.op}` };
+}
+
+/**
+ * 嗅探到的 PDF 字节。字节留在 office 帧自己手里，谁都不往那个窗口发消息——
+ * 那一帧住着 WPS SDK，它收到任何一条 window 消息都会把应答队列推错位（DV-17/DV-18）。
+ *
+ * 寻址靠 frameKey 而不是页面侧的 `window.frames` 序号：句柄里已经带着 frameKey，
+ * 换成 frameId 就能精确投递。序号那套只在「office 帧恰好是顶层帧的直接子帧」时成立，
+ * 外壳类宿主（业务页本身就在 iframe 里）下永远算不出来。
+ */
+async function takeWebOfficePdf(tabId, target) {
+  const sniffed = await askFrameWebOffice(tabId, target.frameId, { kind: 'take-frame-pdf' });
+  if (sniffed.ok && Array.isArray(sniffed.value) && sniffed.value.length > 0) return sniffed;
+  // 嗅探空手是常态：weboffice 服务端渲染，正常浏览时整份 PDF 根本不过网。
+  // 退到页面自己握着的那条原件直链——它常在业务页那一层，与实例不同帧，所以逐帧问
+  const frames = [...frameRegistry.values()].filter((entry) => entry.tabId === tabId);
+  for (const entry of frames) {
+    const answer = await askFrameWebOffice(tabId, entry.frameId, { kind: 'take-linked-pdf' });
+    if (answer.ok && Array.isArray(answer.value) && answer.value.length > 0) return answer;
+  }
+  return { ok: true, value: undefined };
 }
 
 // Page perception / page action share the fetch routing: same tab, same origin match, same

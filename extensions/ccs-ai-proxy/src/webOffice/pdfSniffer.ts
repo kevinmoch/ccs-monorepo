@@ -1,7 +1,7 @@
 /**
  * PDF 字节窥探（0.21.0 分册 12，读取路线的第 ② 级）。
  *
- * 只装在**顶层帧的直接子帧**：WPS 的文档 iframe 自己去取 PDF，那份字节从我们这边过一次，
+ * 只装在**WPS 自己的 office 帧**：那一帧去取 PDF，那份字节从我们这边过一次，
  * 抄下来就能用 pdf.js 抽出带位置的文本——比截屏后 OCR 准得多，也比什么都读不到强。
  *
  * ## 三条纪律
@@ -12,8 +12,6 @@
  * 3. **失败即放弃**：任何异常都吞掉并原样返回响应。我们在别人的页面里，
  *    读不到 PDF 的后果只是降级到截屏；把页面自己的请求搞坏则是我们制造的故障。
  */
-
-import { frameIndexInTop } from './frameIndex';
 
 /** 超过这个大小不抄：再大的文档走截屏更划算，也免得一条消息把页面卡住 */
 export const MAX_PDF_BYTES = 8 * 1024 * 1024;
@@ -26,7 +24,7 @@ export const MAX_PDF_BYTES = 8 * 1024 * 1024;
  * 实际上恰好相反：本帧之所以存在，就是因为 SDK 刚刚在 `renderWebOffice` 里建了它，
  * 那一瞬正是它在等自己的帧回话。真实站点上的后果是整份文档直接打不开。
  *
- * 现在反过来：字节留在本帧等宿主来取，两侧各自算一次帧序号来对上是哪一帧（`frameIndexInTop`）。
+ * 现在反过来：字节留在本帧等宿主来取，扩展侧按 `frameId` 精确寻址，页面这边不必报坐标。
  */
 let captured: Uint8Array | undefined;
 
@@ -111,10 +109,27 @@ function installXhrSniffer(): void {
   };
 }
 
+/**
+ * 装不装钩子。原先的闸门是「顶层帧的直接子帧」，用的是 `window.frames` 序号那套坐标；
+ * 外壳类宿主（ccs-framework）里业务页自己就在 iframe 里，office 帧成了孙帧，
+ * 序号取不到 → 嗅探器整个不装，PDF 字节永远拿不到。
+ *
+ * 改成按**本帧身份**判：不是顶层，且这一帧看着就是 WPS 的 office 帧（帧上的
+ * `officeType` 标记，或地址里 WPS 自己拼的 `/office/{类型}/` 段，与 `frameOfficeType()` 同源）。
+ * 判据与深度无关，也就不会因为外面多套一层壳就失效；全网其余 iframe 照旧不包。
+ */
+function isOfficeFrame(): boolean {
+  try {
+    if (window.top === window) return false;
+  } catch {
+    // 跨源读 `top` 被拒，那就肯定不是顶层
+  }
+  if (typeof window.officeType === 'string' && window.officeType !== '') return true;
+  return /\/office\/[^/?#]+\//.test(window.location.pathname);
+}
+
 export function installWebOfficePdfSniffer(): void {
-  // 只装在顶层帧的**直接子帧**：实例登记在顶层帧，更深的帧在它的 `frames` 里没有位置，
-  // 抄下来也无从认领——不如不包页面的网络调用
-  if (frameIndexInTop() === undefined) return;
+  if (!isOfficeFrame()) return;
   const nativeFetch = window.fetch;
   if (typeof nativeFetch === 'function') {
     window.fetch = function patchedFetch(this: unknown, ...args: Parameters<typeof fetch>): Promise<Response> {

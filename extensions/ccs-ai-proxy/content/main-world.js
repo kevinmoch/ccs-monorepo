@@ -231,7 +231,10 @@
       list: () => ask('list').then((res) => res.instances || []),
       keyOf: (handle) => ask('key', { handle }).then((res) => res.key),
       describe: (handle) => ask('describe', { handle }).then((res) => res.value),
-      call: (handle, method, args) => ask('call', { handle, method, args }).then((res) => res.value)
+      call: (handle, method, args) => ask('call', { handle, method, args }).then((res) => res.value),
+      // 字节以数字数组穿过 sendMessage：结构化克隆会把 Uint8Array 变成普通对象。
+      // 没抄到就是 undefined，外壳据此降级，不是错误
+      pdf: (handle) => ask('pdf', { handle }).then((res) => res.value)
     };
 
     window.dispatchEvent(new CustomEvent('ccs-ext-weboffice-ready'));
