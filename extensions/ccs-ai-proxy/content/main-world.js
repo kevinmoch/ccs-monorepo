@@ -15,22 +15,32 @@
   'use strict';
 
   const PROTO = 'ccs-fetch-proxy';
+  /** MAIN → ISOLATED 的出站事件名，三段脚本共用（见 postToIsolated 的说明）*/
+  const OUTBOUND_EVENT = 'ccs-fetch-proxy-out';
   const IS_TOP = window === window.top;
   const REQUEST_TIMEOUT_MS = 30000;
 
   // 原生引用在 document_start 取好，页面之后改原型也劫持不到这条链路
   const nativeAddEventListener = EventTarget.prototype.addEventListener;
   const nativeStopImmediate = Event.prototype.stopImmediatePropagation;
-  const nativePostMessage = window.postMessage;
+  const nativeDispatchEvent = EventTarget.prototype.dispatchEvent;
   let bridgeToken;
 
   /** 已转达给外壳、还没等到应答的开页请求：reqId -> 地址（外壳接不住时用它退回本帧跳转）*/
   const pendingOpens = new Map();
 
-  // 出站报文不带 token：它不截停，页面读得到。结果类报文靠 ISOLATED 发下的一次性
-  // execId 认证（见 isolated.js）；顶层的请求类报文本就由外壳页面自己发起，SW 会再校验白名单。
-  const postToIsolated = (msg) =>
-    nativePostMessage.call(window, { __ccsExt: true, proto: PROTO, to: 'iso', ...msg }, location.origin);
+  // 出站走 document 上的 CustomEvent 而不是 window.postMessage：页面里的 WPS WebOffice SDK
+  // 把收到的任何一条 message 都当成一次应答来推进自己的队列，多出一条就整体错位、且不抛错不打日志
+  // （2026-09-08 真实页面实测）。出站报文按设计**不截停**（截停有掐死 ISOLATED 接收的风险），
+  // 页面必然读得到，因此换载体是唯一出路；入站那条仍走 postMessage，它在 MAIN 侧就地截停，漏不出去。
+  //
+  // 信任模型不变：出站本就假定页面看得见、也伪造得了——结果类报文靠 ISOLATED 发下的一次性 execId
+  // 认证（见 isolated.js），顶层的请求类报文本就由外壳页面自己发起，SW 会再校验白名单。
+  // detail 传 JSON 字符串：跨 world 传对象会撞上结构化克隆的边界。
+  const postToIsolated = (msg) => {
+    const detail = JSON.stringify({ __ccsExt: true, proto: PROTO, to: 'iso', ...msg });
+    nativeDispatchEvent.call(document, new CustomEvent(OUTBOUND_EVENT, { detail }));
+  };
 
   // ─── base64 helpers (binary-safe body transport) ───────────────────────────
   function bytesToBase64(bytes) {

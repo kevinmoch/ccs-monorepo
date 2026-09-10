@@ -14,11 +14,13 @@ import { ERP_ACTION_SCOPE, ERP_ROLE_HINTS } from './scopes';
 
 (() => {
   const PROTO = 'ccs-fetch-proxy';
+  /** MAIN → ISOLATED 的出站事件名，三段脚本共用（见 postToIsolated 的说明）*/
+  const OUTBOUND_EVENT = 'ccs-fetch-proxy-out';
 
   // 原生引用在 document_start 取好，页面之后改原型也劫持不到这条链路
   const nativeAddEventListener = EventTarget.prototype.addEventListener;
   const nativeStopImmediate = Event.prototype.stopImmediatePropagation;
-  const nativePostMessage = window.postMessage.bind(window) as (message: unknown, targetOrigin: string) => void;
+  const nativeDispatchEvent = EventTarget.prototype.dispatchEvent;
 
   // ─── 监听器探针：最强的可交互信号（FR-15.1 信号 0）────────────────────────
   // 本脚本先于页面脚本运行：包裹 addEventListener，把挂过 click 类监听的元素记下来。
@@ -89,9 +91,13 @@ import { ERP_ACTION_SCOPE, ERP_ROLE_HINTS } from './scopes';
   // ─── 与 ISOLATED 的私有通道 ───────────────────────────────────────────────
   // 出站不带 token（页面读得到也无妨），靠 ISOLATED 发下的一次性 execId 认证；
   // 入站验一次性 bridgeToken 并在页面任何监听器之前截停。
+  // 出站的载体是 document 上的 CustomEvent 而不是 window.postMessage：页面里的 WPS WebOffice SDK
+  // 把收到的任何一条 message 都当成一次应答来推进队列，多一条就整体错位且不报错（2026-09-08 实测）。
+  // detail 传 JSON 字符串：跨 world 传对象会撞上结构化克隆的边界。
   let bridgeToken: string | undefined;
   const postToIsolated = (msg: Record<string, unknown>): void => {
-    nativePostMessage({ __ccsExt: true, proto: PROTO, to: 'iso', ...msg }, location.origin);
+    const detail = JSON.stringify({ __ccsExt: true, proto: PROTO, to: 'iso', ...msg });
+    nativeDispatchEvent.call(document, new CustomEvent(OUTBOUND_EVENT, { detail }));
   };
 
   async function execute(reqId: string, op: unknown, payload: unknown): Promise<void> {

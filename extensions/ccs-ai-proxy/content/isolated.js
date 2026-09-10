@@ -16,6 +16,8 @@
   'use strict';
 
   const PROTO = 'ccs-fetch-proxy';
+  /** MAIN → 本层的出站事件名，三段脚本共用（见下方通道说明）*/
+  const OUTBOUND_EVENT = 'ccs-fetch-proxy-out';
   const IS_TOP = window === window.top;
 
   // 祖先帧的 origin 链由浏览器填，页面脚本伪造不了。SW 的注册表会被 MV3 空闲回收清空，这条不会
@@ -37,6 +39,10 @@
   //  · 出站（MAIN → 本层）：不截停（跨 world 的 stopImmediatePropagation 行为各版本不一，
   //    截停有掐死本层接收的风险），因此出站报文不带 token，改由随指令下发的一次性 execId
   //    认证——execId 只存在于被截停的入站报文里，页面猜不到；用过即删，重放也无效。
+  //    既然截不住，载体就不能是 `window.postMessage`：页面里的 WPS WebOffice SDK 把收到的
+  //    任何一条 message 都当成一次应答来推进队列，多一条就整体错位且不报错（2026-09-08 实测）。
+  //    改走 `document` 上的 CustomEvent（OUTBOUND_EVENT）：同一棵 DOM 两个 world 都触得到，
+  //    而它不是 message 事件，不会惊动任何监听 `message` 的页内库。
   // crypto.randomUUID 要求安全上下文，http 的子站点上是 undefined；getRandomValues 没这道限制
   const nonce = () =>
     Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -223,11 +229,16 @@
     requestLockdown(0);
   }
 
-  // MAIN world -> SW bridge (same frame, same origin)
-  window.addEventListener('message', (event) => {
-    if (event.source !== window) return;
-    if (event.origin !== location.origin) return;
-    const data = event.data;
+  // MAIN world -> SW bridge（同帧同一棵 DOM，载体是 document 上的 CustomEvent，见顶部通道说明）。
+  // 原先那两道 event.source / event.origin 闸不再需要：CustomEvent 只在本帧自己的 document 上派发，
+  // 别的帧压根送不进来——这比原来的过滤更紧，不是更松。
+  document.addEventListener(OUTBOUND_EVENT, (event) => {
+    let data;
+    try {
+      data = JSON.parse(event.detail);
+    } catch {
+      return;
+    }
     if (!data || data.__ccsExt !== true || data.proto !== PROTO) return;
     // 只收发给自己的报文。出站报文不带 token（见上方通道说明）：结果类靠 pendingExec 里的
     // 一次性 execId 认证，顶层的请求类本就由外壳页面发起、由 SW 再校验白名单。
