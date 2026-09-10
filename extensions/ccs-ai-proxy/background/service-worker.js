@@ -432,6 +432,8 @@ async function listWebOffice(tabId) {
         iframeId: summary.iframeId,
         viaMount: summary.viaMount,
         state: summary.state,
+        // 承载 jssdk 的那一帧的地址，取自注册表而非页面自述
+        documentUrl: entry.href,
         // 授权判定的输入，必须由扩展给：页面自称的 origin 能让本该弹卡的操作不弹卡
         origin: entry.origin,
         tabId
