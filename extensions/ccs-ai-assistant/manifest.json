@@ -48,6 +48,6 @@
     "pages": ["sandbox.html", "view.html"]
   },
   "content_security_policy": {
-    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; worker-src 'self' blob: data:; child-src 'self' blob: data:;"
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; worker-src 'self' blob: data:; child-src 'self' blob: data:;"
   }
 }

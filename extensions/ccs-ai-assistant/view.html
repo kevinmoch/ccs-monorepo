@@ -41,11 +41,11 @@
         right: auto;
         left: 8px;
       }
-      /* 右上角浮动胶囊：投屏时遮挡小，且可整条隐藏。
+      /* 右上角浮动胶囊、以及下面那条顶部提示：投屏时遮挡小，且都可整条隐藏。
          这里写死深色是刻意的例外，不是漏了语义 token：这一页是 sandbox 里的 opaque origin，
          既取不到扩展的主题配置，也没有 ui-kit 的 token 可用；而它浮在**技能自定的**背景上
          （公文是白纸、大屏是深色），跟随 prefers-color-scheme 反而会在其中一种下糊成一片。
-         固定深色 + 阴影是在两类文档上都读得清的唯一选择。按钮文案则由 main.ts 依 `?lang=` 填。 */
+         固定深色 + 阴影是在两类文档上都读得清的唯一选择。文案则由 main.ts 依 `?lang=` 填。 */
       #viewer-chrome {
         position: fixed;
         top: 12px;
@@ -78,6 +78,53 @@
       #viewer-chrome button:hover {
         background: #4b5563;
       }
+      #viewer-chrome button[disabled] {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      /* 导出结果：顶部居中的悬浮提示，不再挤在胶囊里。
+         这句话可以很长（未导出清单会逐项列出降级），塞进右上角那个圆胶囊只会被压成一条
+         细长的窄柱。独立成条后它有整行宽度，也才有地方放关闭按钮。
+         右边留出 240px 是给胶囊本身的：两者都贴 top:12px，窗口一窄就会撞上。
+         配色沿用上面那段注释里声明的固定深色例外。 */
+      #viewer-toast {
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: min(64ch, calc(100vw - 240px));
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 8px 10px;
+        background: #1f2329;
+        color: #e5e7eb;
+        font:
+          12px/1.5 system-ui,
+          sans-serif;
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgb(0 0 0 / 0.28);
+        z-index: 11;
+      }
+      #viewer-export-note {
+        margin: 0;
+      }
+      /* 关闭按钮（×）：跟胶囊的隐藏按钮同一种「只是收起」的弱表达 */
+      #viewer-toast-close {
+        flex: none;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #9ca3af;
+        border-radius: 999px;
+        padding: 0 5px;
+        cursor: pointer;
+        font: inherit;
+        line-height: 1.5;
+      }
+      #viewer-toast-close:hover {
+        color: #f9fafb;
+        background: #374151;
+      }
       /* 隐藏按钮（×）：更弱的边界，表达「只是收起外壳」 */
       #viewer-chrome-hide {
         border-color: transparent;
@@ -108,8 +155,13 @@
         z-index: 10;
       }
       /* 收起状态用 hidden 属性表达，不能用内联 style：内联声明压得过下面那条 @media print */
+      /* `#viewer-chrome button` 那条 display:inline-flex 压得过 hidden 属性自带的 UA display:none，
+         所以胶囊里的按钮必须在这里把 hidden 补回来。漏掉一次的代价是：导出按钮在装配完成前
+         就已经可见可点，点了什么也不会发生（装配是文档到达之后才跑的）。 */
       #viewer-chrome[hidden],
-      #viewer-chrome-restore[hidden] {
+      #viewer-chrome button[hidden],
+      #viewer-chrome-restore[hidden],
+      #viewer-toast[hidden] {
         display: none;
       }
       /* 外壳自己的 UI 打印时必须消失，且不得碰版式（分册 20 §2.4）——
@@ -118,7 +170,8 @@
          压不住它就会印在每一页的右上角 */
       @media print {
         #viewer-chrome,
-        #viewer-chrome-restore {
+        #viewer-chrome-restore,
+        #viewer-toast {
           display: none;
         }
       }
@@ -128,6 +181,25 @@
     <div id="viewer-chrome">
       <p id="viewer-blocked" data-testid="viewer-blocked-notice"></p>
       <!-- 按钮文案由 main.ts 按投放地址上的 ?lang= 填；写死在 HTML 里就只有一种语言 -->
+      <!-- 导出按钮缺省不出现：判型说不出 pptx/docx 的版式（如监控大屏）不该长出一个按不动的按钮 -->
+      <button id="viewer-export" type="button" data-testid="viewer-export" hidden>
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <path d="M7 10l5 5 5-5" />
+          <path d="M12 15V3" />
+        </svg>
+        <span id="viewer-export-label"></span>
+      </button>
       <button id="viewer-print" type="button" data-testid="viewer-print">
         <svg
           width="13"
@@ -147,6 +219,15 @@
         <span id="viewer-print-label"></span>
       </button>
       <button id="viewer-chrome-hide" type="button">×</button>
+    </div>
+    <!--
+      导出结果提示。`role="status"` + `aria-live="polite"` 让读屏软件在文字换掉时读出来——
+      它是一次操作的回执，不是页面内容，用户的焦点不该被抢走。
+      收起由 main.ts 负责：5 秒自动消失，或者用户按下面这个 ×。
+    -->
+    <div id="viewer-toast" role="status" aria-live="polite" data-testid="viewer-toast" hidden>
+      <p id="viewer-export-note" data-testid="viewer-export-note"></p>
+      <button id="viewer-toast-close" type="button" data-testid="viewer-toast-close">×</button>
     </div>
     <button id="viewer-chrome-restore" type="button" hidden>
       <svg

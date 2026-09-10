@@ -2,28 +2,32 @@
 /**
  * MAIN world 锚点（分册 18 FR-18.3 / FR-18.7）。
  *
- * 这里验的是**桥不该做什么**：白名单之外的方法不分发、跨窗口消息不认、
+ * 这里验的是**桥不该做什么**：白名单之外的方法不分发、不往窗口投消息（DV-17）、
  * 主动通知不带内容。能转发是最容易做对的部分，这几条才是出事的地方。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PAGE_DATA_SOURCES_LIMIT, PAGE_MCP_BRIDGE_CHANNEL } from '../src/shared/pageMcpBridge';
+import { dispatchBridgeEvent, readBridgeEvent } from '../src/shared/domBridge';
+import {
+  PAGE_DATA_SOURCES_LIMIT,
+  PAGE_MCP_BRIDGE_CHANNEL,
+  PAGE_MCP_BRIDGE_REQUEST_EVENT,
+  PAGE_MCP_BRIDGE_RESPONSE_EVENT
+} from '../src/shared/pageMcpBridge';
 import { installPageHostAnchor } from '../src/content/pageHostAnchor';
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 let dispose: (() => void) | undefined;
+let stopCapture: (() => void) | undefined;
 
-/**
- * 收集本窗口 postMessage 出去的东西。
- *
- * **不往下转发**：jsdom 的 postMessage 是下一个任务才派发的，转发会让应答与
- * 「清单变了」通知交错到别的用例里去。请求由用例自己 dispatch。
- */
+/** 收集锚点发回 ISOLATED 侧的桥事件 */
 function captureOutbound(): { sent: any[] } {
   const sent: any[] = [];
-  vi.spyOn(window, 'postMessage').mockImplementation((data: any) => {
-    sent.push(data);
-  });
+  const onResponse = (event: Event): void => {
+    sent.push(readBridgeEvent(event));
+  };
+  document.addEventListener(PAGE_MCP_BRIDGE_RESPONSE_EVENT, onResponse);
+  stopCapture = () => document.removeEventListener(PAGE_MCP_BRIDGE_RESPONSE_EVENT, onResponse);
   return { sent };
 }
 
@@ -38,12 +42,7 @@ function anchor(): { version: number; register(e: string, c: unknown): void; unr
 /** 发一条桥请求并等应答 */
 async function ask(sent: any[], request: Record<string, unknown>): Promise<any> {
   const before = sent.length;
-  window.dispatchEvent(
-    new MessageEvent('message', {
-      source: window as unknown as MessageEventSource,
-      data: { channel: PAGE_MCP_BRIDGE_CHANNEL, ...request }
-    })
-  );
+  dispatchBridgeEvent(PAGE_MCP_BRIDGE_REQUEST_EVENT, { channel: PAGE_MCP_BRIDGE_CHANNEL, ...request });
   await flush();
   return sent.slice(before).find((m) => m?.ok !== undefined);
 }
@@ -62,6 +61,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  stopCapture?.();
+  stopCapture = undefined;
   dispose?.();
   dispose = undefined;
 });
@@ -172,7 +173,7 @@ describe('桥的分发', () => {
     expect(reply).toMatchObject({ ok: false, reason: 'the page blew up' });
   });
 
-  it('不是本窗口发来的消息一律不理：可能是别的页面在冒充内容脚本', async () => {
+  it('DV-17：老的 window.postMessage 通道已经不通，桥只认 DOM 事件', async () => {
     const { sent } = captureOutbound();
     loadAnchor();
     const client = fakeClient();
@@ -183,7 +184,7 @@ describe('桥的分发', () => {
 
     window.dispatchEvent(
       new MessageEvent('message', {
-        source: {} as MessageEventSource,
+        source: window as unknown as MessageEventSource,
         data: { channel: PAGE_MCP_BRIDGE_CHANNEL, id: 9, kind: 'call', endpoint: 'agile-page', method: 'listTools' }
       })
     );
@@ -191,6 +192,20 @@ describe('桥的分发', () => {
 
     expect(client.listTools).not.toHaveBeenCalled();
     expect(sent.slice(before)).toEqual([]);
+  });
+
+  it('DV-17：一整轮问答期间一条消息都不往窗口投', async () => {
+    const { sent } = captureOutbound();
+    loadAnchor();
+    const post = vi.spyOn(window, 'postMessage');
+    anchor().register('agile-page', fakeClient());
+
+    const reply = await ask(sent, { id: 1, kind: 'call', endpoint: 'agile-page', method: 'listTools' });
+
+    expect(reply.ok).toBe(true);
+    // 往页面窗口投任何一条 message 都会打死页面自带的 SDK（如 WPS WebOffice）
+    expect(post).not.toHaveBeenCalled();
+    post.mockRestore();
   });
 });
 
@@ -225,12 +240,10 @@ describe('站点自荐数据源（0.14.0 分册 21）', () => {
     (anchor() as unknown as { declareDataSources(s: readonly unknown[]): void }).declareDataSources([{ id: 'a' }]);
     const before = sent.length;
 
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        source: window as unknown as MessageEventSource,
-        data: { channel: PAGE_MCP_BRIDGE_CHANNEL, kind: 'data-sources-pull' }
-      })
-    );
+    dispatchBridgeEvent(PAGE_MCP_BRIDGE_REQUEST_EVENT, {
+      channel: PAGE_MCP_BRIDGE_CHANNEL,
+      kind: 'data-sources-pull'
+    });
     await flush();
 
     expect(sent.slice(before)).toEqual([
@@ -243,12 +256,10 @@ describe('站点自荐数据源（0.14.0 分册 21）', () => {
     loadAnchor();
     const before = sent.length;
 
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        source: window as unknown as MessageEventSource,
-        data: { channel: PAGE_MCP_BRIDGE_CHANNEL, kind: 'data-sources-pull' }
-      })
-    );
+    dispatchBridgeEvent(PAGE_MCP_BRIDGE_REQUEST_EVENT, {
+      channel: PAGE_MCP_BRIDGE_CHANNEL,
+      kind: 'data-sources-pull'
+    });
     await flush();
 
     // 空数组与「这站没提供」是同一件事，但多发一条会让面板白闪一次

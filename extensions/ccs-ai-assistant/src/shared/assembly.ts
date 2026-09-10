@@ -6,6 +6,8 @@ import {
   createRemotePageActionExecutor,
   createRemotePerceptionReader,
   createRemoteTargetRegistry,
+  createDocxBlockReader,
+  createXlsxBlockReader,
   explainResolution,
   extractDocxText,
   extractXlsxText,
@@ -33,18 +35,20 @@ import {
   createExtensionConsentStore,
   createExtensionDataSourceCandidateStore,
   createExtensionDownloadConsentStore,
+  createExtensionWebOfficeConsentStore,
   type ExtensionConsentStore,
   type ExtensionDataSourceCandidateStore,
   type ExtensionDownloadConsentStore
 } from './consentStore';
 import { createExtensionDownloadsReader } from './downloadsReader';
+import { createExtensionWebOfficeHost } from './webOfficeHost';
 import { createExtensionDownloadWatcher } from './downloadWatcher';
 import { createExtensionTabWorkset } from './tabWorkset';
 import { createTabLinkedDocumentReader } from './linkedDocuments';
 import { documentFetchRequest } from './messages';
 import { isPageDataSourcesMessage, isPageMcpChanged, pageDataSourcesPull } from './pageMcpClient';
 import { createPageMcpHost, type PageMcpHost } from './pageMcpHost';
-import { extractPdfText } from './pdfText';
+import { extractPdfText, pdfDocumentReader } from './pdfText';
 import { ACTION_SCOPE, DOWNLOAD_WAIT_MS, PERCEPTION_SCOPE } from './scopes';
 import { seedBuiltinSkills, BUILTIN_ROOT } from './seedSkills';
 import { createTabBinding, type TabBindingPort } from './tabBinding';
@@ -196,11 +200,13 @@ export function createExtensionFs(): OpfsProvider {
  * 首启播种内置技能（幂等）。**地址必须在这一层解**：`chrome.runtime.getURL` 只有扩展页能调，
  * 而 `sidepanel/main.tsx` 不许出现 `chrome.`（AC-14.18）。
  *
- * 不阻塞挂载：播完广播一次。引擎把技能目录缓在实例里，不广播得重开面板才看得见。
+ * 不阻塞挂载：真改动了才广播一次。引擎把技能目录缓在实例里，不广播得重开面板才看得见。
  */
 export function seedExtensionSkills(fs: OpfsProvider): void {
   void seedBuiltinSkills(fs, (path) => chrome.runtime.getURL(path))
-    .then(notifySkillsChanged)
+    .then((changed) => {
+      if (changed) notifySkillsChanged();
+    })
     .catch((error: unknown) => {
       // 播种失败就是「技能库里少了三个技能」，静默会让人以为它本来就没有
       console.error('Failed to seed the built-in skills', error);
@@ -410,6 +416,7 @@ export function createSidePanelHost(): SidePanelHost {
 
   const consent = createExtensionConsentStore(() => binding.origin(), readLocaleSync);
   const downloadConsent = createExtensionDownloadConsentStore(readLocaleSync);
+  const webOfficeConsent = createExtensionWebOfficeConsentStore(readLocaleSync);
   // 根与 options 页的 governance facade 同为 MANAGED_ROOT，生成的候选因此直接出现在 console 的审核队列里
   const skillCandidates = createCandidateSink({ store: new CandidateStore({ root: MANAGED_ROOT, fs }), audit });
   // 取数走的是**同一个** perception 策略：数据能不能读由 PERCEPTION_SCOPE 一处判定，
@@ -519,6 +526,11 @@ export function createSidePanelHost(): SidePanelHost {
       openConsoleCandidate: (candidateId: string) =>
         void chrome.tabs.create({
           url: chrome.runtime.getURL(`options.html?candidate=${encodeURIComponent(candidateId)}`)
+        }),
+      // 同上：不给这个回调，消息操作栏上的「查看 trace」整枚不渲染
+      openConsoleTrace: (runId: string) =>
+        void chrome.tabs.create({
+          url: chrome.runtime.getURL(`options.html?run=${encodeURIComponent(runId)}`)
         })
     },
     pagePerception: perception
@@ -541,6 +553,11 @@ export function createSidePanelHost(): SidePanelHost {
     docxExtractor: extractDocxText,
     xlsxExtractor: extractXlsxText,
     pdfExtractor: extractPdfText,
+    // 逐单元读取（分册 22）：三种格式各自独立，缺哪个就哪种格式明确报不支持。
+    // pdf 的图是「整页渲染」，docx/xlsx 的图是包里现成的 PNG/JPEG，两条路不同实现
+    pdfDocumentReader,
+    docxDocumentReader: createDocxBlockReader(),
+    xlsxDocumentReader: createXlsxBlockReader(),
     // 链接文档读取走**内容脚本**取件，为的是带上用户在那个站点的登录态（D-17-1）。
     // side panel 自己 fetch 拿到的会是一张登录页，而那对模型看起来是「读成功了」
     linkedDocuments: createTabLinkedDocumentReader({
@@ -576,7 +593,19 @@ export function createSidePanelHost(): SidePanelHost {
     }),
     // 读本机下载的文件（分册 20）。只交端口：开关读 `sandbox.downloadedFiles`、
     // 授权卡走引擎的 UI 桥、抽取器复用上面那两个，都在 chatbot 侧完成
-    downloads: { reader: createExtensionDownloadsReader(), consent: downloadConsent }
+    downloads: { reader: createExtensionDownloadsReader(), consent: downloadConsent },
+    // 读页内嵌的 WPS 文档（0.21.0 分册 11~13）。同样只交端口：
+    // 授权卡、预算与截断、审计都在 chatbot / SDK 那一侧
+    webOffice: {
+      host: createExtensionWebOfficeHost({
+        tabId: () => binding.tabId(),
+        origin: () => binding.origin(),
+        pageUrl: () => binding.snapshot().url,
+        // 截图预算每次现读：用户在设置里改完下一张就该生效，不要求重建运行时
+        maxImageBytes: () => loadRuntimeConfigSync().multimodal.maxImageBytes
+      }),
+      consent: webOfficeConsent
+    }
   };
 
   // 页面端点变了就重新拉一次清单。**必须校验来源 tab**（FR-18.7 第 4 条）：

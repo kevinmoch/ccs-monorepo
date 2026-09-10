@@ -410,7 +410,9 @@ function mergeUserProfile(raw: unknown, d: RuntimeConfig['userProfile']): Runtim
 
 /** 与 multimodal 同一套判据：阈值非正整数会让隔离永不触发或立即触发，回退默认值 */
 function mergeSkillState(raw: unknown, d: RuntimeConfig['skillState']): RuntimeConfig['skillState'] {
-  const value = ((typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>)['quarantineThreshold'];
+  const value = ((typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>)[
+    'quarantineThreshold'
+  ];
   return {
     quarantineThreshold:
       typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : d.quarantineThreshold

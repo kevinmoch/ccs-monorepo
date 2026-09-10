@@ -1,12 +1,22 @@
 import { createPageAgentHandler } from '@webskill/browser';
-import { isDocumentFetchRequest, isPageAgentEnvelope, isPageMcpRequest, pageAgentResponse } from '../shared/messages';
-import { PAGE_DATA_SOURCES, PAGE_MCP_CHANGED, isPageDataSourcesPull } from '../shared/pageMcpClient';
 import {
+  isDocumentFetchRequest,
+  isPageAgentEnvelope,
+  isPageMcpRequest,
+  isWebOfficeRequest,
+  pageAgentResponse
+} from '../shared/messages';
+import { PAGE_DATA_SOURCES, PAGE_MCP_CHANGED, isPageDataSourcesPull } from '../shared/pageMcpClient';
+import { dispatchBridgeEvent, readBridgeEvent } from '../shared/domBridge';
+import {
+  PAGE_MCP_BRIDGE_REQUEST_EVENT,
+  PAGE_MCP_BRIDGE_RESPONSE_EVENT,
   isPageMcpBridgeChanged,
   isPageMcpBridgeDataSources,
   pageMcpBridgeDataSourcesPull
 } from '../shared/pageMcpBridge';
 import { relayPageMcp } from './pageMcpRelay';
+import { relayWebOffice } from './webOfficeRelay';
 import { fetchDocumentInPage } from '../shared/documentFetch';
 import { keepProbeArmed, probeInteractiveHint } from '../shared/probe';
 import { ACTION_SCOPE } from '../shared/scopes';
@@ -42,6 +52,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     void relayPageMcp(message).then(sendResponse);
     return true;
   }
+  // 页内嵌的 WPS 文档（0.21.0 分册 11）：同样只转发，但 handle 在本侧生成，
+  // 不把页面自己的序号当授权标识用
+  if (isWebOfficeRequest(message)) {
+    void relayWebOffice(message).then(sendResponse);
+    return true;
+  }
   // 带页面登录态取一个链接文档（分册 17）。同注册域闸门已在 side panel 侧过过一遍；
   // 这里**不再复判**不是省事，是因为内容脚本跑在页面的 renderer 里——
   // 被 XSS 的页面能改它的行为，把闸门放在这一侧等于没放
@@ -69,8 +85,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // 页面端点变了就捅一下扩展（分册 18 FR-18.7 第 3 条）：通知**不带内容**，
 // 收到的一侧只会重新拉一次清单，所以页面乱发它最多让我们多拉几次。
-window.addEventListener('message', (event: MessageEvent) => {
-  if (event.source !== window || !isPageMcpBridgeChanged(event.data)) return;
+document.addEventListener(PAGE_MCP_BRIDGE_RESPONSE_EVENT, (event: Event) => {
+  if (!isPageMcpBridgeChanged(readBridgeEvent(event))) return;
   // 没有接收方时（面板没开着）会 reject，属正常情况
   void chrome.runtime.sendMessage({ channel: PAGE_MCP_CHANGED }).catch(() => undefined);
 });
@@ -78,12 +94,13 @@ window.addEventListener('message', (event: MessageEvent) => {
 // 页面自荐的数据源（0.14.0 分册 21）。这条**带内容**，所以它不适用上面那句
 // 「乱发最多多拉几次」的安慰：内容到了 side panel 那侧必须逐条校验后才能进候选表，
 // 而“是不是当前绑定 tab 发的”只有那侧知道。
-window.addEventListener('message', (event: MessageEvent) => {
-  if (event.source !== window || !isPageMcpBridgeDataSources(event.data)) return;
-  declaredSources = event.data.sources;
-  void chrome.runtime.sendMessage({ channel: PAGE_DATA_SOURCES, sources: event.data.sources }).catch(() => undefined);
+document.addEventListener(PAGE_MCP_BRIDGE_RESPONSE_EVENT, (event: Event) => {
+  const payload = readBridgeEvent(event);
+  if (!isPageMcpBridgeDataSources(payload)) return;
+  declaredSources = payload.sources;
+  void chrome.runtime.sendMessage({ channel: PAGE_DATA_SOURCES, sources: payload.sources }).catch(() => undefined);
 });
 
 // 本脚本是 `document_idle` 注入的，站点多半在解析时就喊完了——上面那个监听器
-// 根本不在场。锦点跑在 `document_start`，向它要一次重播就能把那一次补回来。
-window.postMessage(pageMcpBridgeDataSourcesPull(), '*');
+// 根本不在场。锚点跑在 `document_start`，向它要一次重播就能把那一次补回来。
+dispatchBridgeEvent(PAGE_MCP_BRIDGE_REQUEST_EVENT, pageMcpBridgeDataSourcesPull());

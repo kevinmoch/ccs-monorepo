@@ -7,6 +7,12 @@
  * 极难反推到"两边的常量不一样了"。
  *
  * 产物**入库**：AC-14.3 的一致性校验跑在 CI 单测里，那里不执行本脚本。
+ *
+ * 本脚本由 node 直接执行，不经 vite 的别名表，所以只能写发布包的说明符——
+ * 也就是说它落盘的是**已发布**的那份常量。工作区源码改了 `SANDBOX_PAGE_SCRIPT_SOURCE`
+ * 而尚未发版时，跑一次 prebuild 会把入库的 sandbox.js 改回旧版，
+ * `git status` 会看见它——那不是脚本出错，是「该发版了」的信号
+ * （AC-14.3 的单测对着工作区源码比对，同时也会红）。
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

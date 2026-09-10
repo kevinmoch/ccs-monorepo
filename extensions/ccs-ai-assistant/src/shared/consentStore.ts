@@ -6,6 +6,7 @@ import type {
   PageActionKind,
   PageActionTarget
 } from '@webskill/agent';
+import type { WebOfficeAction, WebOfficeAuthorizationKey, WebOfficeConsent } from '@webskill/browser';
 import type { ConnectPageActionConsentView } from '@webskill/console';
 
 const PREFIX = 'consent:';
@@ -204,6 +205,84 @@ export function createExtensionDownloadConsentStore(
     async forgetAll(): Promise<void> {
       const bag = await chrome.storage.local.get(null);
       const doomed = Object.keys(bag).filter((key) => key.startsWith(DOWNLOAD_PREFIX));
+      if (doomed.length > 0) await chrome.storage.local.remove(doomed);
+    }
+  };
+}
+
+/**
+ * 页内 WPS 文档授权的「不再询问」存储（0.21.0 分册 13）。
+ *
+ * 粒度是 **origin + 动作**：文档一份份地换，站点不会；按 handle 记等于每开一份文档问一次，
+ * 按 origin 记又不能把「看看有哪些」和「拍照」混为一谈——所以两维都要。
+ */
+const WEB_OFFICE_PREFIX = 'woconsent:';
+
+const WEB_OFFICE_ACTION_LABELS_ZH: Record<WebOfficeAction, string> = {
+  list: '列出本页的 WPS 文档',
+  read: '读取本页的 WPS 文档',
+  capture: '截取本页的 WPS 文档'
+};
+
+const WEB_OFFICE_ACTION_LABELS_EN: Record<WebOfficeAction, string> = {
+  list: 'list the WPS documents on this site',
+  read: 'read the WPS documents on this site',
+  capture: 'take screenshots of the WPS documents on this site'
+};
+
+export interface ExtensionWebOfficeConsentStore extends WebOfficeConsent {
+  list(): Promise<readonly ConnectPageActionConsentView[]>;
+  forget(id: string): Promise<void>;
+  forgetAll(): Promise<void>;
+}
+
+export function createExtensionWebOfficeConsentStore(
+  currentLocale: () => 'en' | 'zh' = () => 'en'
+): ExtensionWebOfficeConsentStore {
+  const keyOf = (origin: string, action: string): string => `${WEB_OFFICE_PREFIX}${origin}:${action}`;
+  return {
+    async recall(action: WebOfficeAction, key: WebOfficeAuthorizationKey): Promise<boolean> {
+      const storageKey = keyOf(key.origin, action);
+      const bag = await chrome.storage.local.get(storageKey);
+      return isStored(bag[storageKey]);
+    },
+
+    async remember(action: WebOfficeAction, key: WebOfficeAuthorizationKey): Promise<void> {
+      const entry: StoredConsent = {
+        id: `${key.origin}|${action}`,
+        scope: key.origin,
+        action,
+        grantedAt: new Date().toISOString()
+      };
+      await chrome.storage.local.set({ [keyOf(key.origin, action)]: entry });
+    },
+
+    /** 记住的是**这个站点上的这一类动作**，不是眼前这一份文档。文案必须直说 */
+    describeScope(action: WebOfficeAction, key: WebOfficeAuthorizationKey): string {
+      return currentLocale() === 'zh'
+        ? `以后不再询问「${WEB_OFFICE_ACTION_LABELS_ZH[action]}」（${key.origin}）`
+        : `Don’t ask again to ${WEB_OFFICE_ACTION_LABELS_EN[action]} (${key.origin})`;
+    },
+
+    async list(): Promise<readonly ConnectPageActionConsentView[]> {
+      const bag = await chrome.storage.local.get(null);
+      const views: ConnectPageActionConsentView[] = [];
+      for (const [storageKey, value] of Object.entries(bag)) {
+        if (!storageKey.startsWith(WEB_OFFICE_PREFIX) || !isStored(value)) continue;
+        views.push({ id: value.id, scope: value.scope, action: value.action, grantedAt: value.grantedAt });
+      }
+      return views;
+    },
+
+    async forget(id: string): Promise<void> {
+      const cut = id.lastIndexOf('|');
+      if (cut <= 0 || cut === id.length - 1) return;
+      await chrome.storage.local.remove(keyOf(id.slice(0, cut), id.slice(cut + 1)));
+    },
+
+    async forgetAll(): Promise<void> {
+      const bag = await chrome.storage.local.get(null);
+      const doomed = Object.keys(bag).filter((storageKey) => storageKey.startsWith(WEB_OFFICE_PREFIX));
       if (doomed.length > 0) await chrome.storage.local.remove(doomed);
     }
   };

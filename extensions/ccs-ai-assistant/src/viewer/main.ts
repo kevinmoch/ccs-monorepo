@@ -1,5 +1,7 @@
 import { startViewerShell, watchBlockedResources } from '@webskill/browser';
 import { mountViewerComponents, type ViewerComponentsHandle } from '@webskill/ui';
+import { setupViewerExport } from './export/index';
+import { createViewerToast } from './toast';
 import type { SlideDeckHandle, SlideView } from './viewerSlides';
 
 /**
@@ -33,9 +35,20 @@ watchBlockedResources(window, blocked);
 const zh = new URLSearchParams(location.search).get('lang') !== 'en';
 document.documentElement.lang = zh ? 'zh-CN' : 'en';
 mustFind('viewer-print-label').textContent = zh ? '打印' : 'Print';
+const exportUi = {
+  button: mustFind('viewer-export') as HTMLButtonElement,
+  label: mustFind('viewer-export-label'),
+  notice: createViewerToast({
+    root: mustFind('viewer-toast'),
+    body: mustFind('viewer-export-note'),
+    close: mustFind('viewer-toast-close') as HTMLButtonElement
+  }),
+  live: content
+};
 for (const [id, label] of [
   ['viewer-chrome-hide', zh ? '隐藏工具条' : 'Hide the toolbar'],
-  ['viewer-chrome-restore', zh ? '显示打印按钮' : 'Show the print button']
+  ['viewer-chrome-restore', zh ? '显示打印按钮' : 'Show the print button'],
+  ['viewer-toast-close', zh ? '关闭提示' : 'Dismiss the notice']
 ] as const) {
   const button = mustFind(id);
   button.setAttribute('aria-label', label);
@@ -49,6 +62,8 @@ let pristine = '';
 
 startViewerShell(window, { content, style }, () => {
   pristine = content.innerHTML;
+  // 导出读的是这份 `pristine`，不是活 DOM：打印版式与组件挂载都会改写 DOM
+  setupViewerExport(pristine, exportUi, zh);
   void mount(null, false);
 });
 

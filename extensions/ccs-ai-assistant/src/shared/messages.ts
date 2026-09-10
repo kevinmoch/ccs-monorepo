@@ -155,3 +155,68 @@ export function isPageMcpResult(value: unknown): value is PageMcpResult {
   if (candidate.ok === true) return true;
   return candidate.ok === false && typeof candidate.reason === 'string';
 }
+
+/**
+ * 页内 WPS 文档（0.21.0 分册 11/12）。
+ *
+ * 面板 → 内容脚本走 `chrome.runtime`，内容脚本再转成 MAIN world 的 `document` 事件（DV-17）。
+ * 与 `PAGE_MCP_CHANNEL` 同构，但**不复用**它：那条信道的方法白名单是 MCP 的，
+ * 两者混在一起会让「哪些方法可经桥调用」这个安全判断变成两套语义共用一张表。
+ *
+ * `handle` 只在这一层与面板之间流通；MAIN 侧永远只看得到自己发的 `localId`。
+ */
+export const WEB_OFFICE_CHANNEL = 'webskill:web-office';
+
+export interface WebOfficeRequest {
+  channel: typeof WEB_OFFICE_CHANNEL;
+  kind:
+    | 'list'
+    | 'describe'
+    | 'call'
+    | 'scroll'
+    | 'take-pdf'
+    | 'take-frame-pdf'
+    | 'take-linked-pdf'
+    | 'take-linked-presentation';
+  handle?: string;
+  method?: string;
+  args?: readonly unknown[];
+  /**
+   * `take-frame-pdf` 专用：目标帧在顶层帧 `window.frames` 里的序号。
+   *
+   * 这条请求是**广播**到全部帧的（帧 id 事先不知道），每一帧自己比对序号，
+   * 对不上就干脆不应答——见 `content/main.ts`。
+   */
+  frameIndex?: number;
+}
+
+export type WebOfficeResult =
+  | { channel: typeof WEB_OFFICE_CHANNEL; ok: true; value: unknown }
+  | { channel: typeof WEB_OFFICE_CHANNEL; ok: false; reason: string };
+
+export function isWebOfficeRequest(value: unknown): value is WebOfficeRequest {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as {
+    channel?: unknown;
+    kind?: unknown;
+    handle?: unknown;
+    method?: unknown;
+    frameIndex?: unknown;
+  };
+  if (candidate.channel !== WEB_OFFICE_CHANNEL) return false;
+  if (candidate.kind === 'list' || candidate.kind === 'take-linked-pdf') return true;
+  if (candidate.kind === 'take-linked-presentation') return true;
+  if (candidate.kind === 'take-frame-pdf') return typeof candidate.frameIndex === 'number';
+  if (candidate.kind === 'describe' || candidate.kind === 'scroll' || candidate.kind === 'take-pdf') {
+    return typeof candidate.handle === 'string';
+  }
+  return candidate.kind === 'call' && typeof candidate.handle === 'string' && typeof candidate.method === 'string';
+}
+
+export function isWebOfficeResult(value: unknown): value is WebOfficeResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as { channel?: unknown; ok?: unknown; reason?: unknown };
+  if (candidate.channel !== WEB_OFFICE_CHANNEL) return false;
+  if (candidate.ok === true) return true;
+  return candidate.ok === false && typeof candidate.reason === 'string';
+}

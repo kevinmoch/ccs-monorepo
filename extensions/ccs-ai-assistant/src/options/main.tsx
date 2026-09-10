@@ -27,7 +27,7 @@ import '@webskill/console/console.css';
  * 这里配好的模型 side panel 不需要任何同步代码就能读到（FR-14.9）。
  */
 const fs = createExtensionFs();
-// 用户可能先开 console 再开侧栏：两边都播一次，戳存在就是空跑
+// 用户可能先开 console 再开侧栏：两边都播一次，内容没变就不写盘
 seedExtensionSkills(fs);
 // 装/卸/发布都走这个 manager；side panel 常驻，不广播就看不见新技能
 const manager = new BrowserSkillManager({
@@ -82,6 +82,9 @@ const governance = createGovernanceFacade({
 /** chatbot 的「查看候选」带 `?candidate=<id>` 打开这里（assembly 的 `openConsoleCandidate`） */
 const focusCandidateId = new URLSearchParams(location.search).get('candidate');
 
+/** chatbot 消息操作栏的「查看 trace」带 `?run=<id>` 打开这里（assembly 的 `openConsoleTrace`） */
+const focusRunId = new URLSearchParams(location.search).get('run');
+
 /**
  * chatbot 各处「打开设置」带 `?page=<leaf>` 打开这里（assembly 的 `openConsolePage`）。
  * 白名单挡住任意取值：console 对非法值会静默落到技能库，那与「跳错页」看起来一模一样。
@@ -124,6 +127,9 @@ createRoot(document.getElementById('root')!).render(
     connect={createExtensionConnect()}
     runtimeConfig={runtimeConfigStore}
     {...(focusCandidateId !== null ? { focusCandidateId, initialPage: 'governance.review' as const } : {})}
-    {...(focusCandidateId === null && initialPage !== undefined ? { initialPage } : {})}
+    {...(focusCandidateId === null && focusRunId !== null
+      ? { focusRunId, initialPage: 'runs.inspector' as const }
+      : {})}
+    {...(focusCandidateId === null && focusRunId === null && initialPage !== undefined ? { initialPage } : {})}
   />
 );

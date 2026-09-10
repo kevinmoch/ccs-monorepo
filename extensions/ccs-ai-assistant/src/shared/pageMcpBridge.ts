@@ -5,11 +5,16 @@
  * 它是个刻意保持极小的 `document_start` 脚本，把 `@webskill/browser` 的类型图
  * 拖进去只会让页面每次导航都多下载一份用不上的代码。
  *
- * 两个世界共用同一个 `window`，所以双方都会收到自己发出的消息。
- * 请求带 `kind`、应答带 `ok`，靠这两个字段互斥地认领，别再加 `direction` 字段。
+ * 载体是 `document` 上的 `CustomEvent`，**不是** `window.postMessage`（DV-17，
+ * 理由见 `domBridge.ts`）。方向靠事件名区分：`:request` 是 ISOLATED → MAIN，
+ * `:response` 是 MAIN → ISOLATED。请求带 `kind`、应答带 `ok`，
+ * 靠这两个字段互斥地认领，别再加 `direction` 字段。
  */
 
 export const PAGE_MCP_BRIDGE_CHANNEL = 'webskill:page-mcp-bridge';
+
+export const PAGE_MCP_BRIDGE_REQUEST_EVENT = `${PAGE_MCP_BRIDGE_CHANNEL}:request`;
+export const PAGE_MCP_BRIDGE_RESPONSE_EVENT = `${PAGE_MCP_BRIDGE_CHANNEL}:response`;
 
 export const PAGE_MCP_BRIDGE_METHODS = [
   'listTools',
@@ -42,7 +47,7 @@ export interface PageMcpBridgeChanged {
   kind: 'changed';
 }
 
-/** 一条消息里最多转多少条提议；候选层另有更严的上限，这里只是不让一次 postMessage 把面板卡死 */
+/** 一条消息里最多转多少条提议；候选层另有更严的上限，这里只是不让一次推送把面板卡死 */
 export const PAGE_DATA_SOURCES_LIMIT = 64;
 
 /**

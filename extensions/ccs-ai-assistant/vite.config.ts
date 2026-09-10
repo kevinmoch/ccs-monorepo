@@ -1,4 +1,6 @@
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
@@ -9,6 +11,7 @@ import { nodeShimAliasList, sdkAliasList } from './scripts/sdkAliases.mjs';
 import { parseManifestOverrides } from './scripts/extensionConfig.mjs';
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
+const requireHere = createRequire(import.meta.url);
 
 /** config.json 里的 manifest 覆写；文件缺席即无覆写，非法内容让构建直接失败 */
 function manifestOverrides(): Record<string, string> {
@@ -95,6 +98,14 @@ function copyExtensionAssets(): Plugin {
       // 内置技能：`src/shared/seedSkills.ts` 首启时按扩展内地址 fetch 它们写进 OPFS。
       // 目录结构必须逐字保留——那份清单写的就是这些相对路径
       cpSync(fromHere('skills'), `${outDir}/skills`, { recursive: true });
+
+      // pdfjs 的外置资源（0.21.0 分册 22 FR-22.5）。不拷进产物，pdfjs 就只能去
+      // 官网 CDN 取，而扩展的 CSP 不允许——结果是中日韩 PDF 的 CMap 拿不到，
+      // 抽出来的字全是乱码。wasm 少了则 JPEG2000 扫描件根本渲不出来。
+      const pdfjs = dirname(requireHere.resolve('pdfjs-dist/package.json'));
+      for (const dir of ['cmaps', 'standard_fonts', 'wasm']) {
+        cpSync(`${pdfjs}/${dir}`, `${outDir}/pdfjs/${dir}`, { recursive: true });
+      }
     }
   };
 }

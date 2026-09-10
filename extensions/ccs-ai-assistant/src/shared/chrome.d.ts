@@ -37,6 +37,15 @@ declare namespace chrome {
     function get(tabId: number): Promise<Tab>;
     function create(info: { url: string }): Promise<Tab>;
     function sendMessage(tabId: number, message: unknown, options?: { frameId?: number }): Promise<unknown>;
+    /**
+     * 拍下**当前可见**的那个标签页（0.21.0 分册 12）。
+     * 参数里没有 tabId 不是遗漏：它拍的就是窗口里正显示的那一个，
+     * 所以调用方必须自己先确认该 tab 在前台（`Tab.active`）。
+     */
+    function captureVisibleTab(
+      windowId?: number,
+      options?: { format?: 'jpeg' | 'png'; quality?: number }
+    ): Promise<string>;
     function remove(tabId: number): Promise<void>;
     const onRemoved: { addListener(listener: (tabId: number) => void): void };
     /**
@@ -90,6 +99,20 @@ declare namespace chrome {
 
   namespace sidePanel {
     function setPanelBehavior(behavior: { openPanelOnActionClick: boolean }): Promise<void>;
+    /**
+     * 直接打开侧栏（Chrome 116+）。**必须在用户手势的同一个任务里调用**，
+     * 否则 Chrome 拒绝并 reject。所以它只能出现在 `action.onClicked` 之类的回调里。
+     */
+    function open(options: { windowId?: number; tabId?: number }): Promise<void>;
+  }
+
+  namespace action {
+    /**
+     * 点扩展图标（工具栏上的，或者拼图菜单里那一行）。
+     * `sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` 生效时**不会触发**——
+     * 那时 Chrome 自己开侧栏，事件根本不派发。
+     */
+    const onClicked: { addListener(listener: (tab: tabs.Tab) => void): void };
   }
 
   namespace extension {

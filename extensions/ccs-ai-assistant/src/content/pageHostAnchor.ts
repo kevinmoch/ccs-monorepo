@@ -17,9 +17,12 @@
  *    整张方法表交给消息发送方。
  */
 
+import { dispatchBridgeEvent, readBridgeEvent } from '../shared/domBridge';
 import {
   PAGE_DATA_SOURCES_LIMIT,
   PAGE_MCP_BRIDGE_CHANNEL,
+  PAGE_MCP_BRIDGE_REQUEST_EVENT,
+  PAGE_MCP_BRIDGE_RESPONSE_EVENT,
   isPageMcpBridgeDataSourcesPull,
   isPageMcpBridgeRequest,
   type PageMcpBridgeMethod,
@@ -52,7 +55,11 @@ const clients = new Map<string, McpClientLike>();
 let declaredDataSources: readonly unknown[] = [];
 
 function postDataSources(): void {
-  window.postMessage({ channel: PAGE_MCP_BRIDGE_CHANNEL, kind: 'data-sources', sources: declaredDataSources }, '*');
+  dispatchBridgeEvent(PAGE_MCP_BRIDGE_RESPONSE_EVENT, {
+    channel: PAGE_MCP_BRIDGE_CHANNEL,
+    kind: 'data-sources',
+    sources: declaredDataSources
+  });
 }
 
 /** 端点抖动一批合成一条：demo 换屏时会连着 set 好几次 */
@@ -62,7 +69,7 @@ function announceChange(): void {
   changePending = true;
   void Promise.resolve().then(() => {
     changePending = false;
-    window.postMessage({ channel: PAGE_MCP_BRIDGE_CHANNEL, kind: 'changed' }, '*');
+    dispatchBridgeEvent(PAGE_MCP_BRIDGE_RESPONSE_EVENT, { channel: PAGE_MCP_BRIDGE_CHANNEL, kind: 'changed' });
   });
 }
 
@@ -163,46 +170,47 @@ export function installPageHostAnchor(): () => void {
   if (window.top !== window) return () => undefined;
   installAnchor();
 
-  const onMessage = (event: MessageEvent): void => {
-    if (event.source !== window) return;
+  const onRequest = (event: Event): void => {
+    const payload = readBridgeEvent(event);
     // 内容脚本刚挂上监听器，让它补上错过的那一次自荐（分册 21）
-    if (isPageMcpBridgeDataSourcesPull(event.data)) {
+    if (isPageMcpBridgeDataSourcesPull(payload)) {
       if (declaredDataSources.length > 0) postDataSources();
       return;
     }
-    // 只认本窗口发来的请求：跨窗口的同名消息可能是别的页面在冒充内容脚本
-    if (!isPageMcpBridgeRequest(event.data)) return;
-    const { id } = event.data;
-    void dispatch(event.data).then(
+    if (!isPageMcpBridgeRequest(payload)) return;
+    const request = payload;
+    const { id } = request;
+    void dispatch(request).then(
       (value) => {
-        // 结构化克隆过不去的返回值（含函数、DOM 节点等）不能让整条桥静默卡住
-        try {
-          window.postMessage({ channel: PAGE_MCP_BRIDGE_CHANNEL, id, ok: true, value }, '*');
-        } catch (e) {
-          const reason = e instanceof Error ? e.message : String(e);
-          window.postMessage(
-            {
-              channel: PAGE_MCP_BRIDGE_CHANNEL,
-              id,
-              ok: false,
-              reason: `The page returned a value that cannot cross the bridge (${reason}).`
-            },
-            '*'
-          );
-        }
+        // JSON 过不去的返回值（含函数、循环引用等）不能让整条桥静默卡住
+        const sent = dispatchBridgeEvent(PAGE_MCP_BRIDGE_RESPONSE_EVENT, {
+          channel: PAGE_MCP_BRIDGE_CHANNEL,
+          id,
+          ok: true,
+          value
+        });
+        if (sent) return;
+        dispatchBridgeEvent(PAGE_MCP_BRIDGE_RESPONSE_EVENT, {
+          channel: PAGE_MCP_BRIDGE_CHANNEL,
+          id,
+          ok: false,
+          reason: 'The page returned a value that cannot cross the bridge.'
+        });
       },
       (e: unknown) => {
-        window.postMessage(
-          { channel: PAGE_MCP_BRIDGE_CHANNEL, id, ok: false, reason: e instanceof Error ? e.message : String(e) },
-          '*'
-        );
+        dispatchBridgeEvent(PAGE_MCP_BRIDGE_RESPONSE_EVENT, {
+          channel: PAGE_MCP_BRIDGE_CHANNEL,
+          id,
+          ok: false,
+          reason: e instanceof Error ? e.message : String(e)
+        });
       }
     );
   };
-  window.addEventListener('message', onMessage);
+  document.addEventListener(PAGE_MCP_BRIDGE_REQUEST_EVENT, onRequest);
 
   return () => {
-    window.removeEventListener('message', onMessage);
+    document.removeEventListener(PAGE_MCP_BRIDGE_REQUEST_EVENT, onRequest);
     clients.clear();
     declaredDataSources = [];
     delete (globalThis as Record<string, unknown>)['__webskillPageHost'];

@@ -6,14 +6,21 @@
  * 「它撤得干净、撤得安全」，而不是「函数被调用过」。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PROBE_CHANNEL, PROBE_MARK, keepProbeArmed, probeInteractiveHint } from '../src/shared/probe';
+import { dispatchBridgeEvent } from '../src/shared/domBridge';
+import {
+  PROBE_CHANNEL,
+  PROBE_MARK,
+  PROBE_SIGNAL_EVENT,
+  keepProbeArmed,
+  probeInteractiveHint
+} from '../src/shared/probe';
 
 const native = EventTarget.prototype.addEventListener;
 
 /** 每个用例重新装一次探针：模块级副作用只在首次 import 时跑一遍 */
 async function installProbe(): Promise<void> {
   vi.resetModules();
-  await import('../src/content/probe');
+  await import('../src/content/mainWorld/clickProbe');
 }
 
 beforeEach(() => {
@@ -87,20 +94,30 @@ describe('click 监听器探针', () => {
     const wrapped = EventTarget.prototype.addEventListener;
 
     await vi.advanceTimersByTimeAsync(20_000);
-    window.dispatchEvent(
-      new MessageEvent('message', { data: { channel: PROBE_CHANNEL, kind: 'keep' }, source: window })
-    );
+    dispatchBridgeEvent(PROBE_SIGNAL_EVENT, { channel: PROBE_CHANNEL, kind: 'keep' });
     await vi.advanceTimersByTimeAsync(20_000);
 
     expect(EventTarget.prototype.addEventListener).toBe(wrapped);
   });
 
-  it('keepProbeArmed 发出的正是探针认得的续期负载', () => {
+  it('keepProbeArmed 发出的正是探针认得的续期信号', async () => {
+    await installProbe();
+    const wrapped = EventTarget.prototype.addEventListener;
+
+    await vi.advanceTimersByTimeAsync(20_000);
+    keepProbeArmed();
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    // 两侧的事件名与负载对不上时，探针已经卸了
+    expect(EventTarget.prototype.addEventListener).toBe(wrapped);
+  });
+
+  it('DV-17：续期不走 window.postMessage，否则会打死页面自带的 SDK', () => {
     const post = vi.spyOn(window, 'postMessage');
 
     keepProbeArmed();
 
-    expect(post).toHaveBeenCalledWith({ channel: PROBE_CHANNEL, kind: 'keep' }, '*');
+    expect(post).not.toHaveBeenCalled();
     post.mockRestore();
   });
 
@@ -117,25 +134,21 @@ describe('click 监听器探针', () => {
     expect(EventTarget.prototype.addEventListener).toBe(pageWrapper);
   });
 
-  it('disarm 信号只认本窗口发来的：跨窗口的同名消息不生效', async () => {
+  it('认不出的信号一律不理：页面能在同一棵 DOM 上乱发事件', async () => {
     await installProbe();
     const wrapped = EventTarget.prototype.addEventListener;
 
-    // 内嵌 iframe 里的第三方脚本冒充内容脚本发 disarm；source 不是本窗口，探针必须无视
-    window.dispatchEvent(
-      new MessageEvent('message', { data: { channel: PROBE_CHANNEL, kind: 'disarm' }, source: null })
-    );
+    dispatchBridgeEvent(PROBE_SIGNAL_EVENT, { channel: PROBE_CHANNEL, kind: 'shutdown' });
+    dispatchBridgeEvent(PROBE_SIGNAL_EVENT, { channel: 'someone-else', kind: 'disarm' });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(EventTarget.prototype.addEventListener).toBe(wrapped);
   });
 
-  it('本窗口发来的 disarm 立即卸下探针', async () => {
+  it('disarm 信号立即卸下探针', async () => {
     await installProbe();
 
-    window.dispatchEvent(
-      new MessageEvent('message', { data: { channel: PROBE_CHANNEL, kind: 'disarm' }, source: window })
-    );
+    dispatchBridgeEvent(PROBE_SIGNAL_EVENT, { channel: PROBE_CHANNEL, kind: 'disarm' });
 
     expect(EventTarget.prototype.addEventListener).toBe(native);
   });

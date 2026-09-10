@@ -16,7 +16,8 @@
  * 页面自己的 MutationObserver 可能被惊动——记在这里，不假装没有。
  */
 
-import { installPageHostAnchor } from './pageHostAnchor';
+import { installPageHostAnchor } from '../pageHostAnchor';
+import { readBridgeEvent } from '../../shared/domBridge';
 
 /** 与 shared/probe.ts 共用；那边是感知侧的读取方，改名要同时改两处 */
 const MARK = 'data-webskill-clickable';
@@ -27,6 +28,8 @@ const CLICK_EVENTS = new Set(['click', 'mousedown', 'mouseup', 'pointerdown', 'p
 const DISARM_AFTER_MS = 30_000;
 
 const CHANNEL = 'webskill:probe';
+/** 与 shared/probe.ts 的 `PROBE_SIGNAL_EVENT` 共用；不走 `window.postMessage`（DV-17） */
+const SIGNAL_EVENT = `${CHANNEL}:signal`;
 
 type ProbeSignal = { channel: typeof CHANNEL; kind: 'keep' | 'disarm' };
 
@@ -81,10 +84,10 @@ function disarm(): void {
 
 let timer = setTimeout(disarm, DISARM_AFTER_MS);
 
-window.addEventListener('message', (event: MessageEvent) => {
-  // 只认本窗口发来的信号：跨窗口的同名消息可能是页面在冒充内容脚本
-  if (event.source !== window || !isProbeSignal(event.data)) return;
-  if (event.data.kind === 'disarm') {
+document.addEventListener(SIGNAL_EVENT, (event: Event) => {
+  const payload = readBridgeEvent(event);
+  if (!isProbeSignal(payload)) return;
+  if (payload.kind === 'disarm') {
     clearTimeout(timer);
     disarm();
     return;
