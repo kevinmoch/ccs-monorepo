@@ -10,7 +10,7 @@ import { VIEWER_COMPONENT_ATTR } from '@webskill/ui';
 import type { ViewerNotice } from '../toast';
 import { encodeDocx } from './docx';
 import { extractExportDoc, type ChartImage } from './extract';
-import { sanitizeExportFilename } from './filename';
+import { sanitizeExportFilename, sanitizeExportName } from './filename';
 import { classifyExportKind, exportRootOf, type ExportKind } from './kind';
 import { describeOmissions } from './omissions';
 
@@ -47,10 +47,31 @@ export function setupViewerExport(pristineHtml: string, ui: ExportUi, zh: boolea
   ui.label.textContent = idle;
   ui.button.title = idle;
   ui.button.setAttribute('aria-label', idle);
+  applyDocumentTitle(pristineHtml, kind);
 
   const controller = new AbortController();
   active = controller;
   ui.button.addEventListener('click', () => void run(pristineHtml, kind, ui, zh, idle), { signal: controller.signal });
+}
+
+/**
+ * 把文档标题落成页面标题（FR-15.8）。
+ *
+ * 打印另存为 PDF 时浏览器拿 `document.title` 当默认文件名，所以这里用的必须是
+ * 与导出同一份清洗后的名字，否则同一份文档存成 PDF 和存成 DOCX 会得到两个名字。
+ * 标题同样只能从 `extractExportDoc` 里拿——另写一份「轻量取标题」就是等它与导出那份漂移。
+ * 此刻图表画布还没渲染，拿不到快照，但标题不依赖它们。
+ */
+function applyDocumentTitle(html: string, kind: Exclude<ExportKind, 'none'>): void {
+  let title: string;
+  try {
+    title = extractExportDoc(html).title;
+  } catch {
+    // 抽不出内容的文档照样能打印，只是没有可用的标题；留着 view.html 里那个缺省
+    return;
+  }
+  if (title.trim() === '') return;
+  document.title = sanitizeExportName(title, kind);
 }
 
 async function run(

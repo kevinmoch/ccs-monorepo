@@ -7,6 +7,7 @@ import { WebSkillError } from '@webskill/core';
 import { extractExportDoc, plain } from '../src/viewer/export/extract';
 import { describeOmissions } from '../src/viewer/export/omissions';
 import { setupViewerExport } from '../src/viewer/export/index';
+import { sanitizeExportFilename } from '../src/viewer/export/filename';
 
 const CHART_PROPS = JSON.stringify({
   type: 'bar',
@@ -165,5 +166,43 @@ describe('AC-15.10 · 抽不出东西就不产出字节', () => {
     expect(said.at(-1)).toContain('EXPORT_FAILED');
     expect(ui.button.disabled).toBe(false);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('打印文件名与导出文件名同名（FR-15.8）', () => {
+  const ui = () => ({
+    button: document.createElement('button'),
+    label: document.createElement('span'),
+    notice: { show: () => undefined }
+  });
+
+  it('页面标题就是导出名去掉扩展名', () => {
+    document.title = 'WebSkill document viewer';
+
+    setupViewerExport(THREE_PAGES, ui(), true);
+
+    expect(sanitizeExportFilename(extractExportDoc(THREE_PAGES).title, 'pptx')).toBe('开场白.pptx');
+    expect(document.title).toBe('开场白');
+  });
+
+  it('换一份文档就换一个标题，不会留着上一份的名字', () => {
+    setupViewerExport(THREE_PAGES, ui(), true);
+    setupViewerExport('<div class="bulletin"><h1>年度通报</h1><p>正文</p></div>', ui(), true);
+
+    expect(document.title).toBe('年度通报');
+  });
+
+  it('非法字符按导出那份规则清掉，浏览器不会拿它拼出奇怪路径', () => {
+    setupViewerExport('<div class="bulletin"><h1>2024/Q3: 汇报</h1><p>正文</p></div>', ui(), true);
+
+    expect(document.title).toBe('2024Q3 汇报');
+  });
+
+  it('抽不出内容时不动标题：那一页照样能打印', () => {
+    document.title = 'WebSkill document viewer';
+
+    setupViewerExport('<div data-viewer-mode="slides"><div class="slides"></div></div>', ui(), true);
+
+    expect(document.title).toBe('WebSkill document viewer');
   });
 });

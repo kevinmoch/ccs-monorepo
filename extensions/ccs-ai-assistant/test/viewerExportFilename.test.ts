@@ -4,7 +4,15 @@
  * 标题来自模型产出的 HTML，所以这里的输入全部按**不可信**对待。
  */
 import { describe, expect, it } from 'vitest';
-import { sanitizeExportFilename } from '../src/viewer/export/filename';
+import { sanitizeExportFilename, sanitizeExportName } from '../src/viewer/export/filename';
+
+describe('sanitizeExportName', () => {
+  it('与带扩展名那份是同一次清洗，只差最后那个后缀', () => {
+    for (const title of ['../../etc/passwd', 'CON', '...草稿...', '  年度\n\n 汇报  ', '', '汉'.repeat(200)]) {
+      expect(`${sanitizeExportName(title, 'docx')}.docx`).toBe(sanitizeExportFilename(title, 'docx'));
+    }
+  });
+});
 
 describe('sanitizeExportFilename', () => {
   it('正常标题原样保留，只补扩展名', () => {
