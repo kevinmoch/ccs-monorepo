@@ -15,6 +15,7 @@ import {
   isPageMcpBridgeDataSources,
   pageMcpBridgeDataSourcesPull
 } from '../shared/pageMcpBridge';
+import { hideCcsWatermark } from './hideWatermark';
 import { relayPageMcp } from './pageMcpRelay';
 import { relayWebOffice } from './webOfficeRelay';
 import { fetchDocumentInPage } from '../shared/documentFetch';
@@ -104,3 +105,5 @@ document.addEventListener(PAGE_MCP_BRIDGE_RESPONSE_EVENT, (event: Event) => {
 // 本脚本是 `document_idle` 注入的，站点多半在解析时就喊完了——上面那个监听器
 // 根本不在场。锚点跑在 `document_start`，向它要一次重播就能把那一次补回来。
 dispatchBridgeEvent(PAGE_MCP_BRIDGE_REQUEST_EVENT, pageMcpBridgeDataSourcesPull());
+
+hideCcsWatermark();

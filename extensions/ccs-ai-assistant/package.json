@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "sandbox:write": "node scripts/writeSandboxScript.mjs",
-    "prebuild": "pnpm sandbox:write",
+    "prebuild": "pnpm sandbox:write && pnpm hosts:write",
+    "hosts:write": "node scripts/writeCcsHosts.mjs",
     "build": "vite build && vite build --config vite.content.config.ts && vite build --config vite.probe.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm typecheck"
