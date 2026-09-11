@@ -3,7 +3,6 @@
 
 /** CCS 自家站点的 host（含端口）。内网与生产都算 */
 export const CCS_HOSTS: readonly string[] = [
-  '10.168.1.248:63735',
   'ccs.huaweicloud.com',
   'jijian.huawei.com'
 ];
