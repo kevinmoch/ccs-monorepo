@@ -787,8 +787,6 @@ function onBridgeMessage(event: Event): void {
   if (!isWebOfficeBridgeRequest(payload)) {
     // 信封对得上（channel + id）却没过内容校验，绝大多数就是被只读白名单挡下的方法名。
     // 静默丢弃会让对面干等一整个超时，末了还只能报「没人应答」——那句话既慢又指错方向。
-    // 与 ccs-ai-assistant 的同名文件在此处分叉：那边唯一的发送方是它自己的 relay，
-    // 而这条链路上方法名是页面经 SW 传进来的，挡下来的请求必须当场说清楚。
     const envelope = payload as { channel?: unknown; id?: unknown } | undefined;
     if (envelope && envelope.channel === WEB_OFFICE_BRIDGE_CHANNEL && typeof envelope.id === 'number') {
       fail(envelope.id, 'request-not-allowed: unknown kind or method outside the read-only whitelist');

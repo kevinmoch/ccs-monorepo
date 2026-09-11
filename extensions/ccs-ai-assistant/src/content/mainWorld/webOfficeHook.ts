@@ -784,7 +784,15 @@ function fail(id: number, reason: string): void {
 
 function onBridgeMessage(event: Event): void {
   const payload = readBridgeEvent(event);
-  if (!isWebOfficeBridgeRequest(payload)) return;
+  if (!isWebOfficeBridgeRequest(payload)) {
+    // 信封对得上（channel + id）却没过内容校验，绝大多数就是被只读白名单挡下的方法名。
+    // 静默丢弃会让对面干等一整个超时，末了还只能报「没人应答」——那句话既慢又指错方向。
+    const envelope = payload as { channel?: unknown; id?: unknown } | undefined;
+    if (envelope && envelope.channel === WEB_OFFICE_BRIDGE_CHANNEL && typeof envelope.id === 'number') {
+      fail(envelope.id, 'request-not-allowed: unknown kind or method outside the read-only whitelist');
+    }
+    return;
+  }
   const request = payload;
   try {
     if (request.kind === 'enumerate') {

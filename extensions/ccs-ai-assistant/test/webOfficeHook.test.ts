@@ -570,9 +570,16 @@ describe('伪造的请求（AC-11.7）', () => {
     expect(replies()).toBe(0);
   });
 
-  it('写方法在入口就被挡掉，连一条失败回应都不给', async () => {
+  it('写方法在入口就被挡掉，且当场回一条失败', async () => {
     await install();
     const replies = countReplies();
+    let reason: unknown;
+    const onResponse = (event: Event): void => {
+      const data = readBridgeEvent(event) as { id?: unknown; reason?: unknown } | null;
+      if (data?.id === 998) reason = data.reason;
+    };
+    document.addEventListener(WEB_OFFICE_BRIDGE_RESPONSE_EVENT, onResponse);
+    installed.push([document, WEB_OFFICE_BRIDGE_RESPONSE_EVENT, onResponse]);
 
     dispatchBridgeEvent(WEB_OFFICE_BRIDGE_REQUEST_EVENT, {
       channel: WEB_OFFICE_BRIDGE_CHANNEL,
@@ -583,7 +590,10 @@ describe('伪造的请求（AC-11.7）', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    expect(replies()).toBe(0);
+    // 挡下来了：方法没有被执行。但不能就此静默——对面只会干等一整个超时，
+    // 末了报「没人应答」，那句话既慢又把排查引到通道故障上去
+    expect(replies()).toBe(1);
+    expect(reason).toContain('request-not-allowed');
   });
 
   it('老的 window.postMessage 通道已经不通了（DV-17）', async () => {
