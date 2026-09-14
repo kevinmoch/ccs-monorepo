@@ -18,7 +18,8 @@
  * ## 四条纪律
  *
  * 1. **只同源、只 GET**：跨源直链不碰，那等于拿用户的 cookie 替页面去别处取件。
- * 2. **只认 `%PDF-` 字节**：猜错的代价必须是「什么也没拿到」，
+ * 2. **只认字节自己说的格式**：`%PDF-`、`PK`+`ppt/presentation.xml`、`PK`+`[Content_Types].xml`
+ *    三选一，`Content-Type` 一律不作数。猜错的代价必须是「什么也没拿到」，
  *    而不是「拿了一份别的东西冒充这份文档」。
  * 3. **链接本身不出这一帧**：那条 URL 里带着 `requestkey`，是**凭据**（分册 13 §4.1）。
  *    只把字节交出去；URL 不进日志、不进审计、不进错误消息。
@@ -77,10 +78,7 @@ export function findOriginalFileLinks(): string[] {
   return found;
 }
 
-async function fetchOriginal(
-  href: string,
-  accept: (bytes: Uint8Array) => boolean
-): Promise<Uint8Array | undefined> {
+async function fetchOriginal(href: string, accept: (bytes: Uint8Array) => boolean): Promise<Uint8Array | undefined> {
   const response = await fetch(href, { method: 'GET', credentials: 'include' });
   if (!response.ok) return undefined;
   const length = response.headers.get('content-length');
@@ -123,10 +121,32 @@ async function takeLinked(accept: (bytes: Uint8Array) => boolean): Promise<Uint8
 
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04];
 const PRESENTATION_ENTRY = 'ppt/presentation.xml';
+const CONTENT_TYPES_ENTRY = '[Content_Types].xml';
 
 export function looksLikePresentation(bytes: Uint8Array): boolean {
   if (!ZIP_MAGIC.every((byte, index) => bytes[index] === byte)) return false;
   return containsAscii(bytes, PRESENTATION_ENTRY);
+}
+
+/**
+ * 在线模板的原件（0.22.0 分册 42 FR-42.12 ～ FR-42.15）。
+ *
+ * 与 PDF、幻灯片共用同一批候选链接和同一套纪律，只是收件标准放宽到 OOXML：
+ * `PK\x03\x04` 开头**且**包内含 `[Content_Types].xml`。后一半不能省——
+ * 光看 zip 魔数会把页面上任意一个压缩包当成 Office 文件交出去，
+ * 那就违反了「猜错的代价是什么也没拿到，不是拿一份别的东西冒充」这条纪律。
+ *
+ * 真正是 xlsx 还是 docx 由下游按部件名判（`sniffDocumentFormat`）：
+ * 这里多做一次判型只会多一份要跟着改的口径。
+ */
+export function looksLikeOoxml(bytes: Uint8Array): boolean {
+  if (!ZIP_MAGIC.every((byte, index) => bytes[index] === byte)) return false;
+  return containsAscii(bytes, CONTENT_TYPES_ENTRY);
+}
+
+/** 逐条试，第一条取到 Office 原件就停；全试完没有就返回 `undefined`，上层明说拿不到 */
+export async function takeLinkedOoxml(): Promise<Uint8Array | undefined> {
+  return await takeLinked(looksLikeOoxml);
 }
 
 function containsAscii(bytes: Uint8Array, needle: string): boolean {

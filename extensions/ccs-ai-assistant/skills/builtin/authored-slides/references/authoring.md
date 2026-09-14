@@ -73,7 +73,7 @@ authored-slides__publish({ deck, dataSource })
 `single` 里只放一个 `paragraph` 会被挡回——那正是「一页三行字」的典型形态。
 要么补上它在描述的那张图改用 `split`，要么把话拆成 `bullets` 并写进 `takeaway`。
 
-## 六种正文块
+## 七种正文块
 
 每个槽位是一个 `{ "type": "..." }` 对象。文字里唯一的内联样式是 `**加粗**`，
 不要用别的 markdown 记号。
@@ -110,6 +110,32 @@ authored-slides__publish({ deck, dataSource })
 ```
 
 一页最多约 8 行，多了就归并或拆成两页。每行单元格数必须等于 `columns` 长度。
+
+### image —— 图片
+
+```json
+{
+  "type": "image",
+  "ref": "artifact:capture-1.png",
+  "alt": "经营看板上的季度营收趋势图",
+  "caption": "截图时间 2024-10-09"
+}
+```
+
+形状与 authored-bulletin 的 image 块**完全一致**，不是另一套字段。
+
+`ref` 指向**已经存在**的一张图，三种前缀：
+
+| 前缀        | 指向                                   | 从哪拿到这个值                |
+| ----------- | -------------------------------------- | ----------------------------- |
+| `artifact:` | 本次任务里已经产出的图片（如页面截图） | 取像工具的返回值              |
+| `upload:`   | 用户这次会话上传的图片                 | `listUploadFiles()` 给出的 id |
+| `remote:`   | 一个外链 URL（宿主抓不到字节时的降级） | 宿主告诉你要用这种形式时才用  |
+
+`alt` 是**必填**的替代文本。**不要**写 `width` / `height` / `mimeType`，
+那些由宿主从图片字节里量出来，写了会被挡回。图片占满槽位，等比缩放不裁切。
+
+一张图算一个“有数据的槽位”：整份只有图片而没有图表表格，也不会被当成空片挡回。
 
 ### metrics —— 指标卡
 
@@ -254,6 +280,7 @@ authored-slides__publish({ deck, dataSource })
 - `single` 页里只有一个 `paragraph`；
 - 整份一页数据都没有（全是文字要点）；
 - 图表的 `values` 长度和 `labels` 对不上，或者写成了字符串；
-- 表格某一行的单元格数和 `columns` 对不上。
+- 表格某一行的单元格数和 `columns` 对不上；
+- 图片没写 `ref` 或 `alt`，`ref` 没带前缀，或者自己写了 `width` / `height` / `mimeType`。
 
 按提示改完再调一次即可，不必重新取数。

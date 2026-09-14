@@ -16,6 +16,7 @@ import {
   type ExportRun,
   type TableProps
 } from './extract';
+import type { DocImage } from './image';
 import { OmissionCounter, mergeOmissions } from './omissions';
 
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
@@ -190,28 +191,29 @@ export async function encodePptx(doc: ExportDoc): Promise<EncodedDocument> {
     return out;
   }
 
-  /** 手写 HTML 那条路没有槽位；图表与表格各占一块，其余文字合成一块 */
+  /** 手写 HTML 那条路没有槽位；图表、表格与图片各占一块，其余文字合成一块 */
   function fallbackRegions(blocks: readonly ExportBlock[]): ExportBlock[][] {
-    const text = blocks.filter((block) => block.kind !== 'chart' && block.kind !== 'table');
+    const text = blocks.filter((block) => !SOLO_KINDS.has(block.kind));
     const regions: ExportBlock[][] = [];
     if (text.length > 0) regions.push(text);
     for (const block of blocks) {
-      if (block.kind === 'chart' || block.kind === 'table') regions.push([block]);
+      if (SOLO_KINDS.has(block.kind)) regions.push([block]);
     }
     return regions.length > 0 ? regions : [[]];
   }
 
   function renderRegion(slide: Slide, blocks: readonly ExportBlock[], box: Box): void {
-    const chartOrTable = blocks.find((block) => block.kind === 'chart' || block.kind === 'table');
+    const solo = blocks.find((block) => SOLO_KINDS.has(block.kind));
     const metrics = blocks.find((block) => block.kind === 'metrics');
-    const text = blocks.filter((block) => block.kind !== 'chart' && block.kind !== 'table' && block.kind !== 'metrics');
-    if (chartOrTable !== undefined) {
+    const text = blocks.filter((block) => !SOLO_KINDS.has(block.kind) && block.kind !== 'metrics');
+    if (solo !== undefined) {
       const lead = text.filter((block) => block.kind === 'heading');
       const head = lead.length > 0 ? 0.5 : 0;
       if (head > 0) addTextBand(slide, lead, { ...box, h: head }, theme);
       const rest = { x: box.x, y: box.y + head, w: box.w, h: box.h - head };
-      if (chartOrTable.kind === 'table') addTable(slide, chartOrTable.props, rest, theme);
-      else addChartBlock(slide, chartOrTable.props, rest);
+      if (solo.kind === 'table') addTable(slide, solo.props, rest, theme);
+      else if (solo.kind === 'image') addDocImage(slide, solo.image, solo.caption, rest, theme);
+      else if (solo.kind === 'chart') addChartBlock(slide, solo.props, rest);
       return;
     }
     if (metrics !== undefined && metrics.kind === 'metrics') {
@@ -269,8 +271,42 @@ type Box = { x: number; y: number; w: number; h: number };
 type Theme = { background: string; text: string; muted: string; accent: string; surface: string };
 type Slide = ReturnType<InstanceType<typeof import('pptxgenjs').default>['addSlide']>;
 
+/** 各自独占一个槽位的块：它们都是矩形占位，塞不进一个文本框 */
+const SOLO_KINDS = new Set<ExportBlock['kind']>(['chart', 'table', 'image']);
+
 /** 抽取层不知道 pptxgenjs 支持什么，所以受支持的类型清单只能长在这里 */
 const CHART_TYPES = new Set(['bar', 'line', 'area', 'pie', 'scatter', 'stacked-bar', 'dual-axis']);
+
+/**
+ * 文档图（FR-14.4）。按区域框**等比**适配：拉伸变形的图比小一点的图更难看，
+ * 而版式本来就不要求与屏幕一致（0.21.0 分册 15 §2.1a）。
+ */
+function addDocImage(slide: Slide, image: DocImage, caption: string | undefined, box: Box, theme: Theme): void {
+  const foot = caption === undefined ? 0 : 0.34;
+  const area = { ...box, h: box.h - foot };
+  const scale = Math.min(area.w / image.width, area.h / image.height);
+  const w = image.width * scale;
+  const h = image.height * scale;
+  slide.addImage({
+    data: image.url,
+    ...(image.alt === '' ? {} : { altText: image.alt }),
+    x: area.x + (area.w - w) / 2,
+    y: area.y + (area.h - h) / 2,
+    w,
+    h
+  });
+  if (caption !== undefined) {
+    slide.addText(caption, {
+      x: box.x,
+      y: box.y + box.h - foot,
+      w: box.w,
+      h: foot,
+      fontSize: 12,
+      color: theme.muted,
+      align: 'center'
+    } as never);
+  }
+}
 
 function addMetrics(
   slide: Slide,

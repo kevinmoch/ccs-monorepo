@@ -52,6 +52,20 @@ export interface AuthoredTable {
 }
 
 /**
+ * 图片块（0.22.0 FR-11.1 / FR-11.2）。公文与幻灯片共用同一个形状。
+ *
+ * 没有 `width` / `height` / `mimeType`：那些是**事实**，而技能写进来的只能是**声明**。
+ * 像素数是投放预算的硬兜底维度（FR-10.7），让模型自报等于让被限制方自报限额。
+ */
+export interface AuthoredImage {
+  /** 图片引用：`artifact:` / `upload:` / `remote:` 前缀 + 受限段 */
+  ref: string;
+  /** 替代文本。丢图时它是唯一留得下的线索，所以不兜默认值 */
+  alt: string;
+  caption?: string;
+}
+
+/**
  * 正文块。`text` 字段里 `**…**` 表示加粗——这是模型能表达的**唯一**内联样式，
  * 屏幕与 OOXML 两侧都还原得出来，所以它不是妥协，是刻意收窄的交集。
  */
@@ -61,6 +75,7 @@ export type AuthoredBlock =
   | { type: 'list'; ordered?: boolean; items: string[] }
   | ({ type: 'table' } & AuthoredTable)
   | ({ type: 'chart' } & AuthoredChart)
+  | ({ type: 'image' } & AuthoredImage)
   | { type: 'metrics'; items: AuthoredMetric[] }
   | { type: 'keyValue'; title?: string; items: AuthoredMetaItem[] }
   | { type: 'callout'; tone?: 'info' | 'success' | 'warning' | 'danger'; title?: string; text: string }
@@ -96,6 +111,7 @@ export interface AuthoredDocumentModel {
 export type AuthoredSlideItem =
   | ({ type: 'chart' } & AuthoredChart)
   | ({ type: 'table' } & AuthoredTable)
+  | ({ type: 'image' } & AuthoredImage)
   | { type: 'metrics'; items: AuthoredMetric[] }
   | { type: 'keyValue'; title?: string; items: AuthoredMetaItem[] }
   | { type: 'bullets'; title?: string; items: string[] }
@@ -221,6 +237,8 @@ function slideItem(raw: unknown): AuthoredSlideItem | undefined {
       return chartOf(entry);
     case 'table':
       return tableOf(entry);
+    case 'image':
+      return imageOf(entry);
     case 'metrics':
       return { type: 'metrics', items: metricList(entry['items']) };
     case 'keyValue': {
@@ -272,6 +290,8 @@ function blockOf(raw: unknown): AuthoredBlock | undefined {
       return tableOf(entry);
     case 'chart':
       return chartOf(entry);
+    case 'image':
+      return imageOf(entry);
     case 'metrics':
       return { type: 'metrics', items: metricList(entry['items']) };
     case 'keyValue': {
@@ -323,6 +343,21 @@ function tableOf(entry: Record<string, unknown>): { type: 'table' } & AuthoredTa
   return block;
 }
 
+/**
+ * `ref` 与 `alt` 缺一即整块判畸形（FR-11.4），不兜默认值。
+ * 空 `alt` 与没有 `alt` 是同一件事：丢图时什么都不剩，而那正是本版要消灭的形态。
+ */
+function imageOf(entry: Record<string, unknown>): ({ type: 'image' } & AuthoredImage) | undefined {
+  const ref = entry['ref'];
+  const alt = entry['alt'];
+  if (typeof ref !== 'string' || ref === '') return undefined;
+  if (typeof alt !== 'string' || alt === '') return undefined;
+  const block: { type: 'image' } & AuthoredImage = { type: 'image', ref, alt };
+  const caption = text(entry['caption']);
+  if (caption !== '') block.caption = caption;
+  return block;
+}
+
 function chartOf(entry: Record<string, unknown>): { type: 'chart' } & AuthoredChart {
   const block: { type: 'chart' } & AuthoredChart = {
     type: 'chart',
@@ -349,7 +384,9 @@ function cellRow(raw: unknown): (string | number | boolean | null)[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((cell) => {
     if (cell === null || typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') return cell;
-    return String(cell ?? '');
+    // 对象/数组落到这儿只能是模型给错了形状。`String(它)` 会在正文里印出
+    // `[object Object]`——一份版式完好、读不成句的文档比空格难查得多
+    return '';
   });
 }
 

@@ -16,7 +16,10 @@ import type { FileSystemProvider } from '@webskill/core';
 const MANIFEST: Record<string, readonly string[]> = {
   'authored-bulletin': ['SKILL.md', 'references/authoring.md', 'scripts/publish.js'],
   'authored-screen': ['SKILL.md', 'references/authoring.md', 'scripts/publish.js'],
-  'authored-slides': ['SKILL.md', 'references/authoring.md', 'scripts/publish.js']
+  'authored-slides': ['SKILL.md', 'references/authoring.md', 'scripts/publish.js'],
+  // 编排型技能，只有一份 SKILL.md：脚本沙箱够不到 `view_dwg`，
+  // 图纸几何也刻意不进模型上下文，所以它能做的只有编排与纪律（FR-19.13）
+  'dwg-view': ['SKILL.md']
 };
 
 /**

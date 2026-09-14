@@ -23,7 +23,7 @@
 
 import { dispatchBridgeEvent, readBridgeEvent } from '../../shared/domBridge';
 import { frameIndexInTop } from '../../shared/frameIndex';
-import { takeLinkedPdf, takeLinkedPresentation } from './webOfficeFileLink';
+import { takeLinkedOoxml, takeLinkedPdf, takeLinkedPresentation } from './webOfficeFileLink';
 import { takeSniffedPdf } from './webOfficePdfSniffer';
 import {
   WEB_OFFICE_BRIDGE_CHANNEL,
@@ -817,6 +817,13 @@ function onBridgeMessage(event: Event): void {
     }
     if (request.kind === 'take-linked-presentation') {
       void takeLinkedPresentation().then(
+        (bytes) => reply(request.id, bytes === undefined ? undefined : Array.from(bytes)),
+        () => reply(request.id, undefined)
+      );
+      return;
+    }
+    if (request.kind === 'take-linked-ooxml') {
+      void takeLinkedOoxml().then(
         (bytes) => reply(request.id, bytes === undefined ? undefined : Array.from(bytes)),
         () => reply(request.id, undefined)
       );

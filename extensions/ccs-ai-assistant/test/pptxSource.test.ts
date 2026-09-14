@@ -17,9 +17,7 @@ const PKG = 'http://schemas.openxmlformats.org/package/2006/relationships';
 
 /** 一个形状：段落之间是换行，段落内的 run 直接相接 */
 function shape(...paragraphs: string[][]): string {
-  const body = paragraphs
-    .map((runs) => `<a:p>${runs.map((run) => `<a:t>${run}</a:t>`).join('')}</a:p>`)
-    .join('');
+  const body = paragraphs.map((runs) => `<a:p>${runs.map((run) => `<a:t>${run}</a:t>`).join('')}</a:p>`).join('');
   return `<p:sp xmlns:a="${A}"><p:txBody>${body}</p:txBody></p:sp>`;
 }
 
@@ -53,8 +51,7 @@ function pack(files: Record<string, string | Uint8Array>): Uint8Array {
   return zipSync(entries);
 }
 
-const read = async (files: Record<string, string | Uint8Array>) =>
-  await createPptxSourceReader().read(pack(files));
+const read = async (files: Record<string, string | Uint8Array>) => await createPptxSourceReader().read(pack(files));
 
 describe('pptx 原件解包（AC-12.17）', () => {
   it('包里没有 ppt/presentation.xml 的 zip 一页都读不出来', async () => {

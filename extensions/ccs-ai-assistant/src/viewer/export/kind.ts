@@ -17,7 +17,10 @@ export type ExportKind = 'pptx' | 'docx' | 'none';
 export const BUILTIN_EXPORT_KIND = {
   'authored-slides': 'pptx',
   'authored-bulletin': 'docx',
-  'authored-screen': 'none'
+  'authored-screen': 'none',
+  // 编排型技能（FR-19.13）：它自己不投任何 HTML，投放面由 `view_dwg` 出。
+  // 那是一张交互式图纸，导成 DOCX/PPTX 只会得到一张死图
+  'dwg-view': 'none'
 } as const satisfies Record<string, ExportKind>;
 
 /**

@@ -14,11 +14,7 @@
  */
 
 import { unzipSync, strFromU8 } from 'fflate';
-import type {
-  PresentationSourceDocument,
-  PresentationSourceReader,
-  PresentationSourceSlide
-} from '@webskill/browser';
+import type { PresentationSourceDocument, PresentationSourceReader, PresentationSourceSlide } from '@webskill/browser';
 
 const MAIN_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 /** 幻灯片自己的命名空间。`p:sldId` / `p:spTree` 在这里，不在 drawingml 里 */

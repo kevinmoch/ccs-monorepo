@@ -9,8 +9,10 @@
  */
 
 const CHART_TYPES = ['bar', 'line', 'area', 'pie', 'scatter', 'stacked-bar', 'dual-axis'];
-const ITEM_TYPES = ['chart', 'table', 'metrics', 'keyValue', 'bullets', 'paragraph'];
-const DATA_ITEMS = ['chart', 'table', 'metrics', 'keyValue'];
+const ITEM_TYPES = ['chart', 'table', 'image', 'metrics', 'keyValue', 'bullets', 'paragraph'];
+const DATA_ITEMS = ['chart', 'table', 'image', 'metrics', 'keyValue'];
+/** 图片引用的定位前缀；字节由引擎在投放前按引用填入，技能不搬运字节 */
+const IMAGE_REF_PREFIXES = ['artifact:', 'upload:', 'remote:'];
 const LAYOUTS = ['cover', 'section', 'single', 'split', 'grid', 'closing'];
 /** 需要正文槽位的版式；封面与过渡页不吃这套密度规则 */
 const CONTENT_LAYOUTS = ['single', 'split', 'grid', 'closing'];
@@ -77,7 +79,7 @@ function validate(deck, dataSource) {
   });
   if (issues.length === 0 && dataSlides === 0) {
     issues.push(
-      'not one slide carries a chart, table, metrics or keyValue; a deck made only of bullet points is exactly the sparse deck this skill exists to avoid — put the numbers you gathered on the slides'
+      'not one slide carries a chart, table, image, metrics or keyValue; a deck made only of bullet points is exactly the sparse deck this skill exists to avoid — put the numbers you gathered on the slides'
     );
   }
   return issues;
@@ -132,6 +134,9 @@ function itemIssues(item, at) {
       break;
     case 'table':
       for (const issue of tableIssues(item, at)) issues.push(issue);
+      break;
+    case 'image':
+      for (const issue of imageIssues(item, at)) issues.push(issue);
       break;
     case 'metrics':
       if (!Array.isArray(item.items) || item.items.length < 2) {
@@ -236,20 +241,49 @@ function chartIssues(block, at) {
   return issues;
 }
 
+/**
+ * 与公文侧同一份形状：只收引用与替代文本。
+ * 宽高与 MIME 是事实，由宿主侧解析时实测，不收声明。
+ */
+function imageIssues(item, at) {
+  const issues = [];
+  if (!isText(item.ref)) {
+    issues.push(`${at}.ref is required; point at an image artifact or an uploaded file`);
+  } else if (!IMAGE_REF_PREFIXES.some((prefix) => item.ref.startsWith(prefix))) {
+    issues.push(`${at}.ref "${item.ref}" needs one of these prefixes: ${IMAGE_REF_PREFIXES.join(', ')}`);
+  }
+  if (!isText(item.alt)) {
+    issues.push(`${at}.alt is required; it is the only thing left if the image cannot be loaded`);
+  }
+  if (item.width !== undefined || item.height !== undefined || item.mimeType !== undefined) {
+    issues.push(`${at} must not declare width, height or mimeType; the host measures them from the bytes`);
+  }
+  return issues;
+}
+
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
+
+/**
+ * 正文里的一句话只收标量。放富文本对象（或对象数组）过去，
+ * `String(值)` 会在投放页面上印出 `[object Object]`——版式完好只是读不成句，比报错难查。
+ */
+const isScalar = (value) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 
 // ---------------------------------------------------------------- 渲染
 
 const escapeText = (value) =>
-  String(value === undefined || value === null ? '' : value)
+  String(isScalar(value) ? value : '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
 const escapeAttr = (value) => JSON.stringify(value).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/</g, '&lt;');
 
+/** 文本进双引号属性：比 escapeText 多挡两种引号，否则 alt 里一个引号就能拆开标签 */
+const escapeAttrText = (value) => escapeText(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 function inline(text) {
-  const parts = String(text).split('**');
+  const parts = String(isScalar(text) ? text : '').split('**');
   return parts
     .map((part, index) => (index % 2 === 1 ? `<strong>${escapeText(part)}</strong>` : escapeText(part)))
     .join('');
@@ -331,6 +365,12 @@ function renderItem(item) {
       const caption = isText(item.caption) ? `<p class="deck__caption">${escapeText(item.caption)}</p>` : '';
       return `${heading}<div class="deck__table" data-webskill-component="Table" data-webskill-props='${escapeAttr(props)}'></div>${caption}`;
     }
+    case 'image': {
+      // 故意不写 src：字节由引擎在投放前按 data-webskill-image 填入
+      const caption = isText(item.caption) ? `<p class="deck__caption">${escapeText(item.caption)}</p>` : '';
+      const img = `<img class="deck__image" data-webskill-image="${escapeAttrText(item.ref)}" alt="${escapeAttrText(item.alt)}" />`;
+      return `${img}${caption}`;
+    }
     case 'metrics': {
       const cells = item.items
         .map((one) => {
@@ -394,6 +434,7 @@ const CSS = [
   '.deck.reveal .deck__slot { display: flex; flex-direction: column; gap: 16px; min-height: 0; min-width: 0; background: var(--deck-surface); border: 1px solid var(--deck-border); border-radius: 14px; padding: 28px 32px; }',
   '.deck.reveal .deck__slottitle { margin: 0; font-size: 32px; font-weight: 700; color: var(--deck-accent); }',
   '.deck.reveal .deck__chart { flex: 1 1 auto; min-height: 0; }',
+  '.deck.reveal .deck__image { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain; }',
   '.deck.reveal .deck__caption { margin: 0; font-size: 22px; color: var(--deck-muted); }',
   '.deck.reveal .deck__para { margin: 0; font-size: 30px; line-height: 1.7; color: var(--deck-text); }',
   '.deck.reveal .deck__bullets { margin: 0; padding-left: 1.2em; font-size: 32px; line-height: 1.75; color: var(--deck-text); }',

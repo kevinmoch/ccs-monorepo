@@ -17,12 +17,16 @@ export function pageAgentEnvelope(request: PageAgentRequest): PageAgentEnvelope 
   return { channel: PAGE_AGENT_CHANNEL, request };
 }
 
+/** 信封守卫认得的请求类型。漏一个的后果不是「那条消息被拒」，而是内容脚本的监听器
+ *  返回 false、通道立刻关闭，发起方收到 `undefined`，报出来的却是「回包不是应答」 */
+const REQUEST_TYPES: ReadonlySet<string> = new Set(['perceive', 'execute', 'capture-image']);
+
 export function isPageAgentEnvelope(value: unknown): value is PageAgentEnvelope {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as { channel?: unknown; request?: unknown };
   if (candidate.channel !== PAGE_AGENT_CHANNEL) return false;
   const request = candidate.request as { type?: unknown } | undefined;
-  return typeof request === 'object' && request !== null && (request.type === 'perceive' || request.type === 'execute');
+  return typeof request === 'object' && request !== null && REQUEST_TYPES.has(request.type as string);
 }
 
 /**
@@ -44,6 +48,14 @@ export function pageAgentResponse(reply: PageAgentReply, documentUrl: string): P
   return { channel: PAGE_AGENT_CHANNEL, reply, documentUrl };
 }
 
+/** 与 `REQUEST_TYPES` 一一对应：每多一种请求就多一种回包，两张表要一起改 */
+const REPLY_TYPES: ReadonlySet<string> = new Set([
+  'perceive-result',
+  'execute-result',
+  'capture-image-result',
+  'error'
+]);
+
 export function isPageAgentResponse(value: unknown): value is PageAgentResponse {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as { channel?: unknown; reply?: unknown; documentUrl?: unknown };
@@ -56,7 +68,7 @@ export function isPageAgentResponse(value: unknown): value is PageAgentResponse 
 export function isPageAgentReply(value: unknown): value is PageAgentReply {
   if (typeof value !== 'object' || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === 'perceive-result' || type === 'execute-result' || type === 'error';
+  return REPLY_TYPES.has(type as string);
 }
 
 /**
@@ -177,7 +189,8 @@ export interface WebOfficeRequest {
     | 'take-pdf'
     | 'take-frame-pdf'
     | 'take-linked-pdf'
-    | 'take-linked-presentation';
+    | 'take-linked-presentation'
+    | 'take-linked-ooxml';
   handle?: string;
   method?: string;
   args?: readonly unknown[];
@@ -205,7 +218,7 @@ export function isWebOfficeRequest(value: unknown): value is WebOfficeRequest {
   };
   if (candidate.channel !== WEB_OFFICE_CHANNEL) return false;
   if (candidate.kind === 'list' || candidate.kind === 'take-linked-pdf') return true;
-  if (candidate.kind === 'take-linked-presentation') return true;
+  if (candidate.kind === 'take-linked-presentation' || candidate.kind === 'take-linked-ooxml') return true;
   if (candidate.kind === 'take-frame-pdf') return typeof candidate.frameIndex === 'number';
   if (candidate.kind === 'describe' || candidate.kind === 'scroll' || candidate.kind === 'take-pdf') {
     return typeof candidate.handle === 'string';

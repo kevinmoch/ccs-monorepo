@@ -9,8 +9,10 @@ import { WebSkillError } from '@webskill/core';
 import { VIEWER_COMPONENT_ATTR } from '@webskill/ui';
 import type { ViewerNotice } from '../toast';
 import { encodeDocx } from './docx';
+import { downloadBlob } from './download';
 import { extractExportDoc, type ChartImage } from './extract';
 import { sanitizeExportFilename, sanitizeExportName } from './filename';
+import type { DocImage } from './image';
 import { classifyExportKind, exportRootOf, type ExportKind } from './kind';
 import { describeOmissions } from './omissions';
 
@@ -19,7 +21,7 @@ export interface ExportUi {
   label: HTMLElement;
   /** 结果说给谁听。这里只管说什么，收不收起是提示条自己的事 */
   notice: ViewerNotice;
-  /** 活 DOM 的根。导出读的是投放时那份 HTML，只有图表画布必须从活节点上取 */
+  /** 活 DOM 的根。导出读的是投放时那份 HTML，只有图表画布与图片尺寸必须从活节点上取 */
   live?: ParentNode;
 }
 
@@ -85,7 +87,7 @@ async function run(
   ui.label.textContent = TEXT.busy[zh ? 'zh' : 'en'];
   ui.notice.show('');
   try {
-    const doc = extractExportDoc(html, { chartImages: chartImagesOf(ui.live) });
+    const doc = extractExportDoc(html, { chartImages: chartImagesOf(ui.live), docImages: docImagesOf(ui.live), zh });
     // 编码器按需加载：不点导出的人不该为 1.5 MB 的 OOXML 库付一次下载
     const encoded = kind === 'pptx' ? await (await import('./pptx')).encodePptx(doc) : await encodeDocx(doc);
     const filename = sanitizeExportFilename(doc.title, kind);
@@ -104,26 +106,9 @@ async function run(
 }
 
 /**
- * 三个刻意的决定：
- * 1. 不 `appendChild`——不入 DOM 也能触发，入了反而要在技能文档里塞一个临时节点；
- * 2. 延后 revoke——立刻 revoke 会在慢机器上撤掉还没读完的 blob；
- * 3. 这里**只知道自己发起了下载**。sandbox 页拿不到下载结果，
- *    所以调用方永远只能说「已生成」，不能说「已下载」（FR-15.9 第 4 条）。
- */
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = 'noopener';
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
-
-/**
  * 屏幕上每张图表画布的快照，按文档顺序。
  *
- * 这是整条导出链路里**唯一**读活 DOM 的地方，因为图只存在于画布里，
+ * 这与 `docImagesOf` 是整条导出链路里仅有的两处读活 DOM 的地方，因为图只存在于画布里，
  * 投放时那份 HTML 上只有一个空占位。取不到就返回空位，编码器自会降级成数据表。
  */
 function chartImagesOf(live: ParentNode | undefined): ChartImage[] {
@@ -141,6 +126,31 @@ function chartImagesOf(live: ParentNode | undefined): ChartImage[] {
       // 画布被污染就取不出像素；这不是错误，降级成数据表即可
       out.push({ url: '', width: 0, height: 0 });
     }
+  }
+  return out;
+}
+
+/**
+ * 屏幕上每张文档图的字节与实测尺寸，按文档顺序（FR-14.3 / FR-14.4）。
+ *
+ * 尺寸只有活 DOM 上才有：投放时那份 HTML 的 `<img>` 不带宽高，而 `naturalWidth`
+ * 要等图解码完才成立。失败占位（`.wsdoc__image-missing`）也要占一个位——
+ * 结构化投放按顺序把这份清单配回图片块，少一个就整条错位。
+ */
+function docImagesOf(live: ParentNode | undefined): DocImage[] {
+  if (!live) return [];
+  const out: DocImage[] = [];
+  for (const node of Array.from(live.querySelectorAll('img, .wsdoc__image-missing'))) {
+    if (!(node instanceof HTMLImageElement)) {
+      out.push({ url: '', width: 0, height: 0, alt: '' });
+      continue;
+    }
+    out.push({
+      url: node.currentSrc === '' ? node.src : node.currentSrc,
+      width: node.naturalWidth,
+      height: node.naturalHeight,
+      alt: node.alt
+    });
   }
   return out;
 }

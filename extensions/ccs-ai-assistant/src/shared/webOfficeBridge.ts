@@ -85,6 +85,8 @@ export type WebOfficeBridgePayload =
   | { kind: 'take-linked-pdf' }
   /** 同上，但收件标准是演示文稿包（FR-12.4d） */
   | { kind: 'take-linked-presentation' }
+  /** 同上，但收件标准是 OOXML 包（分册 42 FR-42.13）：把在线模板的原件字节取回来 */
+  | { kind: 'take-linked-ooxml' }
   /** 取本帧嗅到的 PDF。不带 localId：发到哪一帧就是那一帧的字节（DV-18） */
   | { kind: 'take-frame-pdf' };
 
@@ -103,7 +105,7 @@ export function isWebOfficeBridgeRequest(value: unknown): value is WebOfficeBrid
   if (c.channel !== WEB_OFFICE_BRIDGE_CHANNEL || typeof c.id !== 'number') return false;
   if (c.kind === 'enumerate' || c.kind === 'describe' || c.kind === 'scroll') return true;
   if (c.kind === 'take-pdf' || c.kind === 'take-frame-pdf' || c.kind === 'take-linked-pdf') return true;
-  if (c.kind === 'take-linked-presentation') return true;
+  if (c.kind === 'take-linked-presentation' || c.kind === 'take-linked-ooxml') return true;
   // 方法白名单挡在**入口**：放进 dispatch 里判，一个漏掉的分支就是任意方法调用
   return c.kind === 'call' && typeof c.method === 'string' && WEB_OFFICE_READ_METHOD_MIRROR.includes(c.method);
 }

@@ -17,6 +17,7 @@ const BLOCK_TYPES = [
   'list',
   'table',
   'chart',
+  'image',
   'metrics',
   'keyValue',
   'callout',
@@ -25,6 +26,8 @@ const BLOCK_TYPES = [
   'pageBreak'
 ];
 const TONES = ['info', 'success', 'warning', 'danger'];
+/** 图片引用的定位前缀；字节由引擎在投放前按引用填入，技能不搬运字节 */
+const IMAGE_REF_PREFIXES = ['artifact:', 'upload:', 'remote:'];
 
 /** 屏幕与另存件共用的一组取色；写进模型里带走，编码器不再自己配色 */
 const PALETTE = {
@@ -89,13 +92,22 @@ function blockIssues(block, at) {
       if (!isText(block.text)) issues.push(`${at}.text is required`);
       break;
     case 'list':
-      if (!Array.isArray(block.items) || block.items.length === 0) issues.push(`${at}.items must be a non-empty array`);
+      if (!Array.isArray(block.items) || block.items.length === 0) {
+        issues.push(`${at}.items must be a non-empty array`);
+      } else {
+        block.items.forEach((item, i) => {
+          if (!isScalar(item)) issues.push(notScalar(`${at}.items[${i}]`));
+        });
+      }
       break;
     case 'table':
       for (const issue of tableIssues(block, at)) issues.push(issue);
       break;
     case 'chart':
       for (const issue of chartIssues(block, at)) issues.push(issue);
+      break;
+    case 'image':
+      for (const issue of imageIssues(block, at)) issues.push(issue);
       break;
     case 'metrics':
       if (!Array.isArray(block.items) || block.items.length === 0) {
@@ -107,12 +119,27 @@ function blockIssues(block, at) {
           if (!item || !isText(item.label)) issues.push(`${at}.items[${i}].label is required`);
           if (!item || item.value === undefined || item.value === null) {
             issues.push(`${at}.items[${i}].value is required`);
+          } else if (!isScalar(item.value)) {
+            issues.push(notScalar(`${at}.items[${i}].value`));
           }
         });
       }
       break;
     case 'keyValue':
-      if (!Array.isArray(block.items) || block.items.length === 0) issues.push(`${at}.items must be a non-empty array`);
+      if (!Array.isArray(block.items) || block.items.length === 0) {
+        issues.push(`${at}.items must be a non-empty array`);
+      } else {
+        block.items.forEach((item, i) => {
+          if (typeof item !== 'object' || item === null) {
+            issues.push(`${at}.items[${i}] must be an object with a label and a value`);
+            return;
+          }
+          if (!isText(item.label)) issues.push(`${at}.items[${i}].label is required`);
+          if (item.value !== undefined && item.value !== null && !isScalar(item.value)) {
+            issues.push(notScalar(`${at}.items[${i}].value`));
+          }
+        });
+      }
       break;
     case 'callout':
       if (!isText(block.text)) issues.push(`${at}.text is required`);
@@ -139,6 +166,9 @@ function tableIssues(block, at) {
     issues.push(`${at}.rows must be a non-empty array`);
     return issues;
   }
+  block.columns.forEach((column, i) => {
+    if (!isScalar(column)) issues.push(notScalar(`${at}.columns[${i}]`));
+  });
   block.rows.forEach((row, i) => {
     if (!Array.isArray(row)) {
       issues.push(`${at}.rows[${i}] must be an array of cells`);
@@ -147,6 +177,9 @@ function tableIssues(block, at) {
     if (row.length !== block.columns.length) {
       issues.push(`${at}.rows[${i}] has ${row.length} cells but there are ${block.columns.length} columns`);
     }
+    row.forEach((cell, j) => {
+      if (cell !== null && !isScalar(cell)) issues.push(notScalar(`${at}.rows[${i}][${j}]`));
+    });
   });
   return issues;
 }
@@ -158,6 +191,10 @@ function chartIssues(block, at) {
   }
   if (!Array.isArray(block.labels) || block.labels.length === 0) {
     issues.push(`${at}.labels must be a non-empty array`);
+  } else {
+    block.labels.forEach((label, i) => {
+      if (!isScalar(label)) issues.push(notScalar(`${at}.labels[${i}]`));
+    });
   }
   if (!Array.isArray(block.series) || block.series.length === 0) {
     issues.push(`${at}.series must be a non-empty array`);
@@ -183,22 +220,57 @@ function chartIssues(block, at) {
   return issues;
 }
 
+/**
+ * 宽高与 MIME 一律不收：那些是**事实**，由宿主侧解析时实测。
+ * 像素数是投放载荷预算的硬兜底维度，让技能自报等于让被限制方自报限额。
+ */
+function imageIssues(block, at) {
+  const issues = [];
+  if (!isText(block.ref)) {
+    issues.push(`${at}.ref is required; point at an image artifact or an uploaded file`);
+  } else if (!IMAGE_REF_PREFIXES.some((prefix) => block.ref.startsWith(prefix))) {
+    issues.push(`${at}.ref "${block.ref}" needs one of these prefixes: ${IMAGE_REF_PREFIXES.join(', ')}`);
+  }
+  if (!isText(block.alt)) {
+    issues.push(`${at}.alt is required; it is the only thing left if the image cannot be loaded`);
+  }
+  if (block.width !== undefined || block.height !== undefined || block.mimeType !== undefined) {
+    issues.push(`${at} must not declare width, height or mimeType; the host measures them from the bytes`);
+  }
+  return issues;
+}
+
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
+
+/**
+ * 正文里的一格、一条、一个值，只收标量。
+ * 放富文本对象（或对象数组）过去的代价是 `String(值)` 在投放页面上印出 `[object Object]`：
+ * 文档看着正常、版式完好，只是读不成句——这比当场报错难查得多。
+ */
+const isScalar = (value) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+
+const notScalar = (at) =>
+  `${at} must be a string, number or boolean. Rich-text objects and arrays are not accepted here; ` +
+  'flatten them into plain text first and use "**bold**" if you need emphasis.';
 
 // ---------------------------------------------------------------- 渲染
 
-const escapeText = (value) =>
-  String(value === undefined || value === null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+const escapeText = (value) => scalarText(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** 和 escapeText 同一个口径，只是不转义：给进 JSON 属性的值用 */
+function scalarText(value) {
+  return String(isScalar(value) ? value : '');
+}
 
 /** JSON 进单引号属性：双引号原样保留，只需处理 & 与 ' */
 const escapeAttr = (value) => JSON.stringify(value).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/</g, '&lt;');
 
+/** 文本进双引号属性：比 escapeText 多挡两种引号，否则 alt 里一个引号就能拆开标签 */
+const escapeAttrText = (value) => escapeText(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 /** `**粗体**` 是模型能表达的唯一内联样式；两侧都还原得出来，所以只放这一种 */
 function inline(text) {
-  const parts = String(text).split('**');
+  const parts = scalarText(text).split('**');
   return parts
     .map((part, index) => (index % 2 === 1 ? `<strong>${escapeText(part)}</strong>` : escapeText(part)))
     .join('');
@@ -217,7 +289,7 @@ function normalise(doc) {
   if (Array.isArray(doc.meta) && doc.meta.length > 0) {
     model.meta = doc.meta
       .filter((item) => item && isText(item.label))
-      .map((item) => ({ label: String(item.label), value: String(item.value === undefined ? '' : item.value) }));
+      .map((item) => ({ label: scalarText(item.label), value: scalarText(item.value) }));
   }
   if (docType === 'official' && doc.official) {
     const official = { issuer: String(doc.official.issuer).trim() };
@@ -284,22 +356,28 @@ function renderBlock(block) {
       return `<${tag} class="wsdoc__list">${items}</${tag}>`;
     }
     case 'table': {
-      const props = { columns: block.columns.map(String), rows: block.rows };
+      const props = { columns: block.columns.map(scalarText), rows: block.rows };
       if (Array.isArray(block.columnWidths)) props.columnWidths = block.columnWidths;
       const title = isText(block.title) ? `<p class="wsdoc__blocktitle">${escapeText(block.title)}</p>` : '';
       const caption = isText(block.caption) ? `<figcaption>${escapeText(block.caption)}</figcaption>` : '';
       return `<figure class="wsdoc__figure">${title}<div class="wsdoc__table" data-webskill-component="Table" data-webskill-props='${escapeAttr(props)}'></div>${caption}</figure>`;
     }
     case 'chart': {
-      const props = { type: block.chartType, labels: block.labels.map(String), series: block.series };
+      const props = { type: block.chartType, labels: block.labels.map(scalarText), series: block.series };
       if (isText(block.title)) props.title = block.title;
       const caption = isText(block.caption) ? `<figcaption>${escapeText(block.caption)}</figcaption>` : '';
       return `<figure class="wsdoc__figure"><div class="wsdoc__chart" data-webskill-component="Chart" data-webskill-props='${escapeAttr(props)}'></div>${caption}</figure>`;
     }
+    case 'image': {
+      // 故意不写 src：字节由引擎在投放前按 data-webskill-image 填入
+      const caption = isText(block.caption) ? `<figcaption>${escapeText(block.caption)}</figcaption>` : '';
+      const img = `<img class="wsdoc__image" data-webskill-image="${escapeAttrText(block.ref)}" alt="${escapeAttrText(block.alt)}" />`;
+      return `<figure class="wsdoc__figure">${img}${caption}</figure>`;
+    }
     case 'metrics': {
       const cells = block.items
         .map((item) => {
-          const props = { label: String(item.label), value: item.value };
+          const props = { label: scalarText(item.label), value: item.value };
           if (isText(item.change)) props.change = item.change;
           if (item.trend) props.trend = item.trend;
           return `<div class="wsdoc__metric" data-webskill-component="Metric" data-webskill-props='${escapeAttr(props)}'></div>`;
@@ -310,8 +388,8 @@ function renderBlock(block) {
     case 'keyValue': {
       const props = {
         items: block.items.map((item) => ({
-          label: String(item.label === undefined ? '' : item.label),
-          value: String(item.value === undefined ? '' : item.value)
+          label: scalarText(item.label),
+          value: scalarText(item.value)
         }))
       };
       const title = isText(block.title) ? `<p class="wsdoc__blocktitle">${escapeText(block.title)}</p>` : '';
@@ -363,6 +441,7 @@ const CSS = [
   '.wsdoc__figure { margin: 18px 0; break-inside: avoid; }',
   '.wsdoc__blocktitle { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: #5c6b7f; }',
   '.wsdoc__chart { height: 300px; }',
+  '.wsdoc__image { display: block; max-width: 100%; height: auto; margin: 0 auto; }',
   '.wsdoc__figure figcaption { margin-top: 8px; font-size: 13px; color: #5c6b7f; text-align: center; }',
   '.wsdoc table { width: 100%; border-collapse: collapse; font-size: 14px; }',
   '.wsdoc th, .wsdoc td { border: 1px solid #d8dee8; padding: 8px 10px; text-align: left; }',

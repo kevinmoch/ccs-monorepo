@@ -126,7 +126,10 @@ export function createTabTransport(
     ...(budget !== undefined ? { budget } : {})
   });
   return {
-    send: async (request): Promise<PageAgentReply> =>
-      request.type === 'perceive' ? await router.perceive(request) : await router.execute(request)
+    send: async (request): Promise<PageAgentReply> => {
+      if (request.type === 'perceive') return await router.perceive(request);
+      if (request.type === 'capture-image') return await router.captureImage(request);
+      return await router.execute(request);
+    }
   };
 }

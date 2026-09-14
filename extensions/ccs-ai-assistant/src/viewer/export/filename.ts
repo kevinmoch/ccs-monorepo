@@ -8,12 +8,20 @@
 const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 const MAX_CODE_POINTS = 80;
 
-export function sanitizeExportFilename(title: string, extension: 'pptx' | 'docx'): string {
+export type ExportExtension = 'pptx' | 'docx' | 'xlsx';
+
+const FALLBACK: Readonly<Record<ExportExtension, string>> = {
+  pptx: 'webskill-slides',
+  docx: 'webskill-document',
+  xlsx: 'webskill-sheet'
+};
+
+export function sanitizeExportFilename(title: string, extension: ExportExtension): string {
   return `${sanitizeExportName(title, extension)}.${extension}`;
 }
 
 /** 同一份清洗，但不带扩展名：打印另存 PDF 时浏览器自己补 `.pdf` */
-export function sanitizeExportName(title: string, extension: 'pptx' | 'docx'): string {
+export function sanitizeExportName(title: string, extension: ExportExtension): string {
   let name = title;
   // eslint-disable-next-line no-control-regex -- 就是要按码位剔除控制字符
   name = name.replace(/[\u0000-\u001f\u007f]/g, '');
@@ -28,6 +36,6 @@ export function sanitizeExportName(title: string, extension: 'pptx' | 'docx'): s
   if (RESERVED.test(name)) name = `_${name}`;
   const points = Array.from(name);
   if (points.length > MAX_CODE_POINTS) name = points.slice(0, MAX_CODE_POINTS).join('').trim();
-  if (name === '') name = extension === 'pptx' ? 'webskill-slides' : 'webskill-document';
+  if (name === '') name = FALLBACK[extension];
   return name;
 }

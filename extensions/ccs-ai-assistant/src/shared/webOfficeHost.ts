@@ -12,6 +12,7 @@
  * 代价是它**同时拍到文档以外的一切**，这一点必须在授权卡上说明，而不是在这里悄悄办掉。
  */
 import type { WebOfficeHost, WebOfficeInstanceRecord } from '@webskill/browser';
+import type { TemplateFileSource } from '@webskill/agent';
 import { WEB_OFFICE_CHANNEL, isWebOfficeResult, type WebOfficeRequest } from './messages';
 import { extractPdfText, pdfDocumentReader } from './pdfText';
 import { createPptxSourceReader } from './pptxSource';
@@ -283,6 +284,43 @@ export function createExtensionWebOfficeHost(options: ExtensionWebOfficeHostOpti
 
     // ⓪ 级（演示文稿）：pptx 包里没有渲染好的页面图，所以这是解包器不是渲染器
     presentationReader: createPptxSourceReader()
+  };
+}
+
+/**
+ * 在线 WPS 文档的**原件字节**，供 `inspect_template` / `fill_template` 当模板用
+ * （0.22.0 分册 42 · FR-42.12 ～ FR-42.15）。
+ *
+ * 与 `takeCapturedPresentation` 同一条路、同一批候选链接、同一套纪律，只是收件标准是 OOXML。
+ * 逐帧问而不是按 handle 定位：直链是**宿主帧**的东西，实例在 office 子帧，两者从不在同一帧——
+ * 所以 handle 在这里只用来说清「模型指的是哪一份」，取件本身不靠它。
+ *
+ * 取不到就返回 `undefined`，由工具那一侧明说取不到并让用户下载后作为附件传入。
+ * **这里绝不退到「读文本骨架再重排一份」**（FR-42.14）：那会产出一份悄悄丢光样式的文件，
+ * 比直接失败更糟，因为用户要到打开它的时候才发现。
+ */
+export function createExtensionWebOfficeTemplateSource(
+  options: Pick<ExtensionWebOfficeHostOptions, 'tabId'>
+): TemplateFileSource {
+  return {
+    async read(handle: string): Promise<{ name: string; bytes: Uint8Array } | undefined> {
+      const tabId = options.tabId();
+      if (tabId === undefined) return undefined;
+      for (const frameId of await frameIds(tabId)) {
+        let linked: unknown;
+        try {
+          linked = await ask(tabId, { kind: 'take-linked-ooxml' }, frameId);
+        } catch {
+          continue; // 那一帧没装内容脚本、或已经卸载
+        }
+        if (Array.isArray(linked) && linked.length > 0) {
+          // 真正是 xlsx 还是 docx 由工具那一侧按包内部件名判，这里不抢着判型：
+          // 多一处判型就多一份要跟着改的口径
+          return { name: `online document (${handle})`, bytes: Uint8Array.from(linked as number[]) };
+        }
+      }
+      return undefined;
+    }
   };
 }
 

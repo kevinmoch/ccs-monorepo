@@ -16,6 +16,7 @@ import {
   type ExportRun,
   type TableProps
 } from './extract';
+import type { DocImage } from './image';
 import { OmissionCounter, mergeOmissions } from './omissions';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -216,6 +217,8 @@ export async function encodeDocx(doc: ExportDoc): Promise<EncodedDocument> {
         );
       case 'table':
         return table(block.props);
+      case 'image':
+        return image(block.image, block.caption);
       case 'chart':
         return chart(block.props);
       case 'metrics':
@@ -338,23 +341,10 @@ export async function encodeDocx(doc: ExportDoc): Promise<EncodedDocument> {
    */
   function chart(props: ChartProps): Child[] {
     const out: Child[] = [];
-    const image = props.image;
-    const data = image === undefined ? undefined : base64Of(image.url);
-    if (image !== undefined && data !== undefined && image.width > 0 && image.height > 0) {
-      const width = Math.min(CONTENT_WIDTH_PT, image.width);
-      out.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 120, after: 60 },
-          children: [
-            new ImageRun({
-              type: 'png',
-              data,
-              transformation: { width, height: Math.round((width * image.height) / image.width) }
-            })
-          ]
-        })
-      );
+    const snapshot = props.image;
+    const data = snapshot === undefined ? undefined : imageDataOf(snapshot.url);
+    if (snapshot !== undefined && data !== undefined && snapshot.width > 0 && snapshot.height > 0) {
+      out.push(picture(data, snapshot.width, snapshot.height, ''));
       counter.add('chart-as-picture');
     } else {
       // 没拿到画布快照就只剩数据；下面那张数据表至少让内容不丢
@@ -363,6 +353,37 @@ export async function encodeDocx(doc: ExportDoc): Promise<EncodedDocument> {
     if (props.caption !== undefined) out.push(caption(props.caption, false));
     out.push(...table(chartToTable(props)));
     return out;
+  }
+
+  /** 文档图（FR-14.3）。到了这里一定嵌得进去：嵌不进的在转换期就已经换成了一段话 */
+  function image(doc: DocImage, text: string | undefined): Child[] {
+    const data = imageDataOf(doc.url);
+    if (data === undefined) return [];
+    const out: Child[] = [picture(data, doc.width, doc.height, doc.alt)];
+    if (text !== undefined) out.push(caption(text, false));
+    return out;
+  }
+
+  /** 等比缩进版心：版式不要求与屏幕一致，但不能溢出页面 */
+  function picture(
+    data: { base64: string; type: 'png' | 'jpg' },
+    width: number,
+    height: number,
+    alt: string
+  ): InstanceType<typeof Paragraph> {
+    const fitted = Math.min(CONTENT_WIDTH_PT, width);
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 60 },
+      children: [
+        new ImageRun({
+          type: data.type,
+          data: data.base64,
+          transformation: { width: fitted, height: Math.round((fitted * height) / width) },
+          ...(alt === '' ? {} : { altText: { name: alt, description: alt, title: alt } })
+        })
+      ]
+    });
   }
 
   function caption(text: string, bold: boolean): InstanceType<typeof Paragraph> {
@@ -443,13 +464,20 @@ function hex(value: string | undefined, fallback: string): string {
   return value === undefined ? fallback : value.replace('#', '');
 }
 
-/** `data:image/png;base64,…` → 裸 base64；不是 PNG data URL 就当没有 */
-function base64Of(url: string): string | undefined {
+/**
+ * data URL → 裸 base64 与 docx 认的类型名。
+ * 受支持的类型清单只有一份（`DOCUMENT_IMAGE_MIME_TYPES`，在 `image.ts` 里消费），
+ * 这里只负责把 mime 映成 `docx` 的枚举名。
+ */
+function imageDataOf(url: string): { base64: string; type: 'png' | 'jpg' } | undefined {
   const marker = ';base64,';
   const at = url.indexOf(marker);
-  if (!url.startsWith('data:image/png') || at < 0) return undefined;
+  if (at < 0) return undefined;
+  const mime = url.slice('data:'.length, at);
+  const type = mime === 'image/jpeg' ? 'jpg' : mime === 'image/png' ? 'png' : undefined;
   const payload = url.slice(at + marker.length);
-  return payload === '' ? undefined : payload;
+  if (type === undefined || payload === '') return undefined;
+  return { base64: payload, type };
 }
 
 export const DOCX_CONTENT_TYPE = DOCX_MIME;

@@ -11,6 +11,8 @@ import { BUILTIN_ROOT, seedBuiltinSkills } from '../src/shared/seedSkills';
 
 const SKILLS = ['authored-bulletin', 'authored-screen', 'authored-slides'] as const;
 const FILES = ['SKILL.md', 'references/authoring.md', 'scripts/publish.js'] as const;
+/** 编排型技能只有一份 SKILL.md（FR-19.13）；播种不能假设每个技能都带脚本 */
+const SOLO_SKILLS = ['dwg-view'] as const;
 
 /** 扩展包里那一份：键是 `chrome.runtime.getURL` 解出来的地址 */
 let assets: Map<string, string>;
@@ -30,6 +32,7 @@ function bodyOf(skill: string, file: string, revision: string): string {
 beforeEach(() => {
   assets = new Map();
   for (const skill of SKILLS) for (const file of FILES) assets.set(assetKey(skill, file), bodyOf(skill, file, 'v1'));
+  for (const skill of SOLO_SKILLS) assets.set(assetKey(skill, 'SKILL.md'), bodyOf(skill, 'SKILL.md', 'v1'));
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = String(input);
     const text = assets.get(url);
@@ -43,13 +46,18 @@ async function seedInto(fs: MemoryFS): Promise<boolean> {
 }
 
 describe('内置技能播种：更新不靠重装', () => {
-  it('首次播种把三个技能全写进内置根', async () => {
+  it('首次播种把清单里的技能全写进内置根', async () => {
     const fs = new MemoryFS();
     expect(await seedInto(fs)).toBe(true);
     for (const skill of SKILLS) {
       for (const file of FILES) {
         expect(await fs.readText(`${BUILTIN_ROOT}/${skill}/${file}`)).toBe(bodyOf(skill, file, 'v1'));
       }
+    }
+    for (const skill of SOLO_SKILLS) {
+      expect(await fs.readText(`${BUILTIN_ROOT}/${skill}/SKILL.md`)).toBe(bodyOf(skill, 'SKILL.md', 'v1'));
+      // 没有脚本就不该凭空建一个空目录，否则技能库里会多出一条无意义的告警
+      expect(await fs.exists(`${BUILTIN_ROOT}/${skill}/scripts`)).toBe(false);
     }
   });
 

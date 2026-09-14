@@ -7,7 +7,12 @@
  * 一取就是 `%PDF-1.7`。用例按**纪律**分条写——每一条都是「猜错时不许干什么」。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { findOriginalFileLinks, takeLinkedPdf, takeLinkedPresentation } from '../src/content/mainWorld/webOfficeFileLink';
+import {
+  findOriginalFileLinks,
+  takeLinkedOoxml,
+  takeLinkedPdf,
+  takeLinkedPresentation
+} from '../src/content/mainWorld/webOfficeFileLink';
 
 const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37]);
 const NOT_PDF = new Uint8Array([0x3c, 0x21, 0x44, 0x4f, 0x43]); // "<!DOC"
@@ -164,5 +169,58 @@ describe('演示文稿原件（FR-12.4d）', () => {
 
     vi.stubGlobal('fetch', () => Promise.resolve(respond(PDF)));
     await expect(takeLinkedPresentation()).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * 在线模板的原件（0.22.0 分册 42 FR-42.12 ～ FR-42.15）。
+ *
+ * 放宽的只有**收件标准**这一条，四条纪律一条不动——所以这组用例问的全是
+ * 「放宽之后，原来不许干的事还是不许干吗」。
+ */
+describe('Office 模板原件（FR-42.12）', () => {
+  const zipOf = (entryName: string): Uint8Array =>
+    Uint8Array.from([0x50, 0x4b, 0x03, 0x04, ...Array.from(entryName, (c) => c.charCodeAt(0))]);
+
+  it('包里报出 [Content_Types].xml 才算 Office 原件', async () => {
+    pageDefines('downloadurl', `${location.origin}/servlet/wps/download`);
+    const book = zipOf('[Content_Types].xml');
+    vi.stubGlobal('fetch', () => Promise.resolve(respond(book)));
+
+    await expect(takeLinkedOoxml()).resolves.toEqual(book);
+  });
+
+  it('只有 zip 魔数的普通压缩包当作没取到：光看 PK 会把任意压缩包冒充成模板', async () => {
+    pageDefines('downloadurl', `${location.origin}/servlet/wps/download`);
+    vi.stubGlobal('fetch', () => Promise.resolve(respond(zipOf('photos/img.png'))));
+
+    await expect(takeLinkedOoxml()).resolves.toBeUndefined();
+  });
+
+  it('`Content-Type` 说是 xlsx 也不算数，只有字节算', async () => {
+    pageDefines('downloadurl', `${location.origin}/servlet/wps/download`);
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(
+        respond(NOT_PDF, { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      )
+    );
+
+    await expect(takeLinkedOoxml()).resolves.toBeUndefined();
+  });
+
+  it('跨源的直链照旧不碰，一次请求都不发', async () => {
+    pageDefines('downloadurl', 'https://evil.example.com/template.xlsx');
+    const fetchMock = vi.fn(() => Promise.resolve(respond(zipOf('[Content_Types].xml'))));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(takeLinkedOoxml()).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('PDF 不会被当成 Office 原件', async () => {
+    pageDefines('downloadurl', `${location.origin}/servlet/wps/download`);
+    vi.stubGlobal('fetch', () => Promise.resolve(respond(PDF)));
+
+    await expect(takeLinkedOoxml()).resolves.toBeUndefined();
   });
 });

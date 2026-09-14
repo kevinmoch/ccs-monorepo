@@ -4,13 +4,21 @@ import {
   createDocumentSurfaceHost,
   createIframeWorker,
   createRemotePageActionExecutor,
+  createRemoteImageHost,
+  createRemotePageImageHost,
   createRemotePerceptionReader,
   createRemoteTargetRegistry,
   createDocxBlockReader,
   createXlsxBlockReader,
+  createPptxBlockReader,
   explainResolution,
   extractDocxText,
   extractXlsxText,
+  extractPptxText,
+  fillDocxTemplate,
+  fillXlsxTemplate,
+  readDocxTemplate,
+  readXlsxTemplate,
   WORKER_BOOTSTRAP_SOURCE
 } from '@webskill/browser';
 import {
@@ -23,6 +31,7 @@ import {
   createHttpDataSourceTransport
 } from '@webskill/agent';
 import type { DataSourceCandidate, DataSourceDef, PageActionUi } from '@webskill/agent';
+import type { PayloadSizeNotice } from '@webskill/browser';
 import type { DataSourceInfo } from '@webskill/runtime';
 import { AUDIT_EVENT_TYPES, CandidateStore, FsAuditLog, createCandidateSink } from '@webskill/governance';
 import type { CandidateSink } from '@webskill/governance';
@@ -41,7 +50,8 @@ import {
   type ExtensionDownloadConsentStore
 } from './consentStore';
 import { createExtensionDownloadsReader } from './downloadsReader';
-import { createExtensionWebOfficeHost } from './webOfficeHost';
+import { createExtensionDwgHost } from './dwgHost';
+import { createExtensionWebOfficeHost, createExtensionWebOfficeTemplateSource } from './webOfficeHost';
 import { createExtensionDownloadWatcher } from './downloadWatcher';
 import { createExtensionTabWorkset } from './tabWorkset';
 import { createTabLinkedDocumentReader } from './linkedDocuments';
@@ -194,6 +204,32 @@ export function hostDataSources(): readonly DataSourceInfo[] {
 
 export function createExtensionFs(): OpfsProvider {
   return new OpfsProvider({ rootName: 'webskill-extension' });
+}
+
+/**
+ * 把载荷预算的软阈值提醒译成一句人话（0.22.0 分册 10 FR-10.4）。
+ *
+ * 这是**提醒不是闸门**：它只解释「为什么可能慢」，返回值仍由用户在同一张确认卡上给。
+ * 语言从调用方现读的 `zh` 传进来，不在装配期定死。
+ */
+function sizeWarning(notice: PayloadSizeNotice, zh: boolean): string {
+  const mb = (notice.units / 1_000_000).toFixed(1);
+  const mp = (notice.pixels / 1_000_000).toFixed(0);
+  const scale =
+    notice.trigger === 'both'
+      ? zh
+        ? `约 ${mb} MB、${mp} 百万像素`
+        : `about ${mb} MB and ${mp} megapixels`
+      : notice.trigger === 'pixels'
+        ? zh
+          ? `约 ${mp} 百万像素的图片`
+          : `about ${mp} megapixels of imagery`
+        : zh
+          ? `约 ${mb} MB`
+          : `about ${mb} MB`;
+  return zh
+    ? `这份文档比较大（${scale}），打开和滚动可能变慢，占用的内存也会更多。`
+    : `This document is large (${scale}); opening and scrolling may be slow and it will use more memory.`;
 }
 
 /**
@@ -536,6 +572,31 @@ export function createSidePanelHost(): SidePanelHost {
     pagePerception: perception
   });
 
+  // 文档投放面（0.15.0 分册 13）。viewer 页跑在 `sandbox.pages` 里的 opaque origin，
+  // 那是扩展里**唯一**能拿到真隔离的办法：扩展页没有服务端，`<meta>` 里的 sandbox 指令被忽略。
+  // 地址在这里取，不在 `sidepanel/main.tsx`——AC-14.18 禁止那一侧出现 `chrome.`。
+  // 提成变量是因为 DWG 投放（0.22.0 分册 19）要复用同一个外壳，不另开第二种窗口
+  const documentSurface = createDocumentSurfaceHost({
+    viewerUrl: chrome.runtime.getURL('view.html'),
+    // viewer 页跑在 opaque origin，读不到扩展存储，界面语言只能随地址带过去。
+    // **每次投放时现读**：装配期快照会把语言钉死在开面板那一刻
+    open: (url, target) => window.open(`${url}?lang=${readLocaleSync()}`, target),
+    // 授权走扩展既有的确认卡通路（与页面操作同一个 UI 桥），不另造一套弹窗
+    confirm: async ({ skillName, dataSource, sizeNotice }) => {
+      const zh = readLocaleSync() === 'zh';
+      const ask = zh
+        ? `技能「${skillName}」要把一份文档投到独立窗口打开，其中包含来自「${dataSource}」的数据。是否继续？`
+        : `Skill “${skillName}” wants to open a document in a separate window. It carries data from “${dataSource}”. Continue?`;
+      const response = await pageActionUi.current!.request({
+        type: 'confirm',
+        id: `document-surface-${Date.now()}`,
+        message: sizeNotice ? `${ask}\n\n${sizeWarning(sizeNotice, zh)}` : ask
+      });
+      return response.cancelled !== true && response.value !== false;
+    },
+    audit
+  });
+
   const adapter: ChatbotHostAdapter = {
     ...(bundle.chatbotAdapter as unknown as ChatbotHostAdapter),
     pageActions,
@@ -552,12 +613,19 @@ export function createSidePanelHost(): SidePanelHost {
     // 挂进感知开关里的话，用户在文件选择器里根本选不到 .docx/.xlsx（分册 17 D-17-4）
     docxExtractor: extractDocxText,
     xlsxExtractor: extractXlsxText,
+    pptxExtractor: extractPptxText,
     pdfExtractor: extractPdfText,
-    // 逐单元读取（分册 22）：三种格式各自独立，缺哪个就哪种格式明确报不支持。
-    // pdf 的图是「整页渲染」，docx/xlsx 的图是包里现成的 PNG/JPEG，两条路不同实现
+    // 逐单元读取（分册 22 / 0.22.0 分册 18）：四种格式各自独立，缺哪个就哪种格式明确报不支持。
+    // pdf 的图是「整页渲染」，docx/xlsx/pptx 的图是包里现成的 PNG/JPEG，两条路不同实现
     pdfDocumentReader,
     docxDocumentReader: createDocxBlockReader(),
     xlsxDocumentReader: createXlsxBlockReader(),
+    pptxDocumentReader: createPptxBlockReader(),
+    // 照着模板出文件（0.22.0 分册 42）。与上面四个读取器分开给：那四个回答「这份文件说了什么」，
+    // 这两个回答「哪个格子在哪儿、怎么往里写而不动其余任何东西」——后者不能靠前者拼出来，
+    // 因为前者读出的文本里没有样式、列宽、合并和公式
+    xlsxTemplateEngine: { read: readXlsxTemplate, fill: fillXlsxTemplate },
+    docxTemplateEngine: { read: readDocxTemplate, fill: fillDocxTemplate },
     // 链接文档读取走**内容脚本**取件，为的是带上用户在那个站点的登录态（D-17-1）。
     // side panel 自己 fetch 拿到的会是一张登录页，而那对模型看起来是「读成功了」
     linkedDocuments: createTabLinkedDocumentReader({
@@ -569,27 +637,12 @@ export function createSidePanelHost(): SidePanelHost {
       }
     }),
     documentAudit: audit,
-    // 文档投放面（0.15.0 分册 13）。viewer 页跑在 `sandbox.pages` 里的 opaque origin，
-    // 那是扩展里**唯一**能拿到真隔离的办法：扩展页没有服务端，`<meta>` 里的 sandbox 指令被忽略。
-    // 地址在这里取，不在 `sidepanel/main.tsx`——AC-14.18 禁止那一侧出现 `chrome.`
-    documentSurface: createDocumentSurfaceHost({
-      viewerUrl: chrome.runtime.getURL('view.html'),
-      // viewer 页跑在 opaque origin，读不到扩展存储，界面语言只能随地址带过去。
-      // **每次投放时现读**：装配期快照会把语言钉死在开面板那一刻
-      open: (url, target) => window.open(`${url}?lang=${readLocaleSync()}`, target),
-      // 授权走扩展既有的确认卡通路（与页面操作同一个 UI 桥），不另造一套弹窗
-      confirm: async ({ skillName, dataSource }) => {
-        const zh = readLocaleSync() === 'zh';
-        const response = await pageActionUi.current!.request({
-          type: 'confirm',
-          id: `document-surface-${Date.now()}`,
-          message: zh
-            ? `技能「${skillName}」要把一份文档投到独立窗口打开，其中包含来自「${dataSource}」的数据。是否继续？`
-            : `Skill “${skillName}” wants to open a document in a separate window. It carries data from “${dataSource}”. Continue?`
-        });
-        return response.cancelled !== true && response.value !== false;
-      },
-      audit
+    documentSurface,
+    // DWG 图纸（0.22.0 分册 19）：解析在 Worker 里，投放复用上面那个受信外壳。
+    // 语言每次现读，跟 `documentSurface.open` 的理由一样
+    dwg: createExtensionDwgHost({
+      surface: () => documentSurface,
+      locale: () => (readLocaleSync() === 'zh' ? 'zh' : 'en')
     }),
     // 读本机下载的文件（分册 20）。只交端口：开关读 `sandbox.downloadedFiles`、
     // 授权卡走引擎的 UI 桥、抽取器复用上面那两个，都在 chatbot 侧完成
@@ -605,7 +658,18 @@ export function createSidePanelHost(): SidePanelHost {
         maxImageBytes: () => loadRuntimeConfigSync().multimodal.maxImageBytes
       }),
       consent: webOfficeConsent
-    }
+    },
+    // 把页内那份在线文档的**原件**当模板用（0.22.0 分册 42）。取件号是 `weboffice:<handle>`，
+    // handle 就是 `list_weboffice_documents` 已经给过模型的那一个。
+    // 与上面那个只读桥共用同一条直链通道，白名单里依然没有任何写方法（FR-42.15）
+    webOfficeTemplateSource: createExtensionWebOfficeTemplateSource({ tabId: () => binding.tabId() }),
+    // 取宿主页面上的图放进文档（0.22.0 分册 12）。只交端口：授权卡、会话内记忆、
+    // 产物落盘都在引擎那一侧——它们要知道 run 目录与会话生灭，扩展这边不知道
+    pageImage: createRemotePageImageHost({ transport }),
+    // 外链图（0.22.0 分册 13）。直接在本上下文 `fetch`：实测扩展页与 service worker
+    // 连 `http://` 都能拓（设计 14 §1），不需要再绕一道跨上下文。
+    // 授权同样在引擎那一侧，且在发请求之前（AC-13.5）
+    remoteImage: createRemoteImageHost()
   };
 
   // 页面端点变了就重新拉一次清单。**必须校验来源 tab**（FR-18.7 第 4 条）：

@@ -104,6 +104,7 @@ export async function relayWebOffice(request: WebOfficeRequest): Promise<WebOffi
   // 实测里链接在宿主帧、实例在 office 帧，拿 handle 定位只会问错帧
   if (request.kind === 'take-linked-pdf') return ask({ kind: 'take-linked-pdf' });
   if (request.kind === 'take-linked-presentation') return ask({ kind: 'take-linked-presentation' });
+  if (request.kind === 'take-linked-ooxml') return ask({ kind: 'take-linked-ooxml' });
   const localId = request.handle === undefined ? undefined : localIds.get(request.handle);
   if (localId === undefined) return { channel: WEB_OFFICE_CHANNEL, ok: false, reason: 'no-instance' };
   if (request.kind === 'describe') return ask({ kind: 'describe', localId });

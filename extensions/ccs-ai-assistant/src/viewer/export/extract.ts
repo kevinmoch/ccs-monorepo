@@ -19,8 +19,11 @@ import type {
 } from '../authored/model';
 import { readAuthoredModel } from '../authored/model';
 import { fromAuthoredModel } from './fromModel';
+import { imageBlocksOf, type DocImage } from './image';
 import { classifyExportKind, exportRootOf } from './kind';
 import { OmissionCounter, type ExportOmission } from './omissions';
+
+export type { DocImage } from './image';
 
 export interface ExportRun {
   text: string;
@@ -58,6 +61,7 @@ export type ExportBlock =
   | { kind: 'paragraph'; runs: ExportRun[] }
   | { kind: 'list'; ordered: boolean; items: ExportRun[][] }
   | { kind: 'chart'; props: ChartProps }
+  | { kind: 'image'; image: DocImage; caption?: string }
   | { kind: 'table'; props: TableProps }
   | { kind: 'metrics'; items: AuthoredMetric[] }
   | { kind: 'keyValue'; title?: string; items: AuthoredMetaItem[] }
@@ -126,26 +130,48 @@ export function extractExportDoc(html: string, options?: ExtractOptions): Export
     throw new WebSkillError('EXPORT_FAILED', 'The document has no exportable root element.');
   }
 
+  const docImages = options?.docImages ?? [];
+  const zh = options?.zh === true;
   // 结构化投放优先：模型就挂在根节点上，读它比从 DOM 上刮回来精确得多（分册 19 FR-19.6）
   const model = readAuthoredModel(root);
-  if (model !== undefined) return fromAuthoredModel(model, options?.chartImages ?? []);
+  if (model !== undefined) return fromAuthoredModel(model, { chartImages: options?.chartImages ?? [], docImages, zh });
 
-  const counter = new OmissionCounter();
+  const ctx: ExtractCtx = { counter: new OmissionCounter(), sizes: sizeIndex(docImages), zh };
   // 技能自带的 CSS 从来不进 OOXML：这是版式重建的固有代价，不是偶发缺失
-  counter.add('css-decoration');
+  ctx.counter.add('css-decoration');
 
   const kind = format === 'pptx' ? 'slides' : 'bulletin';
-  const pages = kind === 'slides' ? slidePages(root, counter) : [{ blocks: blocksOf(root, counter) }];
+  const pages = kind === 'slides' ? slidePages(root, ctx) : [{ blocks: blocksOf(root, ctx) }];
   if (pages.every((page) => page.blocks.length === 0 && (page.title ?? '') === '')) {
     throw new WebSkillError('EXPORT_FAILED', 'The document has no text, table or chart to export.');
   }
 
-  return { kind, title: docTitle(pages), pages, omissions: counter.list() };
+  return { kind, title: docTitle(pages), pages, omissions: ctx.counter.list() };
 }
 
 export interface ExtractOptions {
   /** 活 DOM 里每张图表画布的快照，按文档顺序排；结构化投放时按同一顺序配回图表块 */
   chartImages?: readonly ChartImage[];
+  /**
+   * 活 DOM 里每张文档图的字节与实测尺寸，按文档顺序排。
+   * 结构化投放按顺序配回图片块，手写 HTML 按 `src` 查——两条路共用同一份采集。
+   */
+  docImages?: readonly DocImage[];
+  /** 丢图时留在产物正文里那句话用哪种语言（FR-14.6） */
+  zh?: boolean;
+}
+
+/** 遍历期要随身带的三样东西；单传 counter 的时候图片拿不到尺寸也说不出语言 */
+interface ExtractCtx {
+  counter: OmissionCounter;
+  sizes: Map<string, DocImage>;
+  zh: boolean;
+}
+
+function sizeIndex(images: readonly DocImage[]): Map<string, DocImage> {
+  const out = new Map<string, DocImage>();
+  for (const image of images) if (image.url !== '' && !out.has(image.url)) out.set(image.url, image);
+  return out;
 }
 
 function docTitle(pages: readonly ExportPage[]): string {
@@ -158,14 +184,14 @@ function docTitle(pages: readonly ExportPage[]): string {
   return '';
 }
 
-function slidePages(root: Element, counter: OmissionCounter): ExportPage[] {
+function slidePages(root: Element, ctx: ExtractCtx): ExportPage[] {
   const stage = root.querySelector('.slides') ?? root;
   const sections = flattenSections(stage);
   if (sections.length === 0) {
     throw new WebSkillError('EXPORT_FAILED', 'Slides document has no <section> elements to export.');
   }
   return sections.map((section) => {
-    const blocks = blocksOf(section, counter);
+    const blocks = blocksOf(section, ctx);
     // 首个标题升为页标题：PPTX 的标题占位本来就是独立的一块，留在正文里会重复
     const lead = blocks[0];
     if (lead?.kind === 'heading') return { title: plain(lead.runs), blocks: blocks.slice(1) };
@@ -185,9 +211,9 @@ function flattenSections(stage: Element): Element[] {
   return out;
 }
 
-function blocksOf(container: Element, counter: OmissionCounter): ExportBlock[] {
+function blocksOf(container: Element, ctx: ExtractCtx): ExportBlock[] {
   const out: ExportBlock[] = [];
-  visitChildren(container, out, counter);
+  visitChildren(container, out, ctx);
   return out;
 }
 
@@ -221,13 +247,13 @@ const INLINE_TAGS = new Set([
   'WBR'
 ]);
 const SKIPPED_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'LINK', 'NOSCRIPT']);
-const GRAPHIC_TAGS = new Set(['SVG', 'IMG', 'CANVAS', 'VIDEO', 'IFRAME', 'PICTURE']);
+const GRAPHIC_TAGS = new Set(['SVG', 'CANVAS', 'VIDEO', 'IFRAME', 'PICTURE']);
 
 /**
  * 逐个子节点走：连续的文字与内联标签攒成一段，遇到块级元素就把攒的段落吐出去。
  * 这样 `<div>直接文字<div>子块</div></div>` 里的「直接文字」不会被吃掉。
  */
-function visitChildren(element: Element, out: ExportBlock[], counter: OmissionCounter): void {
+function visitChildren(element: Element, out: ExportBlock[], ctx: ExtractCtx): void {
   let buffer: ExportRun[] = [];
   const flush = (): void => {
     const runs = trimRuns(buffer);
@@ -252,19 +278,27 @@ function visitChildren(element: Element, out: ExportBlock[], counter: OmissionCo
       continue;
     }
     flush();
-    visit(child, out, counter);
+    visit(child, out, ctx);
   }
   flush();
 }
 
-function visit(element: Element, out: ExportBlock[], counter: OmissionCounter): void {
+function visit(element: Element, out: ExportBlock[], ctx: ExtractCtx): void {
   if (element.hasAttribute(VIEWER_COMPONENT_ATTR)) {
-    visitComponent(element, out, counter);
+    visitComponent(element, out, ctx);
     return;
   }
   const tag = element.tagName.toUpperCase();
+  // 手写 HTML 自己塞进来的字节没有理由在导出时被丢掉（FR-14.2）；其余五种图形标签一字不动
+  if (tag === 'IMG') {
+    const src = element.getAttribute('src') ?? '';
+    const alt = element.getAttribute('alt') ?? '';
+    const measured = ctx.sizes.get(src);
+    out.push(...imageBlocksOf(measured ?? { url: src, width: 0, height: 0, alt }, src, undefined, ctx.counter, ctx.zh));
+    return;
+  }
   if (GRAPHIC_TAGS.has(tag)) {
-    counter.add('inline-graphic');
+    ctx.counter.add('inline-graphic');
     return;
   }
   const level = HEADING_LEVEL[tag];
@@ -285,7 +319,7 @@ function visit(element: Element, out: ExportBlock[], counter: OmissionCounter): 
     visitTable(element, out);
     return;
   }
-  visitChildren(element, out, counter);
+  visitChildren(element, out, ctx);
 }
 
 function visitTable(element: Element, out: ExportBlock[]): void {
@@ -308,10 +342,10 @@ function cellsOf(row: Element): string[] {
  * props 用 catalog 自己的 zod schema 解析，与 viewer 挂载时**同一份**——
  * 手抄一遍形状就等着两边慢慢漂开。
  */
-function visitComponent(element: Element, out: ExportBlock[], counter: OmissionCounter): void {
+function visitComponent(element: Element, out: ExportBlock[], ctx: ExtractCtx): void {
   const name = element.getAttribute(VIEWER_COMPONENT_ATTR) ?? '';
   if (!(DOCUMENT_COMPONENTS as readonly string[]).includes(name)) {
-    counter.add('unknown-component');
+    ctx.counter.add('unknown-component');
     return;
   }
   const raw = element.getAttribute(VIEWER_PROPS_ATTR);
@@ -319,12 +353,12 @@ function visitComponent(element: Element, out: ExportBlock[], counter: OmissionC
   try {
     parsed = JSON.parse(raw ?? '');
   } catch {
-    counter.add('unparsable-component-props');
+    ctx.counter.add('unparsable-component-props');
     return;
   }
   const result = uiCatalog.component(name)?.props.safeParse(parsed);
   if (!result?.success) {
-    counter.add('unparsable-component-props');
+    ctx.counter.add('unparsable-component-props');
     return;
   }
   const props = result.data as Record<string, unknown>;
@@ -336,7 +370,7 @@ function visitComponent(element: Element, out: ExportBlock[], counter: OmissionC
       out.push({ kind: 'table', props: props as unknown as TableProps });
       return;
     case 'Metric': {
-      counter.add('metric-shape');
+      ctx.counter.add('metric-shape');
       const lines = [String(props['value'])];
       const change = props['change'];
       if (typeof change === 'string' && change !== '') lines.push(change);
@@ -344,7 +378,7 @@ function visitComponent(element: Element, out: ExportBlock[], counter: OmissionC
       return;
     }
     case 'Gauge': {
-      counter.add('gauge-shape');
+      ctx.counter.add('gauge-shape');
       out.push({
         kind: 'textCard',
         label: String(props['label'] ?? ''),
@@ -353,7 +387,7 @@ function visitComponent(element: Element, out: ExportBlock[], counter: OmissionC
       return;
     }
     case 'KeyValue': {
-      counter.add('key-value-shape');
+      ctx.counter.add('key-value-shape');
       const items = (props['items'] ?? []) as { label?: unknown; value?: unknown }[];
       out.push({
         kind: 'textCard',
@@ -363,7 +397,7 @@ function visitComponent(element: Element, out: ExportBlock[], counter: OmissionC
       return;
     }
     default:
-      counter.add('unknown-component');
+      ctx.counter.add('unknown-component');
   }
 }
 

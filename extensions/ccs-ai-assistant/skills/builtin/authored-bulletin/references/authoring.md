@@ -45,7 +45,7 @@ authored-bulletin__publish({ doc, dataSource })
 | `blocks`    | **是**      | 正文，见下。至少一项                                                                                                                                    |
 | `signature` | 否          | `{ org?, date? }`，右下角落款。公文一般要，普通文档通常不要                                                                                             |
 
-## blocks —— 11 种块
+## blocks —— 12 种块
 
 每一项都是 `{ "type": "..." }`。正文里唯一的内联样式是 `**加粗**`，
 因为只有它在屏幕和 Word 里都能还原；不要用 `*斜体*`、`` `代码` ``、`# 标题`
@@ -74,6 +74,8 @@ authored-bulletin__publish({ doc, dataSource })
 ```
 
 `ordered: true` 出编号，缺省是圆点。
+`items` 里每一条都是**一个字符串**，不是 `{ "text": "…" }` 这样的富文本对象、也不是对象数组；
+要加粗就在字符串里写 `**粗体**`。
 
 ### table —— 表格
 
@@ -91,6 +93,7 @@ authored-bulletin__publish({ doc, dataSource })
 ```
 
 `rows` 里每一行的单元格数必须等于 `columns` 的长度，否则被挡回。
+每一格只能是字符串、数字、布尔或 `null`，**不能是对象或数组**。
 数字就写数字，不要写成 `"312"`。`columnWidths` 可选，是各列的宽度权重。
 
 ### chart —— 图表
@@ -113,6 +116,30 @@ authored-bulletin__publish({ doc, dataSource })
 每条 `series` 的 `values` 长度必须等于 `labels` 的长度，且必须是**数字**不是字符串。
 导出 DOCX 时，图会以屏幕上那张图的样子贴进去，下面再自动附一张数据表，
 所以数字仍然可编辑——你不需要为了「怕丢」额外再写一遍表格。
+
+### image —— 图片
+
+```json
+{
+  "type": "image",
+  "ref": "artifact:capture-1.png",
+  "alt": "经营看板上的季度营收趋势图",
+  "caption": "截图时间 2024-10-09"
+}
+```
+
+`ref` 指向**已经存在**的一张图，不是你现编的文件名。三种前缀：
+
+| 前缀        | 指向                                   | 从哪拿到这个值                |
+| ----------- | -------------------------------------- | ----------------------------- |
+| `artifact:` | 本次任务里已经产出的图片（如页面截图） | 取像工具的返回值              |
+| `upload:`   | 用户这次会话上传的图片                 | `listUploadFiles()` 给出的 id |
+| `remote:`   | 一个外链 URL（宿主抓不到字节时的降级） | 宿主告诉你要用这种形式时才用  |
+
+`alt` 是**必填**的替代文本：图万一加载不出来，它是唯一留下来的线索。
+
+**不要**写 `width` / `height` / `mimeType`——那些是宿主从图片字节里量出来的事实，
+你写的只是声明，写了会被挡回。图片字节也不需要你读进脚本再编码，你只负责指哪张图。
 
 ### metrics —— 指标卡一排
 
@@ -251,6 +278,8 @@ authored-bulletin__publish({ doc, dataSource })
 - 块的 `type` 拼错（大小写敏感，是 `keyValue` 不是 `keyvalue`）；
 - 表格某一行的单元格数和 `columns` 对不上；
 - 图表的 `values` 长度和 `labels` 对不上，或者写成了字符串；
+- 图片没写 `ref` 或 `alt`，或者 `ref` 没带 `artifact:` / `upload:` / `remote:` 前缀；
+- 图片自己写了 `width` / `height` / `mimeType`；
 - `docType: "official"` 却没给 `official.issuer`；
 - `docType: "plain"` 却带了 `official` 字段；
 - `dataSource` 空。

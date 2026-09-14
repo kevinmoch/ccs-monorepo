@@ -34,8 +34,12 @@ onSkillsChanged(() => engine?.invalidateSkills());
  *
  * 挂在 window 上不放大攻击面：这是扩展自己的页面，网页脚本够不着它，
  * 能打开这个页面的人本来就能做这里的每一件事。同款先例见 playground 的 `?hostPage=1`。
+ *
+ * 引擎也要另挂一份：文档投放端口在引擎上而不在 `adapter` 上（图片引用解析
+ * 要知道 run 产物目录），绕过它直捐 `adapter.documentSurface` 就测不到那一段。
  */
-if (new URLSearchParams(location.search).get('e2e') === '1') {
+const e2e = new URLSearchParams(location.search).get('e2e') === '1';
+if (e2e) {
   (globalThis as unknown as Record<string, unknown>)['__webskillExtensionHost'] = host;
 }
 
@@ -67,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
       onCameraPermissionDenied={() => host.openCameraPermissionPage()}
       onEngineReady={(ready) => {
         engine = ready;
+        if (e2e) (globalThis as unknown as Record<string, unknown>)['__webskillChatEngine'] = ready;
         // 页面操作的确认卡走引擎的交互桥，与技能能力授权同一套观感
         host.pageActionUi.current = ready.bridge;
       }}

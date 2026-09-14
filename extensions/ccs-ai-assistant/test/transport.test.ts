@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createTabTransport } from '../src/shared/transport';
-import { PAGE_AGENT_CHANNEL } from '../src/shared/messages';
+import { PAGE_AGENT_CHANNEL, isPageAgentEnvelope } from '../src/shared/messages';
 
 /** 扩展一重载，已打开页面里的内容脚本就连着上一个实例，新实例发的消息它收不到 */
 const ORPHAN = 'Could not establish connection. Receiving end does not exist.';
@@ -137,5 +137,27 @@ describe('帧路由只剩投递器适配（0.15.0 分册 11）', () => {
     if (reply.type !== 'perceive-result') throw new Error('expected a perceive result');
     expect(reply.result.nodes.map((node) => node.name)).toEqual(['首页', '订单列表']);
     expect(sendMessage).toHaveBeenCalledWith(7, expect.anything(), { frameId: 3 });
+  });
+});
+
+describe('取像请求的信封（0.22.0 分册 12）', () => {
+  const CAPTURE = { type: 'capture-image', ref: 'e87e0f2231614081', maxBytes: 8_000_000 } as const;
+  const IMAGE = { type: 'capture-image-result', result: { id: CAPTURE.ref, mime: 'image/png', bytes: [1], width: 4 } };
+
+  it('取像请求走得通，且内容脚本认得它', async () => {
+    // 这条判据的由来：两张类型表只列了 perceive / execute，于是内容脚本对取像请求
+    // 返回 false（通道立刻关闭），发起方拿到 undefined，报出来的却是「回包不是应答」——
+    // 一条真实缺陷，且在真扩展里表现为 capture_page_image 永远失败
+    const sendMessage = vi.fn().mockResolvedValue({
+      channel: PAGE_AGENT_CHANNEL,
+      reply: IMAGE,
+      documentUrl: 'https://app.example.com/'
+    });
+    stubChrome(sendMessage);
+
+    const reply = await createTabTransport(() => 7).send(CAPTURE);
+
+    expect(reply).toEqual(IMAGE);
+    expect(isPageAgentEnvelope(sendMessage.mock.calls[0]?.[1])).toBe(true);
   });
 });

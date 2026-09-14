@@ -16,21 +16,34 @@ import type {
 } from '../authored/model';
 import { inlineRuns } from '../authored/model';
 import type { ChartImage, ExportBlock, ExportDoc, ExportDocHeader, ExportPage, ExportRun } from './extract';
+import { imageBlocksOf, type DocImage } from './image';
 import { OmissionCounter } from './omissions';
 
-export function fromAuthoredModel(model: AuthoredModel, chartImages: readonly ChartImage[]): ExportDoc {
+export interface FromModelOptions {
+  chartImages: readonly ChartImage[];
+  docImages: readonly DocImage[];
+  zh: boolean;
+}
+
+/** 图表快照与文档图各走一个游标：两者在模型里是两种块，混用一个会互相错位 */
+interface Cursors {
+  charts: { list: readonly ChartImage[]; next: number };
+  docs: { list: readonly DocImage[]; next: number };
+  zh: boolean;
+}
+
+export function fromAuthoredModel(model: AuthoredModel, options: FromModelOptions): ExportDoc {
   const counter = new OmissionCounter();
-  const images = { list: chartImages, next: 0 };
-  const doc = model.kind === 'document' ? documentDoc(model, counter, images) : deckDoc(model, counter, images);
+  const cursors: Cursors = {
+    charts: { list: options.chartImages, next: 0 },
+    docs: { list: options.docImages, next: 0 },
+    zh: options.zh
+  };
+  const doc = model.kind === 'document' ? documentDoc(model, counter, cursors) : deckDoc(model, counter, cursors);
   return { ...doc, omissions: counter.list() };
 }
 
-interface ImageCursor {
-  list: readonly ChartImage[];
-  next: number;
-}
-
-function documentDoc(model: AuthoredDocumentModel, counter: OmissionCounter, images: ImageCursor): ExportDoc {
+function documentDoc(model: AuthoredDocumentModel, counter: OmissionCounter, images: Cursors): ExportDoc {
   const header: ExportDocHeader = { docType: model.docType };
   if (model.subtitle !== undefined) header.subtitle = model.subtitle;
   if (model.meta !== undefined) header.meta = model.meta;
@@ -49,7 +62,7 @@ function documentDoc(model: AuthoredDocumentModel, counter: OmissionCounter, ima
   };
 }
 
-function deckDoc(model: AuthoredDeckModel, counter: OmissionCounter, images: ImageCursor): ExportDoc {
+function deckDoc(model: AuthoredDeckModel, counter: OmissionCounter, images: Cursors): ExportDoc {
   return {
     kind: 'slides',
     title: model.title,
@@ -59,7 +72,7 @@ function deckDoc(model: AuthoredDeckModel, counter: OmissionCounter, images: Ima
   };
 }
 
-function convertSlide(slide: AuthoredSlide, counter: OmissionCounter, images: ImageCursor): ExportPage {
+function convertSlide(slide: AuthoredSlide, counter: OmissionCounter, images: Cursors): ExportPage {
   const regions = slide.body.map((item) => convertItem(item, counter, images));
   const page: ExportPage = { layout: slide.layout, blocks: regions.flat(), regions };
   if (slide.title !== undefined) page.title = slide.title;
@@ -69,7 +82,7 @@ function convertSlide(slide: AuthoredSlide, counter: OmissionCounter, images: Im
   return page;
 }
 
-function convertItem(item: AuthoredSlideItem, counter: OmissionCounter, images: ImageCursor): ExportBlock[] {
+function convertItem(item: AuthoredSlideItem, counter: OmissionCounter, images: Cursors): ExportBlock[] {
   switch (item.type) {
     case 'bullets': {
       const out: ExportBlock[] = [];
@@ -88,7 +101,7 @@ function convertItem(item: AuthoredSlideItem, counter: OmissionCounter, images: 
   }
 }
 
-function convertBlock(block: AuthoredBlock, counter: OmissionCounter, images: ImageCursor): ExportBlock[] {
+function convertBlock(block: AuthoredBlock, counter: OmissionCounter, images: Cursors): ExportBlock[] {
   switch (block.type) {
     case 'heading':
       return [{ kind: 'heading', level: block.level, runs: runs(block.text) }];
@@ -111,8 +124,8 @@ function convertBlock(block: AuthoredBlock, counter: OmissionCounter, images: Im
       ];
     case 'chart': {
       // 图表按文档顺序配一张屏幕上的画布快照；没配到就只剩数据，由编码器决定怎么降级
-      const image = images.list[images.next];
-      images.next += 1;
+      const image = images.charts.list[images.charts.next];
+      images.charts.next += 1;
       return [
         {
           kind: 'chart',
@@ -126,6 +139,19 @@ function convertBlock(block: AuthoredBlock, counter: OmissionCounter, images: Im
           }
         }
       ];
+    }
+    case 'image': {
+      // 图片同样按文档顺序配一张活 DOM 上量到的字节；配不上就落成一段「这里本来有张图」
+      const image = images.docs.list[images.docs.next];
+      images.docs.next += 1;
+      // 替代文本以模型为准：HTML 上那份是它的副本，模型才是原件
+      return imageBlocksOf(
+        { ...(image ?? { url: '', width: 0, height: 0 }), alt: block.alt },
+        block.ref,
+        block.caption,
+        counter,
+        images.zh
+      );
     }
     case 'metrics':
       return block.items.length > 0 ? [{ kind: 'metrics', items: block.items }] : [];
