@@ -32,6 +32,7 @@ export interface ExtensionWebOfficeHostOptions {
 interface Listing {
   handle: string;
   claimedOfficeType?: unknown;
+  claimedSource?: unknown;
   claimedFileId?: unknown;
   claimedViaMount?: unknown;
   ready?: unknown;
@@ -157,6 +158,10 @@ export function createExtensionWebOfficeHost(options: ExtensionWebOfficeHostOpti
           found.push({
             handle: entry.handle,
             officeType: typeof entry.claimedOfficeType === 'string' ? entry.claimedOfficeType : '',
+            // 认不得的取值一律不收：它会被模型当成产品名念给用户，而那是页面写的
+            ...(entry.claimedSource === 'wps' || entry.claimedSource === 'kootable'
+              ? { source: entry.claimedSource }
+              : {}),
             ...(typeof entry.claimedFileId === 'string' ? { fileId: entry.claimedFileId } : {}),
             documentUrl,
             state: entry.ready === true ? ('ready' as const) : ('initialising' as const)

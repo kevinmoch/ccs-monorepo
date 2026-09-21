@@ -368,11 +368,21 @@ describe('面板外壳的主题与语言', () => {
     follow: () => undefined
   };
 
+  /** 未被白名单拦下即提示条不存在，同 MATCHED_FOCUS 的理由 */
+  const UNBLOCKED_BINDING = {
+    snapshot: () => ({ lost: false, bindable: true }),
+    tabId: () => 1,
+    origin: () => 'https://example.com',
+    bindActiveTab: async () => undefined,
+    subscribe: () => () => undefined
+  };
+
   const shell = (store: ReturnType<typeof configStore>['store'], p: DataSourceCandidatesPort) =>
     createElement(SidePanelShell, {
       runtimeConfig: store,
       candidates: p,
       agentFocus: MATCHED_FOCUS,
+      binding: UNBLOCKED_BINDING,
       fallback: FALLBACK,
       children: null
     });
@@ -441,6 +451,7 @@ describe('面板外壳的主题与语言', () => {
         runtimeConfig: store,
         candidates: port({}),
         agentFocus: focus,
+        binding: UNBLOCKED_BINDING,
         fallback: FALLBACK,
         children: null
       });

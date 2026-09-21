@@ -213,23 +213,24 @@ export function createExtensionDownloadConsentStore(
 }
 
 /**
- * 页内 WPS 文档授权的「不再询问」存储（0.21.0 分册 13）。
+ * 页内办公文档授权的「不再询问」存储（0.21.0 分册 13）。
  *
  * 粒度是 **origin + 动作**：文档一份份地换，站点不会；按 handle 记等于每开一份文档问一次，
  * 按 origin 记又不能把「看看有哪些」和「拍照」混为一谈——所以两维都要。
  */
 const WEB_OFFICE_PREFIX = 'woconsent:';
 
+// 不写产品名：这一站用的是 WPS 还是 KooTable 由页面决定，而记住的范围按站点算
 const WEB_OFFICE_ACTION_LABELS_ZH: Record<WebOfficeAction, string> = {
-  list: '列出本页的 WPS 文档',
-  read: '读取本页的 WPS 文档',
-  capture: '截取本页的 WPS 文档'
+  list: '列出本站的办公文档',
+  read: '读取本站的办公文档',
+  capture: '截取本站的办公文档'
 };
 
 const WEB_OFFICE_ACTION_LABELS_EN: Record<WebOfficeAction, string> = {
-  list: 'list the WPS documents on this site',
-  read: 'read the WPS documents on this site',
-  capture: 'take screenshots of the WPS documents on this site'
+  list: 'list the office documents on this site',
+  read: 'read the office documents on this site',
+  capture: 'take screenshots of the office documents on this site'
 };
 
 export interface ExtensionWebOfficeConsentStore extends WebOfficeConsent {

@@ -1,7 +1,7 @@
 {
   "manifest": {
     "name": "CCS AI 助手",
-    "version": "0.21.0",
+    "version": "0.23.0",
     "description": "CCS 基建云平台 AI 助手"
   },
   "agentRuntime": {
@@ -48,6 +48,17 @@
   },
   "privacy": {
     "userProfile": true
+  },
+  "siteAccess": {
+    "allowedHosts": []
+  },
+  "console": {
+    "usageCost": {
+      "enabled": true,
+      "cnyPerMillionTokens": 9,
+      "cnyPerUsd": 6.8
+    },
+    "hiddenPages": []
   },
   "appearance": {
     "theme": "light"

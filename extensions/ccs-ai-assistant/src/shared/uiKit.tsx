@@ -194,6 +194,9 @@ export function defaultRuntimeConfig(): RuntimeConfig {
       encrypted: true
     },
     skillState: { quarantineThreshold: 5 },
+    usageCost: { enabled: true, cnyPerMillionTokens: 9, cnyPerUsd: 6.8 },
+    siteAccess: { allowedHosts: [] },
+    consoleNav: { hiddenPages: [] },
     quickPrompts: [],
     quickPromptsSeeded: false,
     quickPromptLimit: DEFAULT_QUICK_PROMPT_LIMIT,
@@ -290,6 +293,19 @@ export function mergeRuntimeConfigDefaults(partial: unknown): RuntimeConfig {
     documentSurface: mergeDocumentSurface(p['documentSurface'], d.documentSurface),
     userProfile: mergeUserProfile(p['userProfile'], d.userProfile),
     skillState: mergeSkillState(p['skillState'], d.skillState),
+    usageCost: mergeUsageCost(p['usageCost'], d.usageCost),
+    siteAccess: {
+      allowedHosts: readStringList(
+        (p['siteAccess'] as Record<string, unknown> | undefined)?.['allowedHosts'],
+        d.siteAccess.allowedHosts
+      )
+    },
+    consoleNav: {
+      hiddenPages: readStringList(
+        (p['consoleNav'] as Record<string, unknown> | undefined)?.['hiddenPages'],
+        d.consoleNav.hiddenPages
+      )
+    },
     quickPrompts: readQuickPrompts(p['quickPrompts']),
     quickPromptsSeeded: p['quickPromptsSeeded'] === true,
     quickPromptLimit: clampQuickPromptLimit(p['quickPromptLimit']),
@@ -416,6 +432,18 @@ function mergeSkillState(raw: unknown, d: RuntimeConfig['skillState']): RuntimeC
   return {
     quarantineThreshold:
       typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : d.quarantineThreshold
+  };
+}
+
+/** 单价允许 0（自建模型不计费）；汇率必须为正，否则英文界面的金额会变成 Infinity 或负值 */
+function mergeUsageCost(raw: unknown, d: RuntimeConfig['usageCost']): RuntimeConfig['usageCost'] {
+  const p = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const rate = p['cnyPerMillionTokens'];
+  const usd = p['cnyPerUsd'];
+  return {
+    enabled: typeof p['enabled'] === 'boolean' ? p['enabled'] : d.enabled,
+    cnyPerMillionTokens: typeof rate === 'number' && Number.isFinite(rate) && rate >= 0 ? rate : d.cnyPerMillionTokens,
+    cnyPerUsd: typeof usd === 'number' && Number.isFinite(usd) && usd > 0 ? usd : d.cnyPerUsd
   };
 }
 

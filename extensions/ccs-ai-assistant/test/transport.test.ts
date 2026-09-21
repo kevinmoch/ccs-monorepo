@@ -94,6 +94,19 @@ describe('内容脚本失联时的补注入', () => {
     await expect(createTabTransport(() => undefined).send(REQUEST)).rejects.toThrow('No page is bound');
     expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
   });
+
+  // 被站点白名单挡下时也是「没有 tab」，但让用户去切标签页毫无用处：切到哪一页都一样
+  it('调用方给了未绑定的原因时用它，而不是那句「切到你要操作的页」', async () => {
+    stubChrome(vi.fn());
+    const blocked = 'This assistant is restricted to an allowlist of sites, and "x.org" is not on it.';
+    await expect(
+      createTabTransport(
+        () => undefined,
+        undefined,
+        () => blocked
+      ).send(REQUEST)
+    ).rejects.toThrow(blocked);
+  });
 });
 
 describe('帧路由只剩投递器适配（0.15.0 分册 11）', () => {

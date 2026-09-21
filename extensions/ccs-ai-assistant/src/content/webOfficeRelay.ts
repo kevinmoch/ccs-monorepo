@@ -85,6 +85,7 @@ export async function relayWebOffice(request: WebOfficeRequest): Promise<WebOffi
         handle: handleFor(summary.localId),
         // 下面两项是**页面说的**，名字里带 claimed 就是为了让面板那侧无法不小心当成事实
         claimedOfficeType: summary.officeType,
+        ...(summary.source === undefined ? {} : { claimedSource: summary.source }),
         ...(summary.fileId === undefined ? {} : { claimedFileId: summary.fileId }),
         ...(summary.viaMount === true ? { claimedViaMount: true } : {}),
         ready: summary.state === 'ready'

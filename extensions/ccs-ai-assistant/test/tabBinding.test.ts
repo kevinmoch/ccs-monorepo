@@ -268,3 +268,67 @@ describe('绑定跟随活动标签页', () => {
     });
   });
 });
+
+/**
+ * 站点白名单（`RuntimeConfig.siteAccess.allowedHosts`）在绑定这一处收口：
+ * 绑不上就没有 tabId，感知、页面动作、标签页集、WebOffice 全都跟着断。
+ * 所以这一组验的是「拦住」与「说清楚」，不是某个单独能力。
+ */
+describe('站点白名单', () => {
+  let tabs: Map<number, Tab>;
+  let chromeStub: ReturnType<typeof installChrome>;
+  const allowA = (url: string): boolean => new URL(url).hostname === 'a.example.com';
+
+  beforeEach(() => {
+    tabs = new Map<number, Tab>([
+      [1, { id: 1, url: 'https://a.example.com/orders', title: 'A' }],
+      [2, { id: 2, url: 'https://b.example.com/report', title: 'B' }]
+    ]);
+    chromeStub = installChrome(tabs);
+  });
+
+  it('名单内的页照常绑定', async () => {
+    const binding = createTabBinding(() => undefined, allowA);
+    await chromeStub.activate(1);
+    expect(binding.tabId()).toBe(1);
+    expect(binding.snapshot().blockedUrl).toBeUndefined();
+  });
+
+  it('名单外的页不绑定，并把被拦的地址报出来', async () => {
+    const binding = createTabBinding(() => undefined, allowA);
+    await chromeStub.activate(2);
+    expect(binding.tabId()).toBeUndefined();
+    expect(binding.snapshot().blockedUrl).toBe('https://b.example.com/report');
+    // 与「浏览器不让注入」区分开：那是 bindable=false 且没有 blockedUrl
+    expect(binding.snapshot().bindable).toBe(false);
+  });
+
+  it('从名单内切到名单外要清句柄表：否则模型还能操作已经不该碰的那一页', async () => {
+    const onRebind = vi.fn();
+    createTabBinding(onRebind, allowA);
+    await chromeStub.activate(1);
+    const calls = onRebind.mock.calls.length;
+
+    await chromeStub.activate(2);
+    expect(onRebind.mock.calls.length).toBe(calls + 1);
+  });
+
+  it('被拦下时不会退而求其次去绑后台的某个合规标签页', async () => {
+    const binding = createTabBinding(() => undefined, allowA);
+    // 1 号（合规）在后台开着，用户停在 2 号（不合规）上
+    await chromeStub.activate(2);
+    await binding.bindActiveTab();
+    expect(binding.tabId()).toBeUndefined();
+    expect(binding.snapshot().blockedUrl).toBe('https://b.example.com/report');
+  });
+
+  it('切回名单内的页后拦截状态消失', async () => {
+    const binding = createTabBinding(() => undefined, allowA);
+    await chromeStub.activate(2);
+    expect(binding.snapshot().blockedUrl).toBeDefined();
+
+    await chromeStub.activate(1);
+    expect(binding.snapshot().blockedUrl).toBeUndefined();
+    expect(binding.tabId()).toBe(1);
+  });
+});

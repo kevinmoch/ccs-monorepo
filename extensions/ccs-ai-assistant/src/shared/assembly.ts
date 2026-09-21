@@ -37,6 +37,8 @@ import { AUDIT_EVENT_TYPES, CandidateStore, FsAuditLog, createCandidateSink } fr
 import type { CandidateSink } from '@webskill/governance';
 import { createBrowserChatbotHost } from '@webskill/browser';
 import type { ChatbotHostAdapter, SandboxExecutorDeps, SettingsSectionId } from '@webskill/chatbot';
+// 发布档里 `@webskill/ui-kit` 解析到本地垫片，白名单匹配器只能从已发布的 config 入口拿
+import { isAllowedSite } from '@webskill/chatbot/config';
 import { createLocalStorageRuntimeConfigStore } from '@webskill/ui-kit';
 import type { RuntimeConfig, RuntimeConfigStore } from '@webskill/ui-kit';
 import { applyBakedDefaults, withBakedDefaults } from './bakedConfig';
@@ -61,7 +63,8 @@ import { createPageMcpHost, type PageMcpHost } from './pageMcpHost';
 import { extractPdfText, pdfDocumentReader } from './pdfText';
 import { ACTION_SCOPE, DOWNLOAD_WAIT_MS, PERCEPTION_SCOPE } from './scopes';
 import { seedBuiltinSkills, BUILTIN_ROOT } from './seedSkills';
-import { createTabBinding, type TabBindingPort } from './tabBinding';
+import { createTabBinding, type TabBindingPort, type TabBindingSnapshot } from './tabBinding';
+import { describeSiteBlock as describeBlock } from './siteBlock';
 import { createTabTransport } from './transport';
 
 export const CHAT_ROOT = '/chat';
@@ -170,6 +173,16 @@ export function readLocaleSync(): 'en' | 'zh' {
  */
 export function loadRuntimeConfigSync(): RuntimeConfig {
   return applyBakedDefaults(readStoredConfig());
+}
+
+/** 站点白名单判定。清单每次现读：用户在选项页改完不必重开面板 */
+export function allowSiteSync(url: string): boolean {
+  return isAllowedSite(url, loadRuntimeConfigSync().siteAccess.allowedHosts);
+}
+
+/** 说明文案在 `siteBlock.ts` 里，这里只补上「当前允许清单」这一个参数 */
+export function describeSiteBlock(snapshot: TabBindingSnapshot): string | undefined {
+  return describeBlock(snapshot, loadRuntimeConfigSync().siteAccess.allowedHosts);
 }
 
 /**
@@ -390,7 +403,7 @@ export function createSidePanelHost(): SidePanelHost {
     // 候选源同理（D-21-7）；已记住的不动，它们靠 approved(新 origin) 自然只对新站点生效
     candidates.clearPending();
     announceCandidates();
-  });
+  }, allowSiteSync);
 
   /**
    * 主动向当前页要一次它声明过的数据源（分册 21）。
@@ -433,7 +446,11 @@ export function createSidePanelHost(): SidePanelHost {
     onReset: () => targets.clear(),
     onDrop: (shard) => targets.drop(shard)
   });
-  const transport = createTabTransport(() => workset.focusedTabId() ?? binding.tabId());
+  const transport = createTabTransport(
+    () => workset.focusedTabId() ?? binding.tabId(),
+    undefined,
+    () => describeSiteBlock(binding.snapshot())
+  );
 
   const perception = new PagePerceptionPolicy({
     scope: PERCEPTION_SCOPE,

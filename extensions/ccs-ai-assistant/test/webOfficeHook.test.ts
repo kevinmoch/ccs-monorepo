@@ -124,6 +124,7 @@ beforeEach(() => {
   Reflect.deleteProperty(window, 'WebOfficeSDK');
   Reflect.deleteProperty(window, 'WPSOpenApi');
   Reflect.deleteProperty(window, 'officeType');
+  Reflect.deleteProperty(window, 'luckysheet');
   for (const name of ['OpenSDK', 'WPS', 'litePreviewSDK']) Reflect.deleteProperty(window, name);
 });
 
@@ -132,6 +133,7 @@ afterEach(() => {
   Reflect.deleteProperty(window, 'WebOfficeSDK');
   Reflect.deleteProperty(window, 'WPSOpenApi');
   Reflect.deleteProperty(window, 'officeType');
+  Reflect.deleteProperty(window, 'luckysheet');
   for (const name of ['OpenSDK', 'WPS', 'litePreviewSDK']) Reflect.deleteProperty(window, name);
   vi.doUnmock('../src/content/mainWorld/webOfficePdfSniffer');
 });
@@ -786,6 +788,139 @@ describe('演示文稿逐形状取文本（AC-12.16）', () => {
     const localId = await adopt([{ shapes: ['第一张'] }, { shapes: ['第二张'] }]);
 
     await expect(call(localId, 'GetSlideBody', [1])).resolves.toEqual({ texts: ['第二张'], shapeCount: 1 });
+  });
+});
+
+/**
+ * KooTable（Luckysheet fork）。
+ *
+ * 与 WPS 完全是另一套：根对象是页面全局上的 `luckysheet.tableEditor`，序号 0 基，
+ * 网格按配置**预分配**——一张五行的表在数据里就是八十多行空格子。
+ */
+describe('KooTable 表格', () => {
+  interface KooCell {
+    v?: unknown;
+    m?: unknown;
+  }
+
+  /** `rows` 是有值的那几行；后面补到 `allocated` 行，照真实的预分配网格 */
+  function mountKooTable(options: {
+    sheets: { sheetId: number; sheetName?: string; rows: (KooCell | null)[][] }[];
+    allocated?: { rows: number; columns: number };
+  }): void {
+    const grid = (rows: (KooCell | null)[][]): (KooCell | null)[][] => {
+      const allocated = options.allocated ?? { rows: rows.length, columns: 0 };
+      const width = Math.max(allocated.columns, ...rows.map((row) => row.length));
+      const out: (KooCell | null)[][] = [];
+      for (let index = 0; index < Math.max(allocated.rows, rows.length); index += 1) {
+        const row = rows[index] ?? [];
+        out.push(Array.from({ length: width }, (_unused, column) => row[column] ?? null));
+      }
+      return out;
+    };
+    (window as unknown as Record<string, unknown>)['luckysheet'] = {
+      tableEditor: {
+        worksheet: {
+          getAllWorksheets: () =>
+            options.sheets.map((sheet) => ({ sheetId: sheet.sheetId, sheetName: sheet.sheetName }))
+        },
+        cellData: {
+          getAllData: (sheetId: number) => {
+            const sheet = options.sheets.find((candidate) => candidate.sheetId === sheetId);
+            return sheet === undefined ? [] : grid(sheet.rows);
+          }
+        }
+      }
+    };
+  }
+
+  const call = async (localId: string, method: string, args: unknown[] = []): Promise<unknown> => {
+    const result = await ask({ kind: 'call', localId, method, args });
+    expect(result, `${method} 应当成功`).toMatchObject({ ok: true });
+    return result.value;
+  };
+
+  it('收养后立刻可读，并把来源报成 kootable 而不是混进 WPS', async () => {
+    mountKooTable({ sheets: [{ sheetId: 3, sheetName: '第一张', rows: [[{ v: 'a' }]] }] });
+    await install();
+
+    const [record] = await enumerate();
+
+    expect(record).toMatchObject({ officeType: 's', source: 'kootable', state: 'ready' });
+    await expect(ask({ kind: 'describe', localId: record!.localId })).resolves.toMatchObject({
+      value: ['GetSheetNames', 'GetUsedRange']
+    });
+  });
+
+  it('取数路径缺一条就不登记——列得出文档却读出空表更难查', async () => {
+    (window as unknown as Record<string, unknown>)['luckysheet'] = {
+      tableEditor: { worksheet: { getAllWorksheets: () => [] } }
+    };
+    await install();
+
+    await expect(enumerate()).resolves.toEqual([]);
+  });
+
+  it('预分配的空行不算进 rowCount，否则模型会一路续读几十行空格', async () => {
+    mountKooTable({
+      sheets: [{ sheetId: 1, rows: [[{ v: '姓名' }, { v: '工号' }], [{ v: '张三' }, { v: 1001 }]] }],
+      allocated: { rows: 84, columns: 60 }
+    });
+    await install();
+    const [record] = await enumerate();
+
+    await expect(call(record!.localId, 'GetUsedRange', [0, 0, 200])).resolves.toEqual({
+      rows: [
+        ['姓名', '工号'],
+        ['张三', 1001]
+      ],
+      rowCount: 2,
+      columnCount: 2
+    });
+  });
+
+  it('富文本格取渲染出来的那串字，不是 [object Object]', async () => {
+    mountKooTable({
+      sheets: [{ sheetId: 1, rows: [[{ v: [{ ct: {}, v: '加粗' }], m: '加粗的一段' }]] }]
+    });
+    await install();
+    const [record] = await enumerate();
+
+    await expect(call(record!.localId, 'GetUsedRange', [0, 0, 200])).resolves.toMatchObject({
+      rows: [['加粗的一段']]
+    });
+  });
+
+  it('工作表名一个都不滤，序号才对得上：第二张读到的是第二张', async () => {
+    mountKooTable({
+      sheets: [
+        { sheetId: 7, sheetName: '', rows: [[{ v: '第一张' }]] },
+        { sheetId: 4, sheetName: '明细', rows: [[{ v: '第二张' }]] }
+      ]
+    });
+    await install();
+    const [record] = await enumerate();
+
+    await expect(call(record!.localId, 'GetSheetNames')).resolves.toEqual(['Sheet1', '明细']);
+    // sheetId 与序号不相等（4 排在 7 后面）：按序号取 sheetId 才不会读串
+    await expect(call(record!.localId, 'GetUsedRange', [1, 0, 200])).resolves.toMatchObject({
+      rows: [['第二张']]
+    });
+  });
+
+  it('页面换掉实例后旧 handle 立刻失效，而不是读到另一份文档', async () => {
+    mountKooTable({ sheets: [{ sheetId: 1, sheetName: '旧的', rows: [[{ v: '旧内容' }]] }] });
+    await install();
+    const [before] = await enumerate();
+
+    mountKooTable({ sheets: [{ sheetId: 1, sheetName: '新的', rows: [[{ v: '新内容' }]] }] });
+    const after = await enumerate();
+
+    expect(after).toHaveLength(1);
+    expect(after[0]?.localId).not.toBe(before!.localId);
+    await expect(ask({ kind: 'call', localId: before!.localId, method: 'GetSheetNames', args: [] })).resolves.toMatchObject(
+      { ok: false, reason: 'no-instance' }
+    );
   });
 });
 

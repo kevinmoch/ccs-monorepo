@@ -57,6 +57,7 @@ export interface WebOfficeInstanceSummary {
   /** 页面看得见的本地序号。**不是** handle——handle 由 ISOLATED 侧生成（FR-11.3a） */
   localId: string;
   officeType: string;
+  source?: 'wps' | 'kootable';
   fileId?: string;
   iframeId?: string;
   /**

@@ -22,6 +22,12 @@ export interface TabBindingSnapshot {
   lost: boolean;
   /** 内容脚本注入不进去的页面（`chrome://`、扩展页、商店页）；transport 据此立刻失败 */
   bindable: boolean;
+  /**
+   * 该页落在站点白名单之外，助手对它既不读也不操作。
+   * 与 `bindable:false` 分开给：后者是浏览器不让注入，前者是宿主自己划的界，
+   * 两者对用户的话术完全不同——混成一句会让人以为是浏览器的毛病。
+   */
+  blockedUrl?: string;
 }
 
 export interface TabBindingPort {
@@ -79,8 +85,13 @@ const rememberedTab = (): number | undefined => {
 /**
  * @param onRebind 换页时的副作用（清空句柄表）。做成入参而不是内部直接引用 registry：
  *   绑定与句柄表是两件事，把后者塞进来会让这个模块也变成装配代码。
+ * @param allowSite 站点白名单判定。**每次换页时现读**，用户在选项页改完白名单
+ *   不必重开面板；装配期取一次会把清单钉死在开面板那一刻。
  */
-export function createTabBinding(onRebind: () => void): TabBindingPort {
+export function createTabBinding(
+  onRebind: () => void,
+  allowSite: (url: string) => boolean = () => true
+): TabBindingPort {
   let current: TabBindingSnapshot = { lost: false, bindable: false };
   /**
    * 浏览器焦点所在的 tab，**不管它可不可绑定**。
@@ -93,8 +104,17 @@ export function createTabBinding(onRebind: () => void): TabBindingPort {
     for (const listener of [...listeners]) listener();
   };
 
-  const adopt = (tab: chrome.tabs.Tab | undefined): void => {
-    if (tab?.id === undefined || !isBindable(tab.url)) return;
+  /** @returns 这一页是否已有定论（绑上了，或明确被白名单挡下）；`bindActiveTab` 的搜索据此收手 */
+  const adopt = (tab: chrome.tabs.Tab | undefined): boolean => {
+    if (tab?.id === undefined || !isBindable(tab.url)) return false;
+    const url = tab.url as string;
+    if (!allowSite(url)) {
+      // 挡下的同时弃表：上一页的句柄留着，就是让模型在一个它已经不被允许看的站点上继续操作
+      if (current.tabId !== undefined) onRebind();
+      current = { lost: false, bindable: false, blockedUrl: url, ...(tab.title ? { title: tab.title } : {}) };
+      notify();
+      return true;
+    }
     const nextOrigin = originOf(tab.url);
     rememberTab(tab.id);
     // 换了 tab 或换了站点即弃表：旧 ref 留着就是让模型能操作它已经看不见的页面
@@ -108,6 +128,7 @@ export function createTabBinding(onRebind: () => void): TabBindingPort {
       ...(nextOrigin ? { origin: nextOrigin } : {})
     };
     notify();
+    return true;
   };
 
   chrome.tabs.onRemoved.addListener((tabId) => {
@@ -151,7 +172,7 @@ export function createTabBinding(onRebind: () => void): TabBindingPort {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id !== undefined && !BROWSER_OWNED.test(tab.url ?? '')) activeTabId = tab.id;
       adopt(tab);
-      if (current.tabId !== undefined) return;
+      if (current.tabId !== undefined || current.blockedUrl !== undefined) return;
       // 从 options 页打开时活动 tab 就是它自己（不可绑定）；回退到上一次记住的那一页
       const remembered = rememberedTab();
       if (remembered !== undefined) {
@@ -159,7 +180,7 @@ export function createTabBinding(onRebind: () => void): TabBindingPort {
           .get(remembered)
           .then(adopt)
           .catch(() => undefined);
-        if (current.tabId !== undefined) return;
+        if (current.tabId !== undefined || current.blockedUrl !== undefined) return;
       }
       // tab id 不跨浏览器会话，记住的那一页可能早就关了。此时只扫「活动 tab」是不够的：
       // 每个窗口只有一个活动 tab，而用户只开一个窗口时那一个正是 console 自己。
@@ -169,7 +190,7 @@ export function createTabBinding(onRebind: () => void): TabBindingPort {
           .filter((candidate) => isBindable(candidate.url))
           .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0];
       adopt(recent(await chrome.tabs.query({ currentWindow: true }).catch(() => [])));
-      if (current.tabId !== undefined) return;
+      if (current.tabId !== undefined || current.blockedUrl !== undefined) return;
       adopt(recent(await chrome.tabs.query({}).catch(() => [])));
     },
     subscribe: (listener) => {

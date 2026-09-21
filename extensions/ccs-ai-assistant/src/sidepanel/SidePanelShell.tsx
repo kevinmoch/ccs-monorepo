@@ -3,13 +3,17 @@ import { ThemeScope, useRuntimeAppearance } from '@webskill/ui-kit';
 import type { RuntimeAppearanceConfig, RuntimeConfigStore } from '@webskill/ui-kit';
 import { DataSourceCandidates } from './DataSourceCandidates';
 import { AgentFocusNotice } from './AgentFocusNotice';
+import { SiteBlockNotice } from './SiteBlockNotice';
 import type { AgentFocusPort, DataSourceCandidatesPort } from '../shared/assembly';
+import type { TabBindingPort } from '../shared/tabBinding';
 
 export interface SidePanelShellProps {
   runtimeConfig: RuntimeConfigStore;
   candidates: DataSourceCandidatesPort;
   /** 模型焦点与用户视线不一致时的提示条（0.16.0 FR-11.7） */
   agentFocus: AgentFocusPort;
+  /** 站点白名单拦下当前页时的提示条 */
+  binding: TabBindingPort;
   /** 首帧兜底：读盘是异步的，没有它面板会先闪一下缺省主题 */
   fallback: RuntimeAppearanceConfig;
   children: ReactNode;
@@ -27,12 +31,14 @@ export function SidePanelShell({
   runtimeConfig,
   candidates,
   agentFocus,
+  binding,
   fallback,
   children
 }: SidePanelShellProps): JSX.Element {
   const { appearance } = useRuntimeAppearance(runtimeConfig, fallback);
   return (
     <ThemeScope theme={appearance.theme} className="flex h-full flex-col bg-background text-foreground">
+      <SiteBlockNotice port={binding} locale={appearance.locale} />
       <AgentFocusNotice port={agentFocus} locale={appearance.locale} />
       <DataSourceCandidates port={candidates} locale={appearance.locale} />
       <div className="min-h-0 flex-1">{children}</div>

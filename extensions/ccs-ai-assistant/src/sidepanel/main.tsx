@@ -49,6 +49,7 @@ createRoot(document.getElementById('root')!).render(
     runtimeConfig={host.runtimeConfig}
     candidates={host.candidates}
     agentFocus={host.agentFocus}
+    binding={host.binding}
     fallback={APPEARANCE_FALLBACK}
   >
     <Chatbot

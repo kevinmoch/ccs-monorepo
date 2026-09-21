@@ -84,6 +84,25 @@ describe('跨帧枚举（AC-11.12 / FR-11.4c）', () => {
     expect(records[0]).toMatchObject({ handle: 'wo-deep', officeType: 'w', fileId: 'f-1', state: 'ready' });
   });
 
+  it('两家来源都照实转上去，页面瞎报的第三种一个字都不收', async () => {
+    fakeChrome([0], (_frameId, kind) => {
+      if (kind !== 'list') return { channel: WEB_OFFICE_CHANNEL, ok: true, value: undefined };
+      return {
+        channel: WEB_OFFICE_CHANNEL,
+        ok: true,
+        value: [
+          { handle: 'wo-wps', claimedOfficeType: 'w', claimedSource: 'wps', ready: true },
+          { handle: 'wo-koo', claimedOfficeType: 's', claimedSource: 'kootable', ready: true },
+          { handle: 'wo-liar', claimedOfficeType: 'w', claimedSource: 'Microsoft Office', ready: true }
+        ]
+      };
+    });
+
+    const records = await host().list();
+
+    expect(records.map((record) => record.source)).toEqual(['wps', 'kootable', undefined]);
+  });
+
   it('后续调用投回它自己那一帧，而不是顶层', async () => {
     const { sent } = fakeChrome([0, 1, 2], (frameId, kind) => {
       if (kind === 'list') {

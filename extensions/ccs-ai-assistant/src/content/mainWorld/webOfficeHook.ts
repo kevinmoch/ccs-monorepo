@@ -65,13 +65,19 @@ declare global {
     litePreviewSDK?: unknown;
     /** 同一帧上的文档类型标记，`'w'` / `'s'` / `'f'` */
     officeType?: unknown;
+    /** KooTable（Luckysheet fork）的全局入口 */
+    luckysheet?: unknown;
   }
 }
+
+// 实例的来源技术栈
+type InstanceSource = 'wps' | 'kootable';
 
 interface InstanceRecord {
   localId: string;
   instance: Unknown;
   officeType: string;
+  source: InstanceSource;
   fileId?: string;
   iframeId?: string;
   state: 'initialising' | 'ready' | 'failed';
@@ -317,6 +323,129 @@ const ADAPTERS: Record<string, Record<string, ReadAdapter>> = {
   }
 };
 
+/**
+ * 页面全局上那份 KooTable 实例。取不到、或页面把 `luckysheet` 定义成会抛的存取器，
+ * 都当作这一帧没有 KooTable。
+ */
+function currentKooTable(): Unknown | undefined {
+  try {
+    const luckysheet = window.luckysheet;
+    if (!holdsProperties(luckysheet)) return undefined;
+    const tableEditor = luckysheet['tableEditor'];
+    return holdsProperties(tableEditor) ? tableEditor : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * `tableEditor.<组>.<方法>` 是不是真的一个函数。
+ *
+ * 这一侧不复用 `hasPath`：那个函数末段只查描述符，因为 WPS 的代理让属性与方法从外面看
+ * 没有区别。KooTable 是页面自己的普通对象，`typeof` 判得准——而判得准在这里有用：
+ * 少一条取数路径就该认不出来，而不是登记一份读出空表的实例。
+ */
+function kooMethod(tableEditor: Unknown | undefined, group: string, method: string): boolean {
+  if (tableEditor === undefined) return false;
+  const owner = tableEditor[group];
+  return holdsProperties(owner) && typeof owner[method] === 'function';
+}
+
+/** KooTable 的工作表清单，顺序即 `GetSheetNames` / `GetUsedRange` 共用的 0 基序号 */
+async function kooWorksheets(record: InstanceRecord): Promise<Unknown[]> {
+  const sheets = await value(record.instance, ['get', 'worksheet'], ['call', 'getAllWorksheets']);
+  return Array.isArray(sheets) ? sheets.filter(holdsProperties) : [];
+}
+
+/**
+ * 一格的标量值。
+ *
+ * KooTable 每格是 `{v: 原值, m: 渲染出来的那串字, ct: 类型}`，空格直接是 `null`。
+ * 富文本的 `v` 是段数组，取不出标量，那时只有 `m` 能用——否则这一格会变成 `[object Object]`。
+ */
+function kooCellValue(cell: unknown): string | number | boolean | null {
+  if (cell === null || cell === undefined) return null;
+  if (typeof cell === 'number' || typeof cell === 'boolean' || typeof cell === 'string') return cell;
+  if (!holdsProperties(cell)) return null;
+  const raw = cell['v'];
+  if (typeof raw === 'number' || typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') return normaliseText(raw);
+  const shown = cell['m'];
+  return typeof shown === 'string' ? normaliseText(shown) : null;
+}
+
+/**
+ * 真正有值的那一块有多大。
+ *
+ * KooTable 的网格是**按配置预分配**的：新建一张表就有几十行几十列空格子。
+ * 原样报回去的话，一张五行的表会被报成八十多行——模型据此以为后面还有七十多行没读，
+ * 于是一路续读，把格数预算全花在空格上。
+ */
+function kooUsedBounds(grid: readonly unknown[][]): { rows: number; columns: number } {
+  let rows = 0;
+  let columns = 0;
+  for (const [rowIndex, row] of grid.entries()) {
+    if (!Array.isArray(row)) continue;
+    for (const [columnIndex, cell] of row.entries()) {
+      const cellValue = kooCellValue(cell);
+      if (cellValue === null || cellValue === '') continue;
+      rows = Math.max(rows, rowIndex + 1);
+      columns = Math.max(columns, columnIndex + 1);
+    }
+  }
+  return { rows, columns };
+}
+
+/**
+ * KooTable 的逻辑方法适配器。
+ *
+ * 与 WPS 那张表分开而不是并进去：根对象、调用形状、序号基数全不一样
+ * （这边是 `tableEditor.<组>.<方法>` 的普通对象、0 基；那边是 VBA 对象模型、1 基）。
+ * `probe` 在这里也是 `tableEditor` 下的两段路径，由 `resolveAdapter` 真的去查，
+ * 不是摆着好看的注解。
+ */
+const KOO_TABLE_ADAPTERS: Record<string, ReadAdapter> = {
+  GetSheetNames: {
+    probe: ['worksheet', 'getAllWorksheets'],
+    async invoke(record) {
+      // 一个名字都不滤：这份名单的下标就是 `GetUsedRange` 的 sheet 序号，
+      // 滤掉任何一条，之后每一次取值都会落到另一张表上
+      //（WPS 那边靠 `positions` 解决同一个问题，这边靠不滤）
+      return (await kooWorksheets(record)).map((sheet, index) => {
+        const name = sheet['sheetName'];
+        return typeof name === 'string' && name !== '' ? name : `Sheet${String(index + 1)}`;
+      });
+    }
+  },
+  GetUsedRange: {
+    probe: ['cellData', 'getAllData'],
+    async invoke(record, args) {
+      const sheetIndex = Math.max(0, numberAt(args, 0, 0));
+      const start = Math.max(0, numberAt(args, 1, 0));
+      const limit = Math.max(1, numberAt(args, 2, 200));
+      const sheet = (await kooWorksheets(record))[sheetIndex];
+      if (sheet === undefined) return { rows: [], rowCount: 0, columnCount: 0 };
+      // `getAllData()` 认 sheetId 不认序号；插入或删除过工作表之后两者就不再相等
+      const sheetId = typeof sheet['sheetId'] === 'number' ? sheet['sheetId'] : sheetIndex;
+      const raw = await value(record.instance, ['get', 'cellData'], ['call', 'getAllData', [sheetId]]);
+      const grid = (Array.isArray(raw) ? raw : []) as unknown[][];
+      const { rows: rowCount, columns: columnCount } = kooUsedBounds(grid);
+      const take = Math.min(limit, rowCount - start);
+      if (take <= 0 || columnCount <= 0) return { rows: [], rowCount, columnCount };
+      const rows: (string | number | boolean | null)[][] = [];
+      for (let index = start; index < start + take; index += 1) {
+        const source = grid[index];
+        const row: (string | number | boolean | null)[] = [];
+        for (let column = 0; column < columnCount; column += 1) {
+          row.push(kooCellValue(Array.isArray(source) ? source[column] : null));
+        }
+        rows.push(row);
+      }
+      return { rows, rowCount, columnCount };
+    }
+  }
+};
+
 /** 第 `index` 张（0 基）幻灯片。`Slides.Item` 是 1 基的 */
 function slideAt(record: InstanceRecord, index: number): unknown {
   const app = record.instance['Application'];
@@ -377,6 +506,12 @@ async function sheetPositions(record: InstanceRecord): Promise<number[]> {
 }
 
 function resolveAdapter(record: InstanceRecord, method: string): ReadAdapter | undefined {
+  if (record.source === 'kootable') {
+    const adapter = KOO_TABLE_ADAPTERS[method];
+    if (adapter === undefined) return undefined;
+    const [group = '', name = ''] = adapter.probe;
+    return kooMethod(record.instance, group, name) ? adapter : undefined;
+  }
   const adapter = ADAPTERS[record.officeType]?.[method];
   if (adapter === undefined) return undefined;
   try {
@@ -396,6 +531,7 @@ function summarize(record: InstanceRecord): WebOfficeInstanceSummary {
   return {
     localId: record.localId,
     officeType: record.officeType,
+    ...(record.source === 'wps' ? {} : { source: record.source }),
     ...(record.fileId === undefined ? {} : { fileId: record.fileId }),
     ...(record.iframeId === undefined ? {} : { iframeId: record.iframeId }),
     ...(record.viaMount === true ? { viaMount: true } : {}),
@@ -422,9 +558,16 @@ export function probeRecords(): readonly { summary: WebOfficeInstanceSummary; in
  * 下一次有人来问的时候发现它不在了就够了。
  */
 function liveRecords(): InstanceRecord[] {
+  const kooTable = currentKooTable();
   for (let i = records.length - 1; i >= 0; i -= 1) {
     const record = records[i]!;
     if (record.iframeId !== undefined && document.getElementById(record.iframeId) === null) {
+      records.splice(i, 1);
+      continue;
+    }
+    // KooTable 的实例是页面全局上的一个对象，SPA 换一份文档就整个换掉。
+    // 旧那份不清掉的话，旧 handle 再读到的是另一份文档的内容——比读不到更糟
+    if (record.source === 'kootable' && record.instance !== kooTable) {
       records.splice(i, 1);
       continue;
     }
@@ -515,6 +658,7 @@ function registerInstance(instance: unknown, params: unknown): void {
       localId: `local-${nextLocalId++}`,
       instance: instance as Unknown,
       officeType,
+      source: 'wps',
       ...(fileId === undefined ? {} : { fileId }),
       state: 'initialising'
     };
@@ -628,6 +772,7 @@ function adoptOpenApi(): void {
       localId: `local-${nextLocalId++}`,
       instance: api,
       officeType: frameOfficeType(),
+      source: 'wps',
       ...(fileId === undefined ? {} : { fileId }),
       state: 'initialising'
     };
@@ -663,6 +808,54 @@ function scan(): void {
   adoptOpenApi();
   wrapExistingSdk();
   wrapConfigSdks();
+  adoptKooTable();
+}
+
+/**
+ * 收养 KooTable 实例（Luckysheet fork 站点）。
+ *
+ * 不走 `watchReady`：这一支没有就绪事件，取数路径齐了就是真的可读，
+ * 而路径不齐时根本不登记——没有「登记了但还不能读」这一档。
+ */
+const kootableAdopted = new WeakSet<object>();
+
+/**
+ * 地址里的文档 id。只用于在「一页两份」时给用户一个看得出差别的标签；
+ * 取不到就不给——`fileId` 从不参与授权，编一个出来只会让卡上多一行假的。
+ */
+function kooFileId(): string | undefined {
+  try {
+    // 实测站点把它放在路径的最后一段（`/wapp/doc/{uuid}`）。别的部署未必如此，所以取不到是常态
+    const id = /\/(?:doc|sheet|file)\/([^/?#]+)/.exec(window.location.pathname)?.[1];
+    return id === undefined || id === '' ? undefined : id;
+  } catch {
+    return undefined;
+  }
+}
+
+function adoptKooTable(): void {
+  try {
+    const tableEditor = currentKooTable();
+    if (tableEditor === undefined || kootableAdopted.has(tableEditor)) return;
+    // 两条取数路径缺一条就不是我们认得的那套。登记一份读不出内容的实例，
+    // 症状是「列得出文档、读出来是空」，比认不出来更难查
+    if (!kooMethod(tableEditor, 'worksheet', 'getAllWorksheets')) return;
+    if (!kooMethod(tableEditor, 'cellData', 'getAllData')) return;
+    kootableAdopted.add(tableEditor);
+
+    const fileId = kooFileId();
+    const record: InstanceRecord = {
+      localId: `local-${nextLocalId++}`,
+      instance: tableEditor,
+      officeType: 's',
+      source: 'kootable',
+      ...(fileId === undefined ? {} : { fileId }),
+      state: 'ready'
+    };
+    records.push(record);
+  } catch {
+    // 页面把 luckysheet 定义成会抛的存取器：当作这一帧没有 KooTable
+  }
 }
 
 /**
@@ -705,6 +898,7 @@ function registerConfigured(instance: unknown, params: unknown): void {
       localId: `local-${nextLocalId++}`,
       instance,
       officeType,
+      source: 'wps',
       ...(fileId === undefined ? {} : { fileId }),
       state: 'initialising',
       viaMount: true

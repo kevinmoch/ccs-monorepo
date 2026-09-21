@@ -33,14 +33,18 @@ function frameKey(url: string): string | undefined {
  * 地址是 `frameId` 而**不是** `{ tabId, frameId }`：tabId 每次现取，
  * 句柄记的只是帧号。把 tabId 焊进地址会让用户切 tab 之后旧句柄被投回旧 tab。
  */
-function createTabDispatcher(resolveTabId: () => number | undefined): FrameDispatcher<number> {
+function createTabDispatcher(
+  resolveTabId: () => number | undefined,
+  explainUnbound: () => string | undefined
+): FrameDispatcher<number> {
   /** 本次感知的帧清单快照；`mainFrame()` 是每次编排的第一步，借它作废上一次的缓存 */
   let frames: readonly chrome.webNavigation.GetAllFrameResultDetails[] = [];
 
   const requireTab = (): number => {
     const tabId = resolveTabId();
     if (tabId === undefined) {
-      throw new Error('No page is bound. Switch to the tab you want the assistant to work on.');
+      // 被站点白名单挡下时说「没绑定」是在误导：用户会去切标签页，而怎么切都没用
+      throw new Error(explainUnbound() ?? 'No page is bound. Switch to the tab you want the assistant to work on.');
     }
     return tabId;
   };
@@ -119,10 +123,12 @@ function createTabDispatcher(resolveTabId: () => number | undefined): FrameDispa
  */
 export function createTabTransport(
   resolveTabId: () => number | undefined,
-  budget?: Partial<FrameBudget>
+  budget?: Partial<FrameBudget>,
+  /** 没有可用 tab 时要告诉模型的真实原因；缺席即沿用「未绑定」的通用说法 */
+  explainUnbound: () => string | undefined = () => undefined
 ): PageAgentTransport {
   const router = createFrameRouter<number>({
-    dispatcher: createTabDispatcher(resolveTabId),
+    dispatcher: createTabDispatcher(resolveTabId, explainUnbound),
     ...(budget !== undefined ? { budget } : {})
   });
   return {

@@ -428,6 +428,8 @@ async function listWebOffice(tabId) {
       instances.push({
         handle: `${entry.key}:${summary.localId}`,
         officeType: summary.officeType,
+        // 页面跑在哪套技术栈上（wps / kootable）。缺席按 WPS 算；只进文案，不参与判定
+        source: summary.source,
         fileId: summary.fileId,
         iframeId: summary.iframeId,
         viaMount: summary.viaMount,
@@ -471,6 +473,7 @@ async function routeWebOfficeRequest(msg, tabId) {
     });
   }
   if (msg.op === 'pdf') return takeWebOfficePdf(tabId, target);
+  if (msg.op === 'ooxml') return takeWebOfficeOoxml(tabId);
   return { ok: false, error: `Unsupported WebOffice operation: ${msg.op}` };
 }
 
@@ -495,7 +498,23 @@ async function takeWebOfficePdf(tabId, target) {
   return { ok: true, value: undefined };
 }
 
-// Page perception / page action share the fetch routing: same tab, same origin match, same
+/**
+ * 在线文档的**原件字节**，供 `inspect_template` / `fill_template` 当模板用
+ * （0.22.0 分册 42 · FR-42.12 ～ FR-42.15）。
+ *
+ * 与 `take-linked-pdf` 同一批候选链接、同一套纪律，只是收件标准是 OOXML。
+ * 逐帧问而不按句柄定位：直链是**宿主帧**的东西，实例在 office 子帧，两者从不在同一帧。
+ * 没有崩溃版径：取不到就是 `undefined`，由工具那一侧明说取不到——
+ * 绝不退到「读文本骨架再重排一份」（FR-42.14）：那会产出一份悄悄丢光样式的文件。
+ */
+async function takeWebOfficeOoxml(tabId) {
+  const frames = [...frameRegistry.values()].filter((entry) => entry.tabId === tabId);
+  for (const entry of frames) {
+    const answer = await askFrameWebOffice(tabId, entry.frameId, { kind: 'take-linked-ooxml' });
+    if (answer.ok && Array.isArray(answer.value) && answer.value.length > 0) return answer;
+  }
+  return { ok: true, value: undefined };
+}
 // "open the page first" failure mode. Only the forwarded command differs.
 //
 // 带 frameKey 时不走 URL 排序：句柄是精确的，省掉 discoverFrames 的 500ms，也不会在

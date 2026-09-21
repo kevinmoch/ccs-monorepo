@@ -93,3 +93,19 @@ describe('按帧序号取 PDF 字节（DV-18）', () => {
     expect(seen[0]).not.toHaveProperty('localId');
   });
 });
+
+describe('枚举时照实转发页面自称的来源', () => {
+  it('两家都转，缺席就不带这一项——中继不替页面补一个默认产品', async () => {
+    answer = [
+      { localId: 'l-1', officeType: 'w', source: 'wps', state: 'ready' },
+      { localId: 'l-2', officeType: 's', source: 'kootable', state: 'ready' },
+      { localId: 'l-3', officeType: 'w', state: 'ready' }
+    ];
+
+    const result = await relayWebOffice({ channel: WEB_OFFICE_CHANNEL, kind: 'list' });
+
+    const listed = (result as { value: Array<Record<string, unknown>> }).value;
+    expect(listed.map((entry) => entry['claimedSource'])).toEqual(['wps', 'kootable', undefined]);
+    expect(listed[2]).not.toHaveProperty('claimedSource');
+  });
+});
