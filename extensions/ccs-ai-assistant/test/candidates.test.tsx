@@ -6,7 +6,7 @@
  * 这里不装配整个 side panel——那需要 OPFS 与 sandbox iframe。
  * 被验的是两段真正独立的逻辑：消息闸的判据本身，和区块组件对端口的反应。
  */
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -85,15 +85,33 @@ describe('来源 tab 闸（AC-21.14）', () => {
 let root: Root | undefined;
 let container: HTMLElement | undefined;
 
+// act 会在返回前把渲染、effect 和 effect 里又发出的 setState 一并刷完；
+// 开不开它决定了下面的断言是看终态还是看半成品
+declare global {
+  // eslint-disable-next-line no-var
+  var IS_REACT_ACT_ENVIRONMENT: boolean;
+}
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
 function mount(element: ReturnType<typeof createElement>): HTMLElement {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
-  root.render(element);
+  const target = root;
+  act(() => {
+    target.render(element);
+  });
   return container;
 }
 
-const tick = (): Promise<unknown> => new Promise((resolve) => setTimeout(resolve, 10));
+// 弹窗是 effect 里 `setOpen(true)` 打开的，比首次提交晚一轮。原先这里只睡 10ms，
+// 单文件跑刚好赶得上，全量跑满载时就抢在提交前断言——`[role="dialog"]` 还不在，
+// 同一条用例在 0.20.0 下也三次里挂一次。改成 act 后不再依赖壁钟。
+const tick = async (): Promise<void> => {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
 
 /** 主题来自 store 的异步 load，固定 sleep 在满负载下会抢在 fallback 还生效时断言 */
 async function waitUntil(done: () => boolean): Promise<void> {
