@@ -37,7 +37,6 @@ import { AUDIT_EVENT_TYPES, CandidateStore, FsAuditLog, createCandidateSink } fr
 import type { CandidateSink } from '@webskill/governance';
 import { createBrowserChatbotHost } from '@webskill/browser';
 import type { ChatbotHostAdapter, SandboxExecutorDeps, SettingsSectionId } from '@webskill/chatbot';
-// 发布档里 `@webskill/ui-kit` 解析到本地垫片，白名单匹配器只能从已发布的 config 入口拿
 import { isAllowedSite } from '@webskill/chatbot/config';
 import { createLocalStorageRuntimeConfigStore } from '@webskill/ui-kit';
 import type { RuntimeConfig, RuntimeConfigStore } from '@webskill/ui-kit';
