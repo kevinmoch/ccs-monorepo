@@ -70,7 +70,7 @@ function isBindable(url: string | undefined): boolean {
  * 而 options 页被看的时候“活动 tab”正是它自己（不可绑定）。
  * 两页同源，记在 localStorage 里就能对上同一页（分册 18 FR-18.6）。
  */
-const LAST_BOUND_KEY = 'webskill.extension.last-bound-tab';
+export const LAST_BOUND_KEY = 'webskill.extension.last-bound-tab';
 
 const rememberTab = (tabId: number): void => {
   globalThis.localStorage?.setItem(LAST_BOUND_KEY, String(tabId));

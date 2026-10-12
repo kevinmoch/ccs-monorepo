@@ -10,6 +10,7 @@ import {
   MANAGED_ROOT,
   SKILL_ROOTS,
   createExtensionExecutor,
+  createExtensionBackupPort,
   createExtensionFs,
   createExtensionRuntimeConfigStore,
   hostDataSources,
@@ -109,6 +110,9 @@ const initialPage = SETTINGS_PAGES.find((page) => page === requestedPage);
 // 渲染前完成：晚于 console 首次挂载编辑器就来不及了，本次会话会退回被 CSP 拦掉的 CDN
 configureLocalMonaco();
 
+// 把新的契约成员抽成变量再展开：发布档的 console 类型里还没有 `dataBackup`，内联写会被多余属性检查拦住
+const dataBackup = { dataBackup: createExtensionBackupPort(fs) };
+
 createRoot(document.getElementById('root')!).render(
   <Console
     backend={{
@@ -121,7 +125,8 @@ createRoot(document.getElementById('root')!).render(
         chatRoot: CHAT_ROOT
       }),
       // 导入预检因此能在装之前就说出「这个技能要的 bugs 本宿主没有」（0.14.0 分册 19）
-      dataSources: () => Promise.resolve(hostDataSources())
+      dataSources: () => Promise.resolve(hostDataSources()),
+      ...dataBackup
     }}
     governance={governance}
     connect={createExtensionConnect()}

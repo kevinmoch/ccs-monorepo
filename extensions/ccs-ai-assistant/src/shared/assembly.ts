@@ -10,6 +10,7 @@ import {
   createRemoteTargetRegistry,
   createDocxBlockReader,
   createXlsxBlockReader,
+  createXlsxTableReader,
   createPptxBlockReader,
   explainResolution,
   extractDocxText,
@@ -36,6 +37,8 @@ import type { DataSourceInfo } from '@webskill/runtime';
 import { AUDIT_EVENT_TYPES, CandidateStore, FsAuditLog, createCandidateSink } from '@webskill/governance';
 import type { CandidateSink } from '@webskill/governance';
 import { createBrowserChatbotHost } from '@webskill/browser';
+import { HOST_COMPONENT_ENTRIES } from 'virtual:webskill-host-components';
+import { createHostComponents } from './hostComponents';
 import type { ChatbotHostAdapter, SandboxExecutorDeps, SettingsSectionId } from '@webskill/chatbot';
 import { isAllowedSite } from '@webskill/chatbot/config';
 import { createLocalStorageRuntimeConfigStore } from '@webskill/ui-kit';
@@ -52,6 +55,7 @@ import {
 } from './consentStore';
 import { createExtensionDownloadsReader } from './downloadsReader';
 import { createExtensionDwgHost } from './dwgHost';
+import { createExtensionDataBackup, type ExtensionDataBackup } from './dataBackup';
 import { createExtensionWebOfficeHost, createExtensionWebOfficeTemplateSource } from './webOfficeHost';
 import { createExtensionDownloadWatcher } from './downloadWatcher';
 import { createExtensionTabWorkset } from './tabWorkset';
@@ -62,7 +66,7 @@ import { createPageMcpHost, type PageMcpHost } from './pageMcpHost';
 import { extractPdfText, pdfDocumentReader } from './pdfText';
 import { ACTION_SCOPE, DOWNLOAD_WAIT_MS, PERCEPTION_SCOPE } from './scopes';
 import { seedBuiltinSkills, BUILTIN_ROOT } from './seedSkills';
-import { createTabBinding, type TabBindingPort, type TabBindingSnapshot } from './tabBinding';
+import { createTabBinding, LAST_BOUND_KEY, type TabBindingPort, type TabBindingSnapshot } from './tabBinding';
 import { describeSiteBlock as describeBlock } from './siteBlock';
 import { createTabTransport } from './transport';
 
@@ -70,6 +74,10 @@ export const CHAT_ROOT = '/chat';
 export const MANAGED_ROOT = '/managed';
 // 内置根排最前：同名时 discovery 按 root 顺序定赢家
 export const SKILL_ROOTS = [BUILTIN_ROOT, '/skills', MANAGED_ROOT];
+
+// 宿主组件由 config.json 的 `hostComponents` 配置（0.26.0 分册 14 · FR-14.26）：写了就接入，没写就没有。
+// 工厂是本版新增导出：发版前只有 `build:src` 编得过，发版后升依赖即可
+const HOST_COMPONENTS = createHostComponents(HOST_COMPONENT_ENTRIES);
 
 /**
  * 技能脚本能取的数据源（分册 16）。**目标由宿主写死，脚本只能给 `id`**——
@@ -216,6 +224,22 @@ export function hostDataSources(): readonly DataSourceInfo[] {
 
 export function createExtensionFs(): OpfsProvider {
   return new OpfsProvider({ rootName: 'webskill-extension' });
+}
+
+/**
+ * options 页的「数据备份」端口（0.26.0 分册 15）。移除扩展会清空 OPFS、localStorage 与 chrome.storage，
+ * 所以换安装方式前要能导出。`chrome.*` 的接线必须在这一层（AC-14.18：UI 挂载文件不碰 `chrome.`）。
+ */
+export function createExtensionBackupPort(fs: OpfsProvider): ExtensionDataBackup {
+  return createExtensionDataBackup({
+    fs,
+    chatRoot: CHAT_ROOT,
+    localStorage,
+    chromeStorage: chrome.storage.local,
+    extensionVersion: chrome.runtime.getManifest().version,
+    excludeLocalKeys: [LAST_BOUND_KEY],
+    onRestored: notifySkillsChanged
+  });
 }
 
 /**
@@ -636,7 +660,9 @@ export function createSidePanelHost(): SidePanelHost {
     pdfDocumentReader,
     docxDocumentReader: createDocxBlockReader(),
     xlsxDocumentReader: createXlsxBlockReader(),
+    xlsxTableReader: createXlsxTableReader(),
     pptxDocumentReader: createPptxBlockReader(),
+    ...(HOST_COMPONENTS.length > 0 ? { components: HOST_COMPONENTS } : {}),
     // 照着模板出文件（0.22.0 分册 42）。与上面四个读取器分开给：那四个回答「这份文件说了什么」，
     // 这两个回答「哪个格子在哪儿、怎么往里写而不动其余任何东西」——后者不能靠前者拼出来，
     // 因为前者读出的文本里没有样式、列宽、合并和公式

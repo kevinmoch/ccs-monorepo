@@ -11,6 +11,9 @@ apps/*/.ccs-card-build
 apps/*/dist
 # 扩展的模型定义与明文 apiKey；其余出厂设置在入库的 config.json 里
 extensions/*/models.json
+# CRX 的签名私钥：私钥决定扩展 ID，绝不入库（打包产物 release/ 已在上面忽略）
+extensions/*/keys/
+*.pem
 *-lock.*
 !pnpm-lock.yaml
 out

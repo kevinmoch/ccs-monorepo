@@ -93,8 +93,11 @@ pnpm --filter ccs-ai-assistant build
   快捷指令 / 隐私与用户画像 / 外观各分区的开关，都能在这里写死。
   它是**缺省值**而不是强制值：用户在 Console 里改过的项永远优先，
   只有从没配过的字段才吃这份配置。
-- **manifest 的 `name` / `version` / `description`**——写了就覆盖 `manifest.json` 里的那三项，
-  其余字段（`key`、权限、入口路径）逐字保留。
+- **manifest 的 `name` / `version` / `description` / `update_url`**——写了就覆盖 `manifest.json` 里的同名项，
+  其余字段（`key`、权限、入口路径）逐字保留。`update_url` 只对 CRX 安装有意义（见下一节），文件夹加载的扩展会忽略它。
+- **宿主组件（`hostComponents`）**——写了某一项，扩展就接入该组件（例如「把汇总发到微信」）：
+  地址、中英显示名、首次收集 token 时的中英提示都在这里配；分节缺席或为空数组就是不接入。
+  不是 SDK 的配置契约，改了要重新构建。字段见 [config.md](config.md#hostcomponents扩展独有)。
 
 为什么要拆：两者合在一个文件里时，一旦把它加进 `.gitignore`，
 快捷指令、闸门开关这些**应该随仓库发布**的出厂设置也一并消失了；
@@ -103,7 +106,7 @@ pnpm --filter ccs-ai-assistant build
 `models.json` 缺席（CI、新克隆）时只用 `config.json`：没有模型定义，但快捷指令与各项设置都在。
 
 通用配置面的解析与校验归 `@webskill/chatbot/vite` 的 `webskillConfig()` 插件（构建期注入
-`virtual:webskill-config`）；`scripts/extensionConfig.mjs` 里只剩 MV3 专属的 `manifest` 覆写。
+`virtual:webskill-config`）；`scripts/extensionConfig.mjs` 只管 MV3 专属的 `manifest` 覆写与 `hostComponents` 两节。
 字段名拼错、枚举值非法、`defaultModel` 指向不存在的条目，都会让构建**直接失败**——
 静默忽略会得到「看起来生效了其实没生效」的产物。
 
@@ -150,6 +153,76 @@ config.json 里打开，构建时会打印一条警告——
 ```
 
 无论列不列，沙箱页脚本里的 `event.source === parent` 校验都保留。
+
+---
+
+## 打包成 CRX（自动更新）
+
+文件夹加载的扩展没有自动更新：每次发新版都要用户下载新文件夹、替换、再点重新加载。
+要让已装的扩展自己更新，就改用 CRX 安装，并在 manifest 里写 `update_url`。
+
+> **两点先说清。**
+> ① Windows 与 macOS 上的 Chrome / Edge 默认**拒绝**商店之外的 CRX。能装，要靠企业策略，
+> 或把这个扩展的 ID 加进浏览器的「扩展允许列表」（宿主已在 Windows 上验证过后一种做法，需开启开发者模式）；Linux 没有这个限制。
+> ② 经 `update_url` 的自动更新是否在你的环境里可用，**尚未验证**——验证办法见下面的「验证自动更新」。
+
+### 前提
+
+| 需要         | 怎么做                                                                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 浏览器       | 打包与创建私钥都调用浏览器自带的 `--pack-extension`。依次找 Chrome、Edge、Chromium；找不到就设 `CHROME_PATH` 指向可执行文件                                                                 |
+| `update_url` | 在 `config.json` 里写 `"manifest": { "update_url": "https://你的主机/webskill/updates.xml" }`。缺了它 `build:crx` 会失败——没有它装好的扩展永远不会自动更新                                  |
+| 私钥         | 首次运行 `pnpm crx:key`，用 Chrome 自己的打包命令生成 `keys/extension.pem`。**已存在则拒绝**：换私钥等于换扩展 ID，已装的用户从此收不到更新。私钥已在 `.gitignore` 里，**不要入库、不要丢** |
+
+### 打包与发布
+
+```bash
+pnpm crx:key        # 只做一次
+pnpm build:crx      # 先 build，再打包；可加 --base-url https://cdn.example/files/ 指定 CRX 所在目录
+```
+
+产出在 `release/`：
+
+- `webskill-extension-<版本>.crx`——给用户安装用；
+- `updates.xml`——放到 `update_url` 指向的地方；`appid` 取自私钥，`version` 取自 manifest，`codebase` 默认与 `update_url` 同目录。
+
+命令结束时会打印扩展 ID、两个文件的路径、SHA-256，以及**这个 CRX 的 ID 与文件夹安装的 ID 是否相同**。
+`codebase` 不是 HTTPS 时会给出警告（本机回环地址除外）。**每发一版都要递增 manifest 的 `version`**，并用同一把私钥打包，
+已装的副本才会把它当作更新。
+
+打包用的是 `dist/` 的临时副本，副本的 manifest 去掉了 `key`（CRX 的 ID 由私钥决定）；`dist/` 本身不动，文件夹加载照旧可用。
+
+### 从文件夹安装迁移到 CRX
+
+新私钥推出的 ID 与文件夹安装的 ID（`manifest.json` 里 `key` 对应的那个）**不同**，所以 CRX 是**另一个扩展**：
+它看不到文件夹版的会话、技能与设置。而**移除扩展会清空它的全部数据**（扩展 ID 不变也一样，实测）。
+所以迁移必须带着备份走，顺序如下：
+
+1. **先用原来的方式**（替换文件夹、重新加载）把文件夹版更新到含「数据备份」的版本。ID 没变，数据保留。
+2. 在文件夹版的选项页 → Settings → About & Diagnostics →「导出备份」，把得到的 zip 存好。
+   备份**包含你填的 API Key 与各类凭据，未加密**，请当密码文件保管。
+3. （Windows）把 CRX 的 ID 加进 Chrome / Edge 的扩展允许列表，并打开开发者模式。
+4. 把 CRX 拖进 `chrome://extensions` 安装，然后在同一页**停用**文件夹版（**不是移除**：移除会清空数据，停用不会）。
+   两个扩展同时运行的表现没有实测过，迁移期间只留一个在跑。
+5. 在**新**扩展的 About & Diagnostics →「导入备份」，选第 2 步的文件。会话、技能、设置与授权记录会被还原；
+   同名的被覆盖，其余不动。重新打开侧栏，核对会话与技能都在。
+6. 确认无误后，再把文件夹版**移除**。
+
+备份里**不含**用户画像记忆（它用一把不可导出的密钥加密，换了安装就读不开）；开了画像的用户请先在
+设置 › 隐私里导出画像，装好后再导入。
+
+如果你找回了当初生成 `key` 的私钥并用它打包，CRX 的 ID 会与文件夹版**相同**，两者不能同时安装：
+此时要先导出备份、移除文件夹版、再装 CRX、再导入。命令结束时打印的比较结果会告诉你是哪一种。
+
+### 验证自动更新
+
+在把它推给所有用户之前，用一台机器走一遍：
+
+1. 把 `update_url` 指向一个你能控制的地址（可以先用本机回环地址，如 `http://localhost:8080/updates.xml`），打出版本 N 的 CRX 并安装；
+2. 把 `version` 加一，用**同一把私钥**打出版本 N+1，把新的 CRX 与 `updates.xml` 放到该地址；
+3. 在 `chrome://extensions`（开发者模式）点「更新」，或等浏览器定时检查，看版本是否变成 N+1，且会话与设置还在。
+
+这一步没验证通过之前，不要让用户依赖它更新。
 
 ---
 

@@ -8,7 +8,7 @@ import { webskillConfig } from '@webskill/chatbot/vite';
 import type { WebSkillConfigDefaults } from '@webskill/chatbot/config';
 // @ts-expect-error -- 纯 JS 单一事实源，无需为构建脚本引入 d.ts
 import { nodeShimAliasList, sdkAliasList } from './scripts/sdkAliases.mjs';
-import { parseManifestOverrides } from './scripts/extensionConfig.mjs';
+import { parseHostComponents, parseManifestOverrides } from './scripts/extensionConfig.mjs';
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const requireHere = createRequire(import.meta.url);
@@ -22,6 +22,36 @@ function manifestOverrides(): Record<string, string> {
     return {};
   }
   return parseManifestOverrides(JSON.parse(raw));
+}
+
+const HOST_COMPONENTS_MODULE = 'virtual:webskill-host-components';
+
+/**
+ * config.json 的 `hostComponents` 分节（0.26.0 分册 14 §3.8）：构建期解析并校验，
+ * 作为虚拟模块交给应用代码。**写了某一项就是接入该组件**；文件缺席或分节缺席即 `[]`，
+ * 存在但非法则让构建直接失败——静默忽略会得到「看起来配了、其实没接」的产物。
+ *
+ * 这一节不是 SDK 的配置契约：`webskillConfig` 经 `hostSections` 对它原样放过。
+ */
+function hostComponentsModule(): Plugin {
+  const resolved = `\0${HOST_COMPONENTS_MODULE}`;
+  let entries: unknown[] = [];
+  return {
+    name: 'webskill-host-components',
+    configResolved() {
+      let raw: string;
+      try {
+        raw = readFileSync(fromHere('config.json'), 'utf8');
+      } catch {
+        entries = [];
+        return;
+      }
+      entries = parseHostComponents(JSON.parse(raw));
+    },
+    resolveId: (id) => (id === HOST_COMPONENTS_MODULE ? resolved : undefined),
+    load: (id) =>
+      id === resolved ? `export const HOST_COMPONENT_ENTRIES = ${JSON.stringify(entries, null, 2)};\n` : undefined
+  };
 }
 
 /**
@@ -77,7 +107,7 @@ function warnOnOpenedGates(defaults: WebSkillConfigDefaults): void {
  * 全都会让"盘上这份就是包里那份"不再成立。
  * `sandbox.html` 同理：它只有一行 `<script src>`，交给 vite 会被改写成带哈希的路径。
  *
- * `manifest.json` 是唯一的例外：name/version/description 三项可由 config.json 覆写，
+ * `manifest.json` 是唯一的例外：name/version/description/update_url 四项可由 config.json 覆写，
  * 所以它是读入 → 合并 → 写出。其余字段（尤其写死的 `background.js`、`icons/` 路径）逐字保留。
  */
 function copyExtensionAssets(): Plugin {
@@ -119,9 +149,10 @@ export default defineConfig({
     webskillConfig({
       file: webskillConfigFile(),
       secrets: 'bake',
-      hostSections: ['manifest'],
+      hostSections: ['manifest', 'hostComponents'],
       onParsed: ({ defaults }) => warnOnOpenedGates(defaults)
     }),
+    hostComponentsModule(),
     copyExtensionAssets()
   ],
   resolve: {
