@@ -94,8 +94,8 @@ describe.skipIf(browser === undefined)('AC-16.6 真浏览器打包', () => {
       const result = packExtension({ distDir, keyPath, outDir, chrome });
       expect(result.id).toBe(created.id);
       expect(result.version).toBe('1.2.3');
-      expect(result.crxPath).toBe(join(outDir, 'webskill-extension-1.2.3.crx'));
-      expect(result.codebase).toBe('https://updates.example.test/webskill/webskill-extension-1.2.3.crx');
+      expect(result.crxPath).toBe(join(outDir, 'ccs-ai-assistant-1.2.3.crx'));
+      expect(result.codebase).toBe('https://updates.example.test/webskill/ccs-ai-assistant-1.2.3.crx');
       expect(result.folderId).toBe(extensionIdFromManifestKey(manifestOnDisk.key));
       expect(result.folderId).not.toBe(result.id);
       expect(result.warnings).toEqual([]);
@@ -127,7 +127,7 @@ describe.skipIf(browser === undefined)('AC-16.6 真浏览器打包', () => {
       const xml = readFileSync(result.xmlPath, 'utf8');
       expect(xml).toContain(`appid='${created.id}'`);
       expect(xml).toContain("version='1.2.3'");
-      expect(xml).toContain("codebase='https://updates.example.test/webskill/webskill-extension-1.2.3.crx'");
+      expect(xml).toContain("codebase='https://updates.example.test/webskill/ccs-ai-assistant-1.2.3.crx'");
 
       // 同一把私钥打下一个版本：ID 不变，才会被已安装的副本当作更新
       const next = makeDist('1.2.4');
@@ -151,6 +151,6 @@ describe.skipIf(browser === undefined)('AC-16.6 真浏览器打包', () => {
       chrome: browser!
     });
     expect(result.id).toBe(extensionIdFromPem(readFileSync(keyPath, 'utf8')));
-    expect(result.codebase).toBe('https://cdn.example.test/ext/webskill-extension-2.0.0.crx');
+    expect(result.codebase).toBe('https://cdn.example.test/ext/ccs-ai-assistant-2.0.0.crx');
   });
 });

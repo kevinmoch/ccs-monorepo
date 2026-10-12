@@ -112,12 +112,12 @@ describe('AC-16.4 updates.xml 与下载地址', () => {
     const xml = buildUpdatesXml({
       appId: 'abcdefghijklmnopabcdefghijklmnop',
       version: '1.2.3',
-      codebase: 'https://updates.example.test/webskill/webskill-extension-1.2.3.crx'
+      codebase: 'https://updates.example.test/webskill/ccs-ai-assistant-1.2.3.crx'
     });
     expect(xml).toContain("<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>");
     expect(xml).toContain("<app appid='abcdefghijklmnopabcdefghijklmnop'>");
     expect(xml).toContain(
-      "<updatecheck codebase='https://updates.example.test/webskill/webskill-extension-1.2.3.crx' version='1.2.3' />"
+      "<updatecheck codebase='https://updates.example.test/webskill/ccs-ai-assistant-1.2.3.crx' version='1.2.3' />"
     );
   });
 
@@ -128,13 +128,13 @@ describe('AC-16.4 updates.xml 与下载地址', () => {
 
   it('默认与 update_url 同目录；--base-url 是目录，缺尾斜杠也成立', () => {
     const name = crxFileName('1.2.3');
-    expect(name).toBe('webskill-extension-1.2.3.crx');
-    expect(codebaseFor('https://u.test/a/b/updates.xml', name)).toBe('https://u.test/a/b/webskill-extension-1.2.3.crx');
+    expect(name).toBe('ccs-ai-assistant-1.2.3.crx');
+    expect(codebaseFor('https://u.test/a/b/updates.xml', name)).toBe('https://u.test/a/b/ccs-ai-assistant-1.2.3.crx');
     expect(codebaseFor('https://u.test/a/updates.xml', name, 'https://cdn.test/files/')).toBe(
-      'https://cdn.test/files/webskill-extension-1.2.3.crx'
+      'https://cdn.test/files/ccs-ai-assistant-1.2.3.crx'
     );
     expect(codebaseFor('https://u.test/a/updates.xml', name, 'https://cdn.test/files')).toBe(
-      'https://cdn.test/files/webskill-extension-1.2.3.crx'
+      'https://cdn.test/files/ccs-ai-assistant-1.2.3.crx'
     );
     expect(() => codebaseFor('https://u.test/a/updates.xml', name, 'ftp://cdn.test/')).toThrow(/--base-url/);
   });

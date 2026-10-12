@@ -183,7 +183,7 @@ pnpm build:crx      # 先 build，再打包；可加 --base-url https://cdn.exam
 
 产出在 `release/`：
 
-- `webskill-extension-<版本>.crx`——给用户安装用；
+- `ccs-ai-assistant-<版本>.crx`——给用户安装用；
 - `updates.xml`——放到 `update_url` 指向的地方；`appid` 取自私钥，`version` 取自 manifest，`codebase` 默认与 `update_url` 同目录。
 
 命令结束时会打印扩展 ID、两个文件的路径、SHA-256，以及**这个 CRX 的 ID 与文件夹安装的 ID 是否相同**。
@@ -214,6 +214,8 @@ pnpm mobileconfig    # mcxToProfile.py 把两份 plist 合成 ccs.mobileconfig�
 装一次 `ccs.mobileconfig`，Edge 和 Chrome 同时配置好；装完重启浏览器，在 `edge://policy` / `chrome://policy` 里能看到对应的策略。
 
 **换了私钥（即换了 ID）之后**按这个顺序走：`pnpm crx:key`（新 ID 自动写进三份策略文件）→ `pnpm mobileconfig`（新 ID 进入描述文件）→ 重装描述文件 → 重启浏览器。注意换 key 后 CRX 是**另一个扩展**，旧安装的数据不会迁移——备份与迁移步骤同「从文件夹安装迁移到 CRX」一节。
+
+> **一台机器只装一份受管描述文件。** macOS 对同一偏好键的冲突处理是「后安装的描述文件生效」且数组不合并——同一台机器上管理多个扩展时，先装的那份会被整体顶掉（其扩展随即失去 forcelist/allowlist，会被浏览器拦下报安全错误）。开发机同时用多个扩展时，只给「要部署的那一个」装描述文件，其余用开发者模式加载未打包目录。
 
 ### 从文件夹安装迁移到 CRX
 

@@ -57,7 +57,7 @@ export function extensionIdFromPem(pem) {
 }
 
 export function crxFileName(version) {
-  return `webskill-extension-${version}.crx`;
+  return `ccs-ai-assistant-${version}.crx`;
 }
 
 /**

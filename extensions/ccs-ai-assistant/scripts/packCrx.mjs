@@ -3,7 +3,7 @@
  * 把构建产物 `dist/` 打成 CRX（0.26.0 分册 16）。
  *
  *   pnpm crx:key                      首次：用 Chrome 的打包命令生成私钥 keys/extension.pem（已存在则拒绝）
- *   pnpm build:crx [-- 选项]          构建后打包：release/webskill-extension-<版本>.crx + release/updates.xml
+ *   pnpm build:crx [-- 选项]          构建后打包：release/ccs-ai-assistant-<版本>.crx + release/updates.xml
  *
  * 选项：--key <路径>  --out <目录>  --base-url <CRX 所在目录的地址>
  * 环境变量：CHROME_PATH 指定浏览器可执行文件（缺省按平台找 Chrome、Edge、Chromium）
