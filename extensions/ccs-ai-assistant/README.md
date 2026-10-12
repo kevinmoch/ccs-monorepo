@@ -192,6 +192,29 @@ pnpm build:crx      # 先 build，再打包；可加 --base-url https://cdn.exam
 
 打包用的是 `dist/` 的临时副本，副本的 manifest 去掉了 `key`（CRX 的 ID 由私钥决定）；`dist/` 本身不动，文件夹加载照旧可用。
 
+### 部署策略文件（扩展 ID 自动同步）
+
+给 Chrome / Edge 用的策略文件由脚本生成，**不要把扩展 ID 写死**——ID 由私钥决定，换 key 就换 ID：
+
+```bash
+pnpm policy:write    # 生成下述三份文件；pnpm crx:key 与 pnpm build:crx 会自动先跑它
+```
+
+- **macOS**：`com.microsoft.Edge.plist`、`com.google.Chrome.plist`——偏好域取自文件名（`ExtensionInstallForcelist` 负责静默安装与自动更新，`ExtensionInstallAllowlist` 放行，`ExtensionSettings.file_url_navigation_allowed` 允许扩展导航到 `file://` URL）；
+- **Windows**：`ccs.reg`——两个浏览器的 `ExtensionInstallAllowlist`，导入 HKLM。
+
+生成源：ID 来自 `keys/extension.pem`（与打包打印 ID 用的是同一个推导），`forcelist` 的更新地址来自 `config.json` 的 `manifest.update_url`（当前预设为 `http://localhost:3333/release/updates.xml`——由仓库根的 `pnpm chat`（`scripts/chatServer.mjs`）把本包的 `release/` 目录挂到 `/release`；回环 http 无需证书，Chrome 的更新检查明确放行）——两点同源，不会出现「策略里写了别的更新地址、扩展永远不更新」的死链。三份文件顶部都有「勿手改」注释，要改就改生成脚本。
+
+macOS 上再合成一份描述文件：
+
+```bash
+pnpm mobileconfig    # mcxToProfile.py 把两份 plist 合成 ccs.mobileconfig（含两个域，标识符 ccs）
+```
+
+装一次 `ccs.mobileconfig`，Edge 和 Chrome 同时配置好；装完重启浏览器，在 `edge://policy` / `chrome://policy` 里能看到对应的策略。
+
+**换了私钥（即换了 ID）之后**按这个顺序走：`pnpm crx:key`（新 ID 自动写进三份策略文件）→ `pnpm mobileconfig`（新 ID 进入描述文件）→ 重装描述文件 → 重启浏览器。注意换 key 后 CRX 是**另一个扩展**，旧安装的数据不会迁移——备份与迁移步骤同「从文件夹安装迁移到 CRX」一节。
+
 ### 从文件夹安装迁移到 CRX
 
 新私钥推出的 ID 与文件夹安装的 ID（`manifest.json` 里 `key` 对应的那个）**不同**，所以 CRX 是**另一个扩展**：

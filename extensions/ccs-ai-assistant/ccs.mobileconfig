@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+	<key>PayloadOrganization</key>
+	<string></string>
+	<key>PayloadUUID</key>
+	<string>de174ed5-e87b-4b0f-aa44-583c4511349a</string>
+	<key>PayloadRemovalDisallowed</key>
+	<true/>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadDescription</key>
+	<string>Included custom settings:
+com.microsoft.Edge
+com.google.Chrome
+</string>
+	<key>PayloadDisplayName</key>
+	<string>MCXToProfile: com.microsoft.Edge</string>
+	<key>PayloadIdentifier</key>
+	<string>ccs</string>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadUUID</key>
+			<string>27c795e7-b4a7-4dc3-b848-493616433afe</string>
+			<key>PayloadEnabled</key>
+			<true/>
+			<key>PayloadType</key>
+			<string>com.apple.ManagedClient.preferences</string>
+			<key>PayloadIdentifier</key>
+			<string>MCXToProfile.de174ed5-e87b-4b0f-aa44-583c4511349a.alacarte.customsettings.27c795e7-b4a7-4dc3-b848-493616433afe</string>
+			<key>PayloadContent</key>
+			<dict>
+				<key>com.microsoft.Edge</key>
+				<dict>
+					<key>Forced</key>
+					<array>
+						<dict>
+							<key>mcx_preference_settings</key>
+							<dict>
+								<key>ExtensionInstallForcelist</key>
+								<array>
+									<string>lfhljmojgmbmdglpjpjdgmmpbbagobfl;http://localhost:3333/release/updates.xml</string>
+								</array>
+								<key>ExtensionInstallAllowlist</key>
+								<array>
+									<string>lfhljmojgmbmdglpjpjdgmmpbbagobfl</string>
+								</array>
+								<key>ExtensionSettings</key>
+								<dict>
+									<key>lfhljmojgmbmdglpjpjdgmmpbbagobfl</key>
+									<dict>
+										<key>file_url_navigation_allowed</key>
+										<true/>
+									</dict>
+								</dict>
+							</dict>
+						</dict>
+					</array>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadUUID</key>
+			<string>27a72792-836c-4f8b-9680-9e66b98443d8</string>
+			<key>PayloadEnabled</key>
+			<true/>
+			<key>PayloadType</key>
+			<string>com.apple.ManagedClient.preferences</string>
+			<key>PayloadIdentifier</key>
+			<string>MCXToProfile.de174ed5-e87b-4b0f-aa44-583c4511349a.alacarte.customsettings.27a72792-836c-4f8b-9680-9e66b98443d8</string>
+			<key>PayloadContent</key>
+			<dict>
+				<key>com.google.Chrome</key>
+				<dict>
+					<key>Forced</key>
+					<array>
+						<dict>
+							<key>mcx_preference_settings</key>
+							<dict>
+								<key>ExtensionInstallForcelist</key>
+								<array>
+									<string>lfhljmojgmbmdglpjpjdgmmpbbagobfl;http://localhost:3333/release/updates.xml</string>
+								</array>
+								<key>ExtensionInstallAllowlist</key>
+								<array>
+									<string>lfhljmojgmbmdglpjpjdgmmpbbagobfl</string>
+								</array>
+								<key>ExtensionSettings</key>
+								<dict>
+									<key>lfhljmojgmbmdglpjpjdgmmpbbagobfl</key>
+									<dict>
+										<key>file_url_navigation_allowed</key>
+										<true/>
+									</dict>
+								</dict>
+							</dict>
+						</dict>
+					</array>
+				</dict>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

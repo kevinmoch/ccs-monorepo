@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+; 本文件由 scripts/writePolicyFiles.mjs 生成（pnpm policy:write），扩展 ID 与更新地址自动同步，勿手改
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallAllowlist]
+"88"="lfhljmojgmbmdglpjpjdgmmpbbagobfl"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallAllowlist]
+"88"="lfhljmojgmbmdglpjpjdgmmpbbagobfl"

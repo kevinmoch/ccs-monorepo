@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 本文件由 scripts/writePolicyFiles.mjs 生成（pnpm policy:write），扩展 ID 与更新地址自动同步，勿手改 -->
+    <key>ExtensionInstallForcelist</key>
+    <array>
+        <!-- 格式：扩展ID;更新URL -->
+        <string>lfhljmojgmbmdglpjpjdgmmpbbagobfl;http://localhost:3333/release/updates.xml</string>
+    </array>
+    <key>ExtensionInstallAllowlist</key>
+    <array>
+        <string>lfhljmojgmbmdglpjpjdgmmpbbagobfl</string>
+    </array>
+    <key>ExtensionSettings</key>
+    <dict>
+        <!-- 允许扩展导航（tabs.create/update）到 file:// URL；不影响详情页「允许访问文件 URL」开关 -->
+        <key>lfhljmojgmbmdglpjpjdgmmpbbagobfl</key>
+        <dict>
+            <key>file_url_navigation_allowed</key>
+            <true/>
+        </dict>
+    </dict>
+</dict>
+</plist>

@@ -2,7 +2,8 @@
   "manifest": {
     "name": "CCS AI 助手",
     "version": "0.24.0",
-    "description": "CCS 基建云平台 AI 助手"
+    "description": "CCS 基建云平台 AI 助手",
+    "update_url": "http://localhost:3333/release/updates.xml"
   },
   "agentRuntime": {
     "agentCapabilities": {
