@@ -189,9 +189,13 @@ describe('config.json', () => {
     expect(() => parseHostComponents(example)).not.toThrow();
   });
 
-  // 0.26.0 分册 16 · AC-16.7：入库的示例配置不带 update_url，所以默认构建的 manifest 与改动前逐字相同
-  it('不带 update_url：示例的 manifest 覆写里没有这个键', () => {
-    expect(parseManifestOverrides(example)).not.toHaveProperty('update_url');
+  // 入库的示例配置带自托管的 update_url（`pnpm chat` 在 /release 下托管）；
+  // 0.26.0 AC-16.7「不配则 manifest 里没有这个键」由上面 parseManifestOverrides 的 update_url 用例覆盖
+  it('入库的示例配置带自托管的 update_url，指向 updates.xml', () => {
+    expect(parseManifestOverrides(example)).toHaveProperty(
+      'update_url',
+      expect.stringMatching(/\/release\/updates\.xml$/)
+    );
   });
 
   // CCS 出厂配置不接宿主组件：上游示例里的 wechat 指向本机联调服务，不随 CCS 发布
