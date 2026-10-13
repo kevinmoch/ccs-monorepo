@@ -15,7 +15,7 @@ const RELEASE_MOUNT = '/release';
 const RELEASE_DIR = resolve(fileURLToPath(new URL('../extensions/ccs-ai-assistant/release/', import.meta.url)));
 
 // 只绑回环：联调用的 token 不该被局域网里的别人收到
-const HOST = '127.0.0.1';
+const HOST = '0.0.0.0';
 const PORT = Number(process.env.CHAT_PORT ?? 3333);
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
@@ -247,8 +247,8 @@ server.on('error', (error) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[chat] mock chat service is listening at http://localhost:${PORT}/ (Ctrl+C to stop)`);
-  console.log(`[chat] extension release files are served at http://localhost:${PORT}${RELEASE_MOUNT}/`);
+  console.log(`[chat] mock chat service is listening at http://${HOST}:${PORT}/ (Ctrl+C to stop)`);
+  console.log(`[chat] extension release files are served at http://${HOST}:${PORT}${RELEASE_MOUNT}/`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
