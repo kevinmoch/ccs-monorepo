@@ -12,7 +12,7 @@
     "build:crx": "pnpm policy:write && pnpm build && node scripts/packCrx.mjs",
     "crx:key": "node scripts/packCrx.mjs --create-key && pnpm policy:write",
     "policy:write": "node scripts/writePolicyFiles.mjs",
-    "mobileconfig": "./mcxToProfile.py --plist com.microsoft.Edge.plist --plist com.google.Chrome.plist --identifier ccs",
+    "mobileconfig": "node scripts/mcxToProfile.mjs --plist com.microsoft.Edge.plist --plist com.google.Chrome.plist --identifier Webskill",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm typecheck"
   },
