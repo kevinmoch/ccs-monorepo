@@ -68,10 +68,10 @@ const reg = `Windows Registry Editor Version 5.00
 
 ; ${banner}
 [HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Google\\Chrome\\ExtensionInstallAllowlist]
-"88"="${id}"
+"66"="${id}"
 
 [HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Edge\\ExtensionInstallAllowlist]
-"88"="${id}"
+"66"="${id}"
 `;
 
 function writeIfChanged(name, content) {
